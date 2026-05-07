@@ -1,0 +1,512 @@
+// ═══════════════════════════════════════════════════════
+// SCHEMA PRISMA COMPLET — TONTINEPRO
+// ═══════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────
+
+enum Role {
+  CLIENT
+  INDEPENDANT
+  AGENT
+  SUPERVISEUR
+  ADMIN
+}
+
+enum StatutCompte {
+  EN_ATTENTE
+  ACTIF
+  SUSPENDU
+  BANNI
+}
+
+enum TypeCollecteur {
+  INDEPENDANT
+  SALARIE
+}
+
+enum PolitiqueRetrait {
+  FLEXIBLE
+  PROGRAMME
+  BLOQUE
+}
+
+enum TypeTontine {
+  PERSONNEL
+  GROUPE
+}
+
+enum StatutTransaction {
+  EN_ATTENTE
+  SUCCES
+  ECHOUE
+  REMBOURSE
+}
+
+enum TypeTransaction {
+  COTISATION
+  RETRAIT
+  COMMISSION
+  REMBOURSEMENT_CREDIT
+  DEBLOCAGE_CREDIT
+  DISTRIBUTION_GROUPE
+  ABONNEMENT
+}
+
+enum StatutRetrait {
+  EN_ATTENTE
+  VALIDE
+  REJETE
+  EXECUTE
+}
+
+enum StatutLitige {
+  OUVERT
+  EN_EXAMEN
+  RESOLU
+  REJETE
+}
+
+enum StatutCredit {
+  EN_ATTENTE
+  ACTIF
+  TERMINE
+  EN_DEFAUT
+}
+
+enum StatutDossierPADME {
+  GENERE
+  VALIDE_ADMIN
+  SOUMIS_PADME
+  ACCEPTE
+  REJETE
+}
+
+enum StatutMembreGroupe {
+  ACTIF
+  DEFAILLANT
+  EXCLU
+  A_RECU
+}
+
+enum TypeNotification {
+  PAIEMENT_RECU
+  RAPPEL_COTISATION
+  TOUR_TONTINE
+  SCORE_MISE_A_JOUR
+  LITIGE_REPONSE
+  BADGE_OBTENU
+  MICRO_CREDIT_DISPO
+  DOSSIER_PADME_SOUMIS
+  REMBOURSEMENT_RAPPEL
+  DEFAILLANT_GROUPE
+  BIENVENUE
+}
+
+enum Canal {
+  PUSH
+  SMS
+  WHATSAPP
+}
+
+enum StatutKYC {
+  EN_ATTENTE
+  VALIDE
+  REJETE
+}
+
+enum NiveauBadge {
+  BRONZE
+  ARGENT
+  OR
+  DIAMANT
+}
+
+// ─────────────────────────────────────────────────────
+// UTILISATEURS
+// ─────────────────────────────────────────────────────
+
+model Utilisateur {
+  id                 String          @id @default(uuid())
+  telephone          String          @unique
+  nom                String
+  photo              String?
+  role               Role            @default(CLIENT)
+  typeCollecteur     TypeCollecteur?
+  statut             StatutCompte    @default(EN_ATTENTE)
+  pinHash            String?
+  deviceId           String?
+  empreinteActive    Boolean         @default(false)
+  kycVerifie         Boolean         @default(false)
+  tentativesEchouees Int             @default(0)
+  bloqueLe           DateTime?
+  collecteurId       String?
+  collecteur         Utilisateur?    @relation("CollecteurClients", fields: [collecteurId], references: [id])
+  clients            Utilisateur[]   @relation("CollecteurClients")
+  superviseurId      String?
+  superviseur        Utilisateur?    @relation("SuperviseurAgents", fields: [superviseurId], references: [id])
+  agents             Utilisateur[]   @relation("SuperviseurAgents")
+  zoneId             String?
+  zone               Zone?           @relation(fields: [zoneId], references: [id])
+  soldeCommission    Float           @default(0)
+  montantCaution     Float           @default(0)
+  creeLe             DateTime        @default(now())
+  misAJourLe         DateTime        @updatedAt
+
+  documentsKYC   DocumentKYC[]
+  facturation    FacturationAgent?
+  tontines       Tontine[]
+  transactions   Transaction[]
+  retraits       Retrait[]
+  commissions    Commission[]
+  microCredits   MicroCredit[]
+  litiges        Litige[]
+  notifications  Notification[]
+  journalAudit   JournalAudit[]
+  presences      PresenceCollecteur[]
+  scoreCredit    ScoreCredit?
+  dossiersPADME  DossierPADME[]
+  codesOTP       CodeOTP[]
+  badges         BadgeClient[]
+  membresGroupe  MembreTontineGroupe[]
+  qrCode         QRCodeCollecteur?
+
+  @@index([telephone])
+  @@index([role])
+  @@index([collecteurId])
+  @@index([zoneId])
+}
+
+model Zone {
+  id          String        @id @default(uuid())
+  nom         String
+  ville       String
+  description String?
+  agents      Utilisateur[]
+  creeLe      DateTime      @default(now())
+}
+
+model DocumentKYC {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  typeDocument  String
+  urlDocument   String
+  statut        StatutKYC   @default(EN_ATTENTE)
+  verifiePar    String?
+  motifRejet    String?
+  creeLe        DateTime    @default(now())
+}
+
+model FacturationAgent {
+  id               String      @id @default(uuid())
+  agentId          String      @unique
+  agent            Utilisateur @relation(fields: [agentId], references: [id])
+  plan             String      @default("STANDARD")
+  fraisMensuels    Float
+  fraisParClient   Float       @default(10)
+  totalClients     Int         @default(0)
+  actif            Boolean     @default(true)
+  dernierPaiement  DateTime    @default(now())
+  prochainPaiement DateTime
+  creeLe           DateTime    @default(now())
+}
+
+model QRCodeCollecteur {
+  id           String      @id @default(uuid())
+  collecteurId String      @unique
+  collecteur   Utilisateur @relation(fields: [collecteurId], references: [id])
+  codeQR       String      @unique
+  expireLe     DateTime
+  actif        Boolean     @default(true)
+  creeLe       DateTime    @default(now())
+}
+
+model CodeOTP {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  telephone     String
+  code          String
+  type          String
+  expireLe      DateTime
+  utilise       Boolean     @default(false)
+  creeLe        DateTime    @default(now())
+}
+
+// ─────────────────────────────────────────────────────
+// TONTINES
+// ─────────────────────────────────────────────────────
+
+model Tontine {
+  id                 String              @id @default(uuid())
+  nom                String
+  type               TypeTontine         @default(PERSONNEL)
+  politique          PolitiqueRetrait    @default(FLEXIBLE)
+  soldeActuel        Float               @default(0)
+  objectifMontant    Float?
+  dateDeverrouillage DateTime?
+  montantJournalier  Float               @default(0)
+  proprietaireId     String
+  proprietaire       Utilisateur         @relation(fields: [proprietaireId], references: [id])
+  transactions       Transaction[]
+  membres            MembreTontineGroupe[]
+  ordresTirage       OrdreTirage[]
+  creeLe             DateTime            @default(now())
+  misAJourLe         DateTime            @updatedAt
+
+  @@index([proprietaireId])
+}
+
+model MembreTontineGroupe {
+  id             String             @id @default(uuid())
+  tontineId      String
+  tontine        Tontine            @relation(fields: [tontineId], references: [id])
+  utilisateurId  String
+  utilisateur    Utilisateur        @relation(fields: [utilisateurId], references: [id])
+  statut         StatutMembreGroupe @default(ACTIF)
+  montantCaution Float              @default(0)
+  cautionBloquee Boolean            @default(true)
+  rejointLe      DateTime           @default(now())
+  excluLe        DateTime?
+  motifExclusion String?
+
+  @@unique([tontineId, utilisateurId])
+}
+
+model OrdreTirage {
+  id            String    @id @default(uuid())
+  tontineId     String
+  tontine       Tontine   @relation(fields: [tontineId], references: [id])
+  utilisateurId String
+  position      Int
+  aRecu         Boolean   @default(false)
+  recuLe        DateTime?
+  montantRecu   Float?
+  creeLe        DateTime  @default(now())
+}
+
+model DefaillanceGroupe {
+  id              String    @id @default(uuid())
+  tontineId       String
+  membreId        String
+  montantManquant Float
+  cautionUtilisee Float     @default(0)
+  statut          String    @default("EN_COURS")
+  detecteLe       DateTime  @default(now())
+  resoluLe        DateTime?
+}
+
+// ─────────────────────────────────────────────────────
+// TRANSACTIONS
+// ─────────────────────────────────────────────────────
+
+model Transaction {
+  id              String           @id @default(uuid())
+  reference       String           @unique @default(uuid())
+  montant         Float
+  montantNet      Float
+  type            TypeTransaction
+  statut          StatutTransaction @default(EN_ATTENTE)
+  refKKiaPay      String?
+  operateur       String?
+  fraisPlateforme Float            @default(0)
+  fraisAgent      Float            @default(0)
+  hashPrecedent   String?
+  hashActuel      String?
+  tontineId       String?
+  tontine         Tontine?         @relation(fields: [tontineId], references: [id])
+  utilisateurId   String
+  utilisateur     Utilisateur      @relation(fields: [utilisateurId], references: [id])
+  tentatives      Int              @default(0)
+  motifEchec      String?
+  creeLe          DateTime         @default(now())
+
+  litiges     Litige[]
+  commissions Commission[]
+
+  @@index([utilisateurId])
+  @@index([statut])
+  @@index([creeLe])
+}
+
+model Retrait {
+  id            String        @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  montant       Float
+  statut        StatutRetrait @default(EN_ATTENTE)
+  validePar     String?
+  motifRejet    String?
+  refKKiaPay    String?
+  creeLe        DateTime      @default(now())
+  executeLe     DateTime?
+}
+
+model Commission {
+  id            String      @id @default(uuid())
+  agentId       String
+  agent         Utilisateur @relation(fields: [agentId], references: [id])
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  montant       Float
+  type          String
+  creeLe        DateTime    @default(now())
+}
+
+// ─────────────────────────────────────────────────────
+// MICRO-CRÉDIT
+// ─────────────────────────────────────────────────────
+
+model MicroCredit {
+  id                   String               @id @default(uuid())
+  clientId             String
+  client               Utilisateur          @relation(fields: [clientId], references: [id])
+  montantPrincipal     Float
+  tauxInteret          Float
+  montantTotal         Float
+  paiementJournalier   Float
+  totalJours           Int
+  joursPayes           Int                  @default(0)
+  montantRestant       Float
+  statut               StatutCredit         @default(EN_ATTENTE)
+  scoreAuMoment        Int
+  initiePar            String
+  methodeConsentement  String?
+  consentementObtenu   Boolean              @default(false)
+  consentementObtenuLe DateTime?
+  decaisseLE           DateTime?
+  dateEcheance         DateTime
+  termineLe            DateTime?
+  remboursements       RemboursementCredit[]
+  creeLe               DateTime             @default(now())
+  misAJourLe           DateTime             @updatedAt
+
+  @@index([clientId])
+  @@index([statut])
+}
+
+model RemboursementCredit {
+  id            String      @id @default(uuid())
+  microCreditId String
+  microCredit   MicroCredit @relation(fields: [microCreditId], references: [id])
+  montant       Float
+  statut        String      @default("EN_ATTENTE")
+  refKKiaPay    String?
+  payeLe        DateTime    @default(now())
+}
+
+// ─────────────────────────────────────────────────────
+// SÉCURITÉ & LITIGES
+// ─────────────────────────────────────────────────────
+
+model Litige {
+  id            String       @id @default(uuid())
+  transactionId String
+  transaction   Transaction  @relation(fields: [transactionId], references: [id])
+  clientId      String
+  client        Utilisateur  @relation(fields: [clientId], references: [id])
+  motif         String
+  statut        StatutLitige @default(OUVERT)
+  resoluPar     String?
+  resolution    String?
+  creeLe        DateTime     @default(now())
+  resoluLe      DateTime?
+}
+
+model PresenceCollecteur {
+  id        String      @id @default(uuid())
+  agentId   String
+  agent     Utilisateur @relation(fields: [agentId], references: [id])
+  clientId  String
+  latitude  Float
+  longitude Float
+  distance  Float
+  estValide Boolean
+  creeLe    DateTime    @default(now())
+}
+
+model JournalAudit {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  action        String
+  details       String
+  adresseIP     String?
+  appareil      String?
+  creeLe        DateTime    @default(now())
+
+  @@index([utilisateurId])
+  @@index([creeLe])
+}
+
+// ─────────────────────────────────────────────────────
+// ANALYTIQUE & PADME
+// ─────────────────────────────────────────────────────
+
+model ScoreCredit {
+  id                  String         @id @default(uuid())
+  utilisateurId       String         @unique
+  utilisateur         Utilisateur    @relation(fields: [utilisateurId], references: [id])
+  score               Int            @default(0)
+  totalDepots         Int            @default(0)
+  tauxRegularite      Float          @default(0)
+  totalMois           Int            @default(0)
+  scoreRemboursement  Float          @default(0)
+  eligiblePADME       Boolean        @default(false)
+  eligibleMicroCredit Boolean        @default(false)
+  dernierCalcul       DateTime       @default(now())
+  dossiersPADME       DossierPADME[]
+}
+
+model DossierPADME {
+  id                String             @id @default(uuid())
+  clientId          String
+  client            Utilisateur        @relation(fields: [clientId], references: [id])
+  scoreCreditId     String
+  scoreCredit       ScoreCredit        @relation(fields: [scoreCreditId], references: [id])
+  scoreAuMoment     Int
+  totalEpargne      Float
+  tauxRegularite    Float
+  creditsRembourses Int                @default(0)
+  urlPDF            String?
+  statut            StatutDossierPADME @default(GENERE)
+  genereePar        String             @default("SYSTEME")
+  soumisLe          DateTime?
+  examineLE         DateTime?
+  creeLe            DateTime           @default(now())
+
+  @@index([clientId])
+  @@index([statut])
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur      @relation(fields: [utilisateurId], references: [id])
+  type          TypeNotification
+  titre         String
+  message       String
+  canal         Canal
+  lu            Boolean          @default(false)
+  creeLe        DateTime         @default(now())
+
+  @@index([utilisateurId, lu])
+}
+
+model BadgeClient {
+  id       String      @id @default(uuid())
+  clientId String
+  client   Utilisateur @relation(fields: [clientId], references: [id])
+  niveau   NiveauBadge
+  obtenuLe DateTime    @default(now())
+}

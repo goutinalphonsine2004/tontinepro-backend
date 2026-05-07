@@ -1,0 +1,69 @@
+import { Body, Controller, Delete, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
+import { UtilisateursService } from './utilisateurs.service';
+import { ModifierProfilDto } from './dto/modifier-profil.dto';
+import { ChangerPinDto } from './dto/changer-pin.dto';
+import { FiltrerUtilisateursDto } from './dto/filtrer-utilisateurs.dto';
+import { ChangerStatutDto } from './dto/changer-statut.dto';
+import { ChangerRoleDto } from './dto/changer-role.dto';
+
+@UseGuards(JwtAuthGuard)
+@Controller('utilisateurs')
+export class UtilisateursController {
+  constructor(private service: UtilisateursService) {}
+
+  @Get('profil')
+  getProfil(@UtilisateurCourant() u: { id: string }) {
+    return this.service.getProfil(u.id);
+  }
+
+  @Put('profil')
+  modifierProfil(@UtilisateurCourant() u: { id: string }, @Body() dto: ModifierProfilDto) {
+    return this.service.modifierProfil(u.id, dto);
+  }
+
+  @Put('pin')
+  changerPin(@UtilisateurCourant() u: { id: string }, @Body() dto: ChangerPinDto) {
+    return this.service.changerPin(u.id, dto);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Get()
+  lister(@Query() dto: FiltrerUtilisateursDto) {
+    return this.service.listerUtilisateurs(dto);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Put(':id/statut')
+  changerStatut(
+    @UtilisateurCourant() u: { id: string },
+    @Param('id') id: string,
+    @Body() dto: ChangerStatutDto,
+  ) {
+    return this.service.changerStatut(u.id, id, dto);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Put(':id/role')
+  changerRole(
+    @UtilisateurCourant() u: { id: string },
+    @Param('id') id: string,
+    @Body() dto: ChangerRoleDto,
+  ) {
+    return this.service.changerRole(u.id, id, dto);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Delete(':id')
+  supprimer(@UtilisateurCourant() u: { id: string }, @Param('id') id: string) {
+    return this.service.supprimerUtilisateur(u.id, id);
+  }
+}
