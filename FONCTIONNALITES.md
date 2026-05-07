@@ -45,32 +45,38 @@
 ## PHASE 2 — UTILISATEURS
 
 ### 2.1 Module Utilisateurs
-• Voir son propre profil
-• Modifier son profil (nom, photo)
-• Admin : lister tous les utilisateurs
-• Admin : changer le statut d'un compte (ACTIF/SUSPENDU/BANNI)
-• Admin : voir les détails d'un utilisateur
+✅ GET  /utilisateurs/profil (sans pinHash)
+✅ PUT  /utilisateurs/profil (nom, photo)
+✅ PUT  /utilisateurs/pin (vérification ancien PIN + bcrypt)
+✅ GET  /utilisateurs (Admin — filtres role/statut/recherche + pagination)
+✅ PUT  /utilisateurs/:id/statut (Admin — ACTIF/SUSPENDU/BANNI)
+✅ PUT  /utilisateurs/:id/role (Admin — promotion)
+✅ DELETE /utilisateurs/:id (Admin — soft delete si données financières)
 
 ### 2.2 Module KYC
-• Upload document KYC (CNI, passeport)
-• Admin : valider un document KYC
-• Admin : rejeter un document KYC (avec motif)
-• Voir le statut de son KYC
+✅ POST /kyc/soumettre (CNI, PASSEPORT, PERMIS, ACTE_NAISSANCE)
+✅ GET  /kyc/mes-documents
+✅ GET  /kyc/en-attente (Admin/Superviseur)
+✅ PUT  /kyc/:id/valider (Admin — kycVerifie=true sur utilisateur)
+✅ PUT  /kyc/:id/rejeter (Admin — motif obligatoire)
 
 ### 2.3 Module Zones
-• Admin : créer une zone géographique
-• Admin : lister les zones
-• Admin : assigner un agent à une zone
+✅ POST /zones (Admin)
+✅ GET  /zones (liste avec compteur agents)
+✅ PUT  /zones/:id (Admin)
+✅ GET  /zones/:id/agents (Admin/Superviseur)
 
 ### 2.4 Module QR Code Collecteur
-• Générer un QR code pour collecteur
-• Valider un QR code (client scanne)
-• Régénérer QR code expiré (cron)
+✅ GET  /qrcode/mon-code (Agent/Indépendant — auto-génère si absent/expiré)
+✅ POST /qrcode/scanner/:code (vérifie authenticité + retourne infos collecteur)
+✅ POST /qrcode/regenerer (Admin — force régénération pour un agent)
+• Régénération automatique QR codes expirés (cron)
 
 ### 2.5 Module Facturation Agent
-• Créer un plan de facturation pour agent
-• Voir sa facturation (agent)
-• Admin : lister les facturations
+✅ GET  /facturation/mon-statut (init STANDARD si inexistant)
+✅ POST /facturation/payer-abonnement (STANDARD=2500 FCFA / PRO=5000 FCFA)
+✅ PUT  /facturation/upgrader (Standard → Pro, erreur si déjà PRO)
+✅ GET  /facturation/tous (Admin — total mensuel calculé)
 • Prélèvement mensuel automatique (cron 1er du mois)
 
 ---
