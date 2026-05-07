@@ -170,6 +170,7 @@ model Utilisateur {
   commissions    Commission[]
   microCredits   MicroCredit[]
   litiges        Litige[]
+  ordresTirage   OrdreTirage[]
   notifications  Notification[]
   journalAudit   JournalAudit[]
   presences      PresenceCollecteur[]
@@ -284,15 +285,16 @@ model MembreTontineGroupe {
 }
 
 model OrdreTirage {
-  id            String    @id @default(uuid())
+  id            String      @id @default(uuid())
   tontineId     String
-  tontine       Tontine   @relation(fields: [tontineId], references: [id])
+  tontine       Tontine     @relation(fields: [tontineId], references: [id])
   utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
   position      Int
-  aRecu         Boolean   @default(false)
+  aRecu         Boolean     @default(false)
   recuLe        DateTime?
   montantRecu   Float?
-  creeLe        DateTime  @default(now())
+  creeLe        DateTime    @default(now())
 }
 
 model DefaillanceGroupe {

@@ -19,6 +19,10 @@ const kyc_module_1 = require("./modules/kyc/kyc.module");
 const zones_module_1 = require("./modules/zones/zones.module");
 const qrcode_module_1 = require("./modules/qrcode/qrcode.module");
 const facturation_module_1 = require("./modules/facturation/facturation.module");
+const tontines_module_1 = require("./modules/tontines/tontines.module");
+const transactions_module_1 = require("./modules/transactions/transactions.module");
+const retraits_module_1 = require("./modules/retraits/retraits.module");
+const commissions_module_1 = require("./modules/commissions/commissions.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -35,6 +39,10 @@ exports.AppModule = AppModule = __decorate([
             zones_module_1.ZonesModule,
             qrcode_module_1.QrcodeModule,
             facturation_module_1.FacturationModule,
+            tontines_module_1.TontinesModule,
+            transactions_module_1.TransactionsModule,
+            retraits_module_1.RetraitsModule,
+            commissions_module_1.CommissionsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [],

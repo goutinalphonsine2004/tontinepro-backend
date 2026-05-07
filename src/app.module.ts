@@ -10,6 +10,10 @@ import { KycModule } from './modules/kyc/kyc.module';
 import { ZonesModule } from './modules/zones/zones.module';
 import { QrcodeModule } from './modules/qrcode/qrcode.module';
 import { FacturationModule } from './modules/facturation/facturation.module';
+import { TontinesModule } from './modules/tontines/tontines.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
+import { RetraitsModule } from './modules/retraits/retraits.module';
+import { CommissionsModule } from './modules/commissions/commissions.module';
 
 @Module({
   imports: [
@@ -23,6 +27,10 @@ import { FacturationModule } from './modules/facturation/facturation.module';
     ZonesModule,
     QrcodeModule,
     FacturationModule,
+    TontinesModule,
+    TransactionsModule,
+    RetraitsModule,
+    CommissionsModule,
   ],
   controllers: [AppController],
   providers: [],

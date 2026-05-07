@@ -1,12 +1,13 @@
-import { Role } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { KkiapayService } from '../../common/services/kkiapay.service';
+import { CommissionsService } from './commissions.service';
 import { RetirerCommissionDto } from './dto/retirer-commission.dto';
-export declare class CommissionsService {
-    private prisma;
-    private kkiapay;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService);
-    monSolde(utilisateurId: string, role: Role): Promise<{
+import { Role } from '@prisma/client';
+export declare class CommissionsController {
+    private service;
+    constructor(service: CommissionsService);
+    monSolde(u: {
+        id: string;
+        role: Role;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -17,7 +18,9 @@ export declare class CommissionsService {
             tauxCommission: string;
         };
     }>;
-    historique(utilisateurId: string): Promise<{
+    historique(u: {
+        id: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: ({
@@ -39,7 +42,9 @@ export declare class CommissionsService {
             transactionId: string;
         })[];
     }>;
-    retirer(utilisateurId: string, dto: RetirerCommissionDto): Promise<{
+    retirer(u: {
+        id: string;
+    }, dto: RetirerCommissionDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {

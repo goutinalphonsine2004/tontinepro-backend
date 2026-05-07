@@ -1,15 +1,14 @@
-import { PrismaService } from '../../prisma/prisma.service';
-import { KkiapayService } from '../../common/services/kkiapay.service';
-import { SmsService } from '../notifications/sms.service';
+import { RawBodyRequest } from '@nestjs/common';
+import { Request } from 'express';
+import { TransactionsService } from './transactions.service';
 import { CotiserDto } from './dto/cotiser.dto';
 import { WebhookKkiapayDto } from './dto/webhook-kkiapay.dto';
-export declare class TransactionsService {
-    private prisma;
-    private kkiapay;
-    private sms;
-    private readonly logger;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService);
-    cotiser(utilisateurId: string, dto: CotiserDto): Promise<{
+export declare class TransactionsController {
+    private service;
+    constructor(service: TransactionsService);
+    cotiser(u: {
+        id: string;
+    }, dto: CotiserDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -22,12 +21,13 @@ export declare class TransactionsService {
             montantNet: number;
         };
     }>;
-    traiterWebhook(body: WebhookKkiapayDto, rawBody: Buffer, signatureRecue: string): Promise<{
+    webhook(req: RawBodyRequest<Request>, body: WebhookKkiapayDto, signature: string): Promise<{
         succes: boolean;
         message: string;
     }>;
-    private traiterSucces;
-    historique(utilisateurId: string): Promise<{
+    historique(u: {
+        id: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: ({
@@ -55,7 +55,9 @@ export declare class TransactionsService {
             motifEchec: string | null;
         })[];
     }>;
-    recu(transactionId: string, utilisateurId: string): Promise<{
+    recu(id: string, u: {
+        id: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {

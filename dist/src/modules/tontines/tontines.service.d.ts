@@ -12,21 +12,21 @@ export declare class TontinesService {
         message: string;
         donnees: {
             proprietaire: {
-                id: string;
-                nom: string;
                 telephone: string;
+                nom: string;
+                id: string;
             };
         } & {
-            id: string;
             nom: string;
-            type: import("@prisma/client").$Enums.TypeTontine;
-            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-            soldeActuel: number;
-            objectifMontant: number | null;
-            dateDeverrouillage: Date | null;
-            montantJournalier: number;
+            id: string;
             creeLe: Date;
             misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            objectifMontant: number | null;
+            montantJournalier: number;
+            dateDeverrouillage: Date | null;
+            soldeActuel: number;
             proprietaireId: string;
         };
     }>;
@@ -40,16 +40,16 @@ export declare class TontinesService {
                     membres: number;
                 };
             } & {
-                id: string;
                 nom: string;
-                type: import("@prisma/client").$Enums.TypeTontine;
-                politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-                soldeActuel: number;
-                objectifMontant: number | null;
-                dateDeverrouillage: Date | null;
-                montantJournalier: number;
+                id: string;
                 creeLe: Date;
                 misAJourLe: Date;
+                type: import("@prisma/client").$Enums.TypeTontine;
+                politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+                objectifMontant: number | null;
+                montantJournalier: number;
+                dateDeverrouillage: Date | null;
+                soldeActuel: number;
                 proprietaireId: string;
             })[];
             membre: {
@@ -58,16 +58,16 @@ export declare class TontinesService {
                 _count: {
                     membres: number;
                 };
-                id: string;
                 nom: string;
-                type: import("@prisma/client").$Enums.TypeTontine;
-                politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-                soldeActuel: number;
-                objectifMontant: number | null;
-                dateDeverrouillage: Date | null;
-                montantJournalier: number;
+                id: string;
                 creeLe: Date;
                 misAJourLe: Date;
+                type: import("@prisma/client").$Enums.TypeTontine;
+                politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+                objectifMontant: number | null;
+                montantJournalier: number;
+                dateDeverrouillage: Date | null;
+                soldeActuel: number;
                 proprietaireId: string;
             }[];
         };
@@ -76,26 +76,26 @@ export declare class TontinesService {
         succes: boolean;
         message: string;
         donnees: {
-            proprietaire: {
-                id: string;
-                nom: string;
-                telephone: string;
-            };
             _count: {
                 transactions: number;
                 membres: number;
             };
+            proprietaire: {
+                telephone: string;
+                nom: string;
+                id: string;
+            };
         } & {
-            id: string;
             nom: string;
-            type: import("@prisma/client").$Enums.TypeTontine;
-            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-            soldeActuel: number;
-            objectifMontant: number | null;
-            dateDeverrouillage: Date | null;
-            montantJournalier: number;
+            id: string;
             creeLe: Date;
             misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            objectifMontant: number | null;
+            montantJournalier: number;
+            dateDeverrouillage: Date | null;
+            soldeActuel: number;
             proprietaireId: string;
         };
     }>;
@@ -103,16 +103,16 @@ export declare class TontinesService {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
             nom: string;
-            type: import("@prisma/client").$Enums.TypeTontine;
-            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-            soldeActuel: number;
-            objectifMontant: number | null;
-            dateDeverrouillage: Date | null;
-            montantJournalier: number;
+            id: string;
             creeLe: Date;
             misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            objectifMontant: number | null;
+            montantJournalier: number;
+            dateDeverrouillage: Date | null;
+            soldeActuel: number;
             proprietaireId: string;
         };
     }>;
@@ -123,8 +123,8 @@ export declare class TontinesService {
             id: string;
             statut: import("@prisma/client").$Enums.StatutMembreGroupe;
             montantCaution: number;
-            tontineId: string;
             utilisateurId: string;
+            tontineId: string;
             cautionBloquee: boolean;
             rejointLe: Date;
             excluLe: Date | null;
@@ -140,17 +140,17 @@ export declare class TontinesService {
         message: string;
         donnees: ({
             utilisateur: {
-                id: string;
-                nom: string;
                 telephone: string;
+                nom: string;
+                id: string;
                 kycVerifie: boolean;
             };
         } & {
             id: string;
             statut: import("@prisma/client").$Enums.StatutMembreGroupe;
             montantCaution: number;
-            tontineId: string;
             utilisateurId: string;
+            tontineId: string;
             cautionBloquee: boolean;
             rejointLe: Date;
             excluLe: Date | null;
@@ -163,8 +163,8 @@ export declare class TontinesService {
         donnees: {
             id: string;
             creeLe: Date;
-            tontineId: string;
             utilisateurId: string;
+            tontineId: string;
             position: number;
             aRecu: boolean;
             recuLe: Date | null;

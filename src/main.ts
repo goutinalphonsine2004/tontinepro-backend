@@ -5,7 +5,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import helmet from 'helmet';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true → accès au corps brut pour vérification HMAC webhook KKiaPay
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.use(helmet());
 
@@ -18,7 +19,6 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
-
   app.enableCors();
 
   const port = process.env.PORT ?? 3000;

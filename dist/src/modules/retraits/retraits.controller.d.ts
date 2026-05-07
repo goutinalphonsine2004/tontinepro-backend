@@ -1,12 +1,12 @@
-import { PrismaService } from '../../prisma/prisma.service';
-import { KkiapayService } from '../../common/services/kkiapay.service';
+import { RetraitsService } from './retraits.service';
 import { DemanderRetraitDto } from './dto/demander-retrait.dto';
 import { RejeterRetraitDto } from './dto/rejeter-retrait.dto';
-export declare class RetraitsService {
-    private prisma;
-    private kkiapay;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService);
-    demander(utilisateurId: string, dto: DemanderRetraitDto): Promise<{
+export declare class RetraitsController {
+    private service;
+    constructor(service: RetraitsService);
+    demander(u: {
+        id: string;
+    }, dto: DemanderRetraitDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -21,8 +21,9 @@ export declare class RetraitsService {
             executeLe: Date | null;
         };
     }>;
-    private executer;
-    mesRetraits(utilisateurId: string): Promise<{
+    mesRetraits(u: {
+        id: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -58,11 +59,15 @@ export declare class RetraitsService {
             executeLe: Date | null;
         })[];
     }>;
-    valider(retraitId: string, adminId: string): Promise<{
+    valider(id: string, u: {
+        id: string;
+    }): Promise<{
         succes: boolean;
         message: string;
     }>;
-    rejeter(retraitId: string, adminId: string, dto: RejeterRetraitDto): Promise<{
+    rejeter(id: string, u: {
+        id: string;
+    }, dto: RejeterRetraitDto): Promise<{
         succes: boolean;
         message: string;
     }>;
