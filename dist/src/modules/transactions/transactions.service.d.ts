@@ -41,11 +41,11 @@ export declare class TransactionsService {
             creeLe: Date;
             type: import("@prisma/client").$Enums.TypeTransaction;
             utilisateurId: string;
-            refKKiaPay: string | null;
             tontineId: string | null;
             reference: string;
             montant: number;
             montantNet: number;
+            refKKiaPay: string | null;
             operateur: string | null;
             fraisPlateforme: number;
             fraisAgent: number;

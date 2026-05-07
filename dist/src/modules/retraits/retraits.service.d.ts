@@ -15,8 +15,8 @@ export declare class RetraitsService {
             creeLe: Date;
             utilisateurId: string;
             motifRejet: string | null;
-            refKKiaPay: string | null;
             montant: number;
+            refKKiaPay: string | null;
             validePar: string | null;
             executeLe: Date | null;
         };
@@ -31,8 +31,8 @@ export declare class RetraitsService {
             creeLe: Date;
             utilisateurId: string;
             motifRejet: string | null;
-            refKKiaPay: string | null;
             montant: number;
+            refKKiaPay: string | null;
             validePar: string | null;
             executeLe: Date | null;
         }[];
@@ -52,8 +52,8 @@ export declare class RetraitsService {
             creeLe: Date;
             utilisateurId: string;
             motifRejet: string | null;
-            refKKiaPay: string | null;
             montant: number;
+            refKKiaPay: string | null;
             validePar: string | null;
             executeLe: Date | null;
         })[];

@@ -14,8 +14,8 @@ export declare class KycService {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         };
     }>;
     mesDocuments(utilisateurId: string): Promise<{
@@ -28,8 +28,8 @@ export declare class KycService {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         }[];
     }>;
     enAttente(): Promise<{
@@ -49,8 +49,8 @@ export declare class KycService {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         })[];
     }>;
     valider(docId: string, adminId: string): Promise<{
@@ -63,8 +63,8 @@ export declare class KycService {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         };
     }>;
     rejeter(docId: string, adminId: string, dto: RejeterKycDto): Promise<{
@@ -77,8 +77,8 @@ export declare class KycService {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         };
     }>;
 }

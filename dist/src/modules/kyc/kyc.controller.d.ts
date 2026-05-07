@@ -16,8 +16,8 @@ export declare class KycController {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         };
     }>;
     mesDocuments(u: {
@@ -32,8 +32,8 @@ export declare class KycController {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         }[];
     }>;
     enAttente(): Promise<{
@@ -53,8 +53,8 @@ export declare class KycController {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         })[];
     }>;
     valider(id: string, u: {
@@ -69,8 +69,8 @@ export declare class KycController {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         };
     }>;
     rejeter(id: string, u: {
@@ -85,8 +85,8 @@ export declare class KycController {
             utilisateurId: string;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
+            motifRejet: string | null;
         };
     }>;
 }

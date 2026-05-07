@@ -12,21 +12,21 @@ export declare class TontinesController {
         message: string;
         donnees: {
             proprietaire: {
-                telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
+                telephone: string;
             };
         } & {
-            nom: string;
             id: string;
-            creeLe: Date;
-            misAJourLe: Date;
+            nom: string;
             type: import("@prisma/client").$Enums.TypeTontine;
             politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-            objectifMontant: number | null;
-            montantJournalier: number;
-            dateDeverrouillage: Date | null;
             soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            creeLe: Date;
+            misAJourLe: Date;
             proprietaireId: string;
         };
     }>;
@@ -42,16 +42,16 @@ export declare class TontinesController {
                     membres: number;
                 };
             } & {
-                nom: string;
                 id: string;
-                creeLe: Date;
-                misAJourLe: Date;
+                nom: string;
                 type: import("@prisma/client").$Enums.TypeTontine;
                 politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-                objectifMontant: number | null;
-                montantJournalier: number;
-                dateDeverrouillage: Date | null;
                 soldeActuel: number;
+                objectifMontant: number | null;
+                dateDeverrouillage: Date | null;
+                montantJournalier: number;
+                creeLe: Date;
+                misAJourLe: Date;
                 proprietaireId: string;
             })[];
             membre: {
@@ -60,16 +60,16 @@ export declare class TontinesController {
                 _count: {
                     membres: number;
                 };
-                nom: string;
                 id: string;
-                creeLe: Date;
-                misAJourLe: Date;
+                nom: string;
                 type: import("@prisma/client").$Enums.TypeTontine;
                 politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-                objectifMontant: number | null;
-                montantJournalier: number;
-                dateDeverrouillage: Date | null;
                 soldeActuel: number;
+                objectifMontant: number | null;
+                dateDeverrouillage: Date | null;
+                montantJournalier: number;
+                creeLe: Date;
+                misAJourLe: Date;
                 proprietaireId: string;
             }[];
         };
@@ -80,26 +80,26 @@ export declare class TontinesController {
         succes: boolean;
         message: string;
         donnees: {
+            proprietaire: {
+                id: string;
+                nom: string;
+                telephone: string;
+            };
             _count: {
                 transactions: number;
                 membres: number;
             };
-            proprietaire: {
-                telephone: string;
-                nom: string;
-                id: string;
-            };
         } & {
-            nom: string;
             id: string;
-            creeLe: Date;
-            misAJourLe: Date;
+            nom: string;
             type: import("@prisma/client").$Enums.TypeTontine;
             politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-            objectifMontant: number | null;
-            montantJournalier: number;
-            dateDeverrouillage: Date | null;
             soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            creeLe: Date;
+            misAJourLe: Date;
             proprietaireId: string;
         };
     }>;
@@ -109,16 +109,16 @@ export declare class TontinesController {
         succes: boolean;
         message: string;
         donnees: {
-            nom: string;
             id: string;
-            creeLe: Date;
-            misAJourLe: Date;
+            nom: string;
             type: import("@prisma/client").$Enums.TypeTontine;
             politique: import("@prisma/client").$Enums.PolitiqueRetrait;
-            objectifMontant: number | null;
-            montantJournalier: number;
-            dateDeverrouillage: Date | null;
             soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            creeLe: Date;
+            misAJourLe: Date;
             proprietaireId: string;
         };
     }>;
@@ -131,8 +131,8 @@ export declare class TontinesController {
             id: string;
             statut: import("@prisma/client").$Enums.StatutMembreGroupe;
             montantCaution: number;
-            utilisateurId: string;
             tontineId: string;
+            utilisateurId: string;
             cautionBloquee: boolean;
             rejointLe: Date;
             excluLe: Date | null;
@@ -150,17 +150,17 @@ export declare class TontinesController {
         message: string;
         donnees: ({
             utilisateur: {
-                telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
+                telephone: string;
                 kycVerifie: boolean;
             };
         } & {
             id: string;
             statut: import("@prisma/client").$Enums.StatutMembreGroupe;
             montantCaution: number;
-            utilisateurId: string;
             tontineId: string;
+            utilisateurId: string;
             cautionBloquee: boolean;
             rejointLe: Date;
             excluLe: Date | null;
@@ -170,16 +170,22 @@ export declare class TontinesController {
     ordreTirage(id: string): Promise<{
         succes: boolean;
         message: string;
-        donnees: {
+        donnees: ({
+            utilisateur: {
+                id: string;
+                nom: string;
+                telephone: string;
+            };
+        } & {
             id: string;
             creeLe: Date;
-            utilisateurId: string;
             tontineId: string;
+            utilisateurId: string;
             position: number;
             aRecu: boolean;
             recuLe: Date | null;
             montantRecu: number | null;
-        }[];
+        })[];
     }>;
     distribuer(id: string, u: {
         id: string;
@@ -187,7 +193,11 @@ export declare class TontinesController {
         succes: boolean;
         message: string;
         donnees: {
-            beneficiaire: any;
+            beneficiaire: {
+                id: string;
+                nom: string;
+                telephone: string;
+            };
             montantNet: number;
             refKKiaPay: string;
         };

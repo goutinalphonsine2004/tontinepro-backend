@@ -148,11 +148,14 @@ export class TontinesService {
     const membre = await this.prisma.membreTontineGroupe.findUnique({
       where: { tontineId_utilisateurId: { tontineId, utilisateurId } },
     });
-    if (!membre || membre.statut !== StatutMembreGroupe.ACTIF) {
-      throw new BadRequestException({ message: 'Vous n\'êtes pas membre actif de cette tontine', code: 'PAS_MEMBRE' });
+    if (!membre) {
+      throw new BadRequestException({ message: 'Vous n\'êtes pas membre de cette tontine', code: 'PAS_MEMBRE' });
     }
     if (membre.statut === StatutMembreGroupe.A_RECU) {
       throw new BadRequestException({ message: 'Impossible de quitter après avoir reçu la distribution', code: 'DEJA_RECU' });
+    }
+    if (membre.statut !== StatutMembreGroupe.ACTIF) {
+      throw new BadRequestException({ message: 'Vous n\'êtes plus membre actif de cette tontine', code: 'PAS_MEMBRE' });
     }
 
     await this.prisma.membreTontineGroupe.update({
