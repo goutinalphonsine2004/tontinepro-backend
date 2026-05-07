@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Headers, Param, Post, RawBodyRequest, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
+import { Body, Controller, Get, Headers, Param, Post, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { TransactionsService } from './transactions.service';
@@ -19,7 +19,7 @@ export class TransactionsController {
   // Pas de JwtAuthGuard — appelé par le serveur KKiaPay
   @Post('webhook-kkiapay')
   webhook(
-    @Req() req: RawBodyRequest<Request>,
+    @Req() req: Request & { rawBody?: Buffer },
     @Body() body: WebhookKkiapayDto,
     @Headers('x-kkiapay-signature') signature: string,
   ) {
