@@ -16,6 +16,11 @@ import { RetraitsModule } from './modules/retraits/retraits.module';
 import { CommissionsModule } from './modules/commissions/commissions.module';
 import { MicroCreditsModule } from './modules/micro-credits/micro-credits.module';
 import { CronModule } from './modules/cron/cron.module';
+import { ScoreModule } from './modules/score/score.module';
+import { PadmeModule } from './modules/padme/padme.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { BadgesModule } from './modules/badges/badges.module';
+import { LitigesModule } from './modules/litiges/litiges.module';
 
 @Module({
   imports: [
@@ -35,6 +40,11 @@ import { CronModule } from './modules/cron/cron.module';
     CommissionsModule,
     MicroCreditsModule,
     CronModule,
+    ScoreModule,
+    PadmeModule,
+    AnalyticsModule,
+    BadgesModule,
+    LitigesModule,
   ],
   controllers: [AppController],
   providers: [],

@@ -25,6 +25,11 @@ const retraits_module_1 = require("./modules/retraits/retraits.module");
 const commissions_module_1 = require("./modules/commissions/commissions.module");
 const micro_credits_module_1 = require("./modules/micro-credits/micro-credits.module");
 const cron_module_1 = require("./modules/cron/cron.module");
+const score_module_1 = require("./modules/score/score.module");
+const padme_module_1 = require("./modules/padme/padme.module");
+const analytics_module_1 = require("./modules/analytics/analytics.module");
+const badges_module_1 = require("./modules/badges/badges.module");
+const litiges_module_1 = require("./modules/litiges/litiges.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -47,6 +52,11 @@ exports.AppModule = AppModule = __decorate([
             commissions_module_1.CommissionsModule,
             micro_credits_module_1.MicroCreditsModule,
             cron_module_1.CronModule,
+            score_module_1.ScoreModule,
+            padme_module_1.PadmeModule,
+            analytics_module_1.AnalyticsModule,
+            badges_module_1.BadgesModule,
+            litiges_module_1.LitigesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [],

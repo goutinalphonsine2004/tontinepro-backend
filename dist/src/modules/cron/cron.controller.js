@@ -39,6 +39,12 @@ let CronController = class CronController {
     remboursements() {
         return this.service.declencherRemboursementsManuellement();
     }
+    facturation() {
+        return this.service.declencherFacturationManuellement();
+    }
+    rappels() {
+        return this.service.declencherRappelsManuellement();
+    }
 };
 exports.CronController = CronController;
 __decorate([
@@ -54,6 +60,18 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], CronController.prototype, "remboursements", null);
+__decorate([
+    (0, common_1.Post)('facturation'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CronController.prototype, "facturation", null);
+__decorate([
+    (0, common_1.Post)('rappels'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CronController.prototype, "rappels", null);
 exports.CronController = CronController = __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

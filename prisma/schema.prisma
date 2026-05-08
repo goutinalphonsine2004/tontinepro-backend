@@ -147,6 +147,7 @@ model Utilisateur {
   statut             StatutCompte    @default(EN_ATTENTE)
   pinHash            String?
   deviceId           String?
+  tokenPush          String?
   empreinteActive    Boolean         @default(false)
   kycVerifie         Boolean         @default(false)
   tentativesEchouees Int             @default(0)

@@ -3,3 +3,9 @@ node_modules
 .env
 
 /generated/prisma
+
+# Firebase — NE JAMAIS COMMITTER
+google-services.json
+tontinepro-firebase-*.json
+firebase-adminsdk-*.json
+*-firebase-adminsdk-*.json

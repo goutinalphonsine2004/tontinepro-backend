@@ -27,4 +27,14 @@ export class CronController {
   remboursements() {
     return this.service.declencherRemboursementsManuellement();
   }
+
+  @Post('facturation')
+  facturation() {
+    return this.service.declencherFacturationManuellement();
+  }
+
+  @Post('rappels')
+  rappels() {
+    return this.service.declencherRappelsManuellement();
+  }
 }

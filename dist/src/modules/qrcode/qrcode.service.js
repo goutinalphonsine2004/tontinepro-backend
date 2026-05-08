@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QrcodeService = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
-const uuid_1 = require("uuid");
+const crypto_1 = require("crypto");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const DUREE_QR_JOURS = 30;
 let QrcodeService = class QrcodeService {
@@ -32,8 +32,8 @@ let QrcodeService = class QrcodeService {
             const expireLe = new Date(Date.now() + DUREE_QR_JOURS * 24 * 60 * 60 * 1000);
             qr = await this.prisma.qRCodeCollecteur.upsert({
                 where: { collecteurId: utilisateurId },
-                create: { collecteurId: utilisateurId, codeQR: (0, uuid_1.v4)(), expireLe, actif: true },
-                update: { codeQR: (0, uuid_1.v4)(), expireLe, actif: true },
+                create: { collecteurId: utilisateurId, codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
+                update: { codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
             });
         }
         return { succes: true, message: 'QR code récupéré.', donnees: qr };
@@ -73,8 +73,8 @@ let QrcodeService = class QrcodeService {
         const expireLe = new Date(Date.now() + DUREE_QR_JOURS * 24 * 60 * 60 * 1000);
         const qr = await this.prisma.qRCodeCollecteur.upsert({
             where: { collecteurId: agentId },
-            create: { collecteurId: agentId, codeQR: (0, uuid_1.v4)(), expireLe, actif: true },
-            update: { codeQR: (0, uuid_1.v4)(), expireLe, actif: true },
+            create: { collecteurId: agentId, codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
+            update: { codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
         });
         return { succes: true, message: `QR code régénéré pour ${agent.nom}.`, donnees: qr };
     }

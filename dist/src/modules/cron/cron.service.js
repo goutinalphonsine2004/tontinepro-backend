@@ -17,16 +17,19 @@ const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
 const sms_service_1 = require("../notifications/sms.service");
+const badges_service_1 = require("../badges/badges.service");
 const business_constants_1 = require("../../common/constants/business.constants");
 let CronService = CronService_1 = class CronService {
     prisma;
     kkiapay;
     sms;
+    badges;
     logger = new common_1.Logger(CronService_1.name);
-    constructor(prisma, kkiapay, sms) {
+    constructor(prisma, kkiapay, sms, badges) {
         this.prisma = prisma;
         this.kkiapay = kkiapay;
         this.sms = sms;
+        this.badges = badges;
     }
     async preleverRemboursementsJournaliers() {
         this.logger.log('[CRON 7h] Prélèvement remboursements journaliers...');
@@ -186,6 +189,7 @@ let CronService = CronService_1 = class CronService {
         if (eligiblePADME) {
             await this.genererDossierPADME(clientId, scoreFinal, tauxRegularite);
         }
+        await this.badges.attribuerBadgesSiEligible(clientId);
         return scoreFinal;
     }
     async genererDossierPADME(clientId, score, tauxRegularite) {
@@ -259,6 +263,205 @@ let CronService = CronService_1 = class CronService {
         await this.preleverRemboursementsJournaliers();
         return { succes: true, message: 'Prélèvements remboursements déclenchés manuellement.' };
     }
+    async envoyerRappelsCotisation() {
+        this.logger.log('[CRON 8h] Rappels cotisation...');
+        const maintenant = new Date();
+        const tontines = await this.prisma.tontine.findMany({
+            where: { dateDeverrouillage: { not: null } },
+            include: {
+                proprietaire: { select: { telephone: true, nom: true } },
+                membres: {
+                    where: { statut: client_1.StatutMembreGroupe.ACTIF },
+                    include: { utilisateur: { select: { telephone: true, nom: true } } },
+                },
+            },
+        });
+        let rappelsEnvoyes = 0;
+        for (const tontine of tontines) {
+            if (!tontine.dateDeverrouillage)
+                continue;
+            const joursRestants = Math.ceil((tontine.dateDeverrouillage.getTime() - maintenant.getTime()) / (24 * 60 * 60 * 1000));
+            let message = null;
+            if (joursRestants === 3) {
+                message = `TontinePro: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque dans 3 jours. Pensez à cotiser !`;
+            }
+            else if (joursRestants === 1) {
+                message = `TontinePro: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque demain ! Dernière chance de cotiser.`;
+            }
+            else if (joursRestants === 0) {
+                message = `TontinePro: 🎉 Aujourd'hui est le jour J pour votre tontine "${tontine.nom}" ! Cotisez maintenant.`;
+            }
+            if (message) {
+                const destinataires = [
+                    tontine.proprietaire.telephone,
+                    ...tontine.membres.map((m) => m.utilisateur.telephone),
+                ];
+                for (const tel of destinataires) {
+                    await this.sms.envoyer(tel, message);
+                    rappelsEnvoyes++;
+                }
+            }
+        }
+        this.logger.log(`[CRON 8h] ${rappelsEnvoyes} rappel(s) cotisation envoyé(s)`);
+    }
+    async detecterDefaillancesGroupe() {
+        this.logger.log('[CRON 7h30] Détection défaillances groupe...');
+        const il24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const tontines = await this.prisma.tontine.findMany({
+            where: { type: 'GROUPE' },
+            include: {
+                membres: {
+                    where: { statut: client_1.StatutMembreGroupe.ACTIF },
+                    include: {
+                        utilisateur: {
+                            select: { id: true, telephone: true, nom: true, soldeCommission: true },
+                        },
+                    },
+                },
+                transactions: {
+                    where: {
+                        creeLe: { gte: il24h },
+                        type: client_1.TypeTransaction.COTISATION,
+                        statut: client_1.StatutTransaction.SUCCES,
+                    },
+                    select: { utilisateurId: true },
+                },
+            },
+        });
+        let defaillances = 0;
+        for (const tontine of tontines) {
+            const membresAyantCotise = new Set(tontine.transactions.map((t) => t.utilisateurId));
+            for (const membre of tontine.membres) {
+                if (!membresAyantCotise.has(membre.utilisateurId) && tontine.montantJournalier > 0) {
+                    if (membre.montantCaution > 0) {
+                        const montantPreleveCalution = Math.min(membre.montantCaution, tontine.montantJournalier);
+                        await this.prisma.membreTontineGroupe.update({
+                            where: { id: membre.id },
+                            data: { montantCaution: { decrement: montantPreleveCalution } },
+                        });
+                        this.logger.warn(`[Défaillance] Caution prélevée pour ${membre.utilisateur.nom} dans ${tontine.nom}: ${montantPreleveCalution} FCFA`);
+                    }
+                    const defaillancesActuelles = await this.prisma.membreTontineGroupe.count({
+                        where: {
+                            tontineId: tontine.id,
+                            utilisateurId: membre.utilisateurId,
+                            statut: client_1.StatutMembreGroupe.DEFAILLANT,
+                        },
+                    });
+                    const nouveauStatut = defaillancesActuelles >= 1
+                        ? client_1.StatutMembreGroupe.EXCLU
+                        : client_1.StatutMembreGroupe.DEFAILLANT;
+                    await this.prisma.membreTontineGroupe.update({
+                        where: { id: membre.id },
+                        data: {
+                            statut: nouveauStatut,
+                            ...(nouveauStatut === client_1.StatutMembreGroupe.EXCLU && {
+                                excluLe: new Date(),
+                                motifExclusion: '2 défaillances consécutives',
+                            }),
+                        },
+                    });
+                    await this.sms.envoyer(membre.utilisateur.telephone, `TontinePro: ⚠️ ${membre.utilisateur.nom}, vous n'avez pas cotisé dans "${tontine.nom}" aujourd'hui. ${nouveauStatut === client_1.StatutMembreGroupe.EXCLU ? 'Vous êtes exclu du groupe.' : 'Attention : 2ème défaillance = exclusion.'}`);
+                    defaillances++;
+                }
+            }
+        }
+        this.logger.log(`[CRON 7h30] ${defaillances} défaillance(s) traitée(s)`);
+    }
+    async facturerAbonnementsCollecteurs() {
+        this.logger.log('[CRON 1er/mois] Facturation abonnements collecteurs...');
+        const facturations = await this.prisma.facturationAgent.findMany({
+            where: { actif: true },
+            include: {
+                agent: { select: { id: true, telephone: true, nom: true } },
+            },
+        });
+        let succes = 0;
+        let echecs = 0;
+        for (const fact of facturations) {
+            try {
+                await this.kkiapay.initierPaiement({
+                    montant: fact.fraisMensuels,
+                    telephone: fact.agent.telephone,
+                    reference: `abonnement_${fact.agentId}_${new Date().toISOString().slice(0, 7)}`,
+                    description: `Abonnement TontinePro ${fact.plan} — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
+                });
+                await this.prisma.facturationAgent.update({
+                    where: { id: fact.id },
+                    data: {
+                        dernierPaiement: new Date(),
+                        prochainPaiement: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    },
+                });
+                await this.sms.envoyer(fact.agent.telephone, `TontinePro: ✅ Abonnement ${fact.plan} (${fact.fraisMensuels} FCFA) prélevé avec succès. Merci !`);
+                succes++;
+            }
+            catch {
+                await this.sms.envoyer(fact.agent.telephone, `TontinePro: ⚠️ Impossible de prélever votre abonnement ${fact.plan} (${fact.fraisMensuels} FCFA). Vérifiez votre solde Mobile Money.`);
+                echecs++;
+            }
+        }
+        this.logger.log(`[CRON Facturation] ${succes} succès / ${echecs} échecs`);
+    }
+    async regenererQRCodesExpires() {
+        const maintenant = new Date();
+        const expires = await this.prisma.qRCodeCollecteur.findMany({
+            where: { expireLe: { lt: maintenant }, actif: true },
+            select: { id: true, collecteurId: true },
+        });
+        for (const qr of expires) {
+            const { randomUUID } = await import('crypto');
+            await this.prisma.qRCodeCollecteur.update({
+                where: { id: qr.id },
+                data: {
+                    codeQR: randomUUID(),
+                    expireLe: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                },
+            });
+        }
+        if (expires.length > 0) {
+            this.logger.log(`[CRON 6h] ${expires.length} QR code(s) régénéré(s)`);
+        }
+    }
+    async verifierCoherenceComptable() {
+        this.logger.log('[CRON 0h30] Vérification cohérence comptable...');
+        const tontines = await this.prisma.tontine.findMany({
+            select: { id: true, nom: true, soldeActuel: true },
+        });
+        let anomalies = 0;
+        for (const tontine of tontines) {
+            const totalTransactions = await this.prisma.transaction.aggregate({
+                where: {
+                    tontineId: tontine.id,
+                    type: client_1.TypeTransaction.COTISATION,
+                    statut: client_1.StatutTransaction.SUCCES,
+                },
+                _sum: { montantNet: true },
+            });
+            const totalRetraits = await this.prisma.retrait.aggregate({
+                where: {
+                    utilisateur: { tontines: { some: { id: tontine.id } } },
+                    statut: 'EXECUTE',
+                },
+                _sum: { montant: true },
+            });
+            const soldeCalcule = (totalTransactions._sum.montantNet ?? 0) - (totalRetraits._sum.montant ?? 0);
+            const ecart = Math.abs(soldeCalcule - tontine.soldeActuel);
+            if (ecart > 1) {
+                this.logger.warn(`[Cohérence] Tontine ${tontine.nom}: solde BD=${tontine.soldeActuel} FCFA, calculé=${soldeCalcule} FCFA, écart=${ecart} FCFA`);
+                anomalies++;
+            }
+        }
+        this.logger.log(`[CRON 0h30] Cohérence vérifiée — ${anomalies} anomalie(s) détectée(s)`);
+    }
+    async declencherFacturationManuellement() {
+        await this.facturerAbonnementsCollecteurs();
+        return { succes: true, message: 'Facturation mensuelle déclenchée manuellement.' };
+    }
+    async declencherRappelsManuellement() {
+        await this.envoyerRappelsCotisation();
+        return { succes: true, message: 'Rappels cotisation déclenchés manuellement.' };
+    }
 };
 exports.CronService = CronService;
 __decorate([
@@ -285,10 +488,41 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], CronService.prototype, "expirerCreditsConsentementExpires", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 * * *', { name: 'rappels-cotisation' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "envoyerRappelsCotisation", null);
+__decorate([
+    (0, schedule_1.Cron)('30 7 * * *', { name: 'defaillances-groupe' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "detecterDefaillancesGroupe", null);
+__decorate([
+    (0, schedule_1.Cron)('0 9 1 * *', { name: 'facturation-mensuelle' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "facturerAbonnementsCollecteurs", null);
+__decorate([
+    (0, schedule_1.Cron)('0 6 * * *', { name: 'regenerer-qrcodes' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "regenererQRCodesExpires", null);
+__decorate([
+    (0, schedule_1.Cron)('30 0 * * *', { name: 'coherence-comptable' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "verifierCoherenceComptable", null);
 exports.CronService = CronService = CronService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         kkiapay_service_1.KkiapayService,
-        sms_service_1.SmsService])
+        sms_service_1.SmsService,
+        badges_service_1.BadgesService])
 ], CronService);
 //# sourceMappingURL=cron.service.js.map

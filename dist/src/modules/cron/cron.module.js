@@ -12,12 +12,13 @@ const cron_service_1 = require("./cron.service");
 const cron_controller_1 = require("./cron.controller");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
 const notifications_module_1 = require("../notifications/notifications.module");
+const badges_module_1 = require("../badges/badges.module");
 let CronModule = class CronModule {
 };
 exports.CronModule = CronModule;
 exports.CronModule = CronModule = __decorate([
     (0, common_1.Module)({
-        imports: [notifications_module_1.NotificationsModule],
+        imports: [notifications_module_1.NotificationsModule, badges_module_1.BadgesModule],
         controllers: [cron_controller_1.CronController],
         providers: [cron_service_1.CronService, kkiapay_service_1.KkiapayService],
         exports: [cron_service_1.CronService],

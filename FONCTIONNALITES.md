@@ -130,73 +130,110 @@
 ## PHASE 4 — MICRO-CRÉDIT
 
 ### 4.1 Module MicroCrédit
-• Vérifier éligibilité (score ≥ 60)
-• Demander un micro-crédit (avec plafond selon score)
-• Consentement client avec smartphone (PIN)
-• Consentement client sans smartphone (SMS → 1 OUI / 2 NON)
-• Annulation automatique si pas de réponse après 30min
-• Admin/Agent : valider et décaisser le crédit
-• Voir ses micro-crédits actifs
-• Admin : voir tous les crédits
+✅ GET  /micro-credits/mon-eligibilite (score, plafond, paiement/jour)
+✅ POST /micro-credits/demander (éligibilité + plafond + calculs BUSINESS)
+✅ POST /micro-credits/consentement-sms (webhook Africa's Talking)
+✅ POST /micro-credits/:id/confirmer-pin (PIN bcrypt → consentement)
+✅ GET  /micro-credits/en-attente (Admin — consentementObtenu=true)
+✅ PUT  /micro-credits/:id/valider (Admin — vérif. consentement + KKiaPay)
+✅ PUT  /micro-credits/:id/refuser (Admin + motif + SMS client)
+✅ GET  /micro-credits/mes-credits
+✅ GET  /micro-credits/:id/remboursements
 
-### 4.2 Module Remboursements
-• Prélèvement journalier automatique (cron 7h)
-• Voir l'historique de remboursements
-• Crédit marqué TERMINE quand soldé
-• Crédit marqué EN_DEFAUT si retards répétés
+Calculs validés avec BUSINESS.constants :
+✅ montantTotal = principal × 1.10 (10 000 → 11 000 FCFA)
+✅ paiementJournalier = ceil(11000/30) = 367 FCFA/jour
+✅ Score 75 → plafond 25 000 FCFA (PLAFONDS_MICRO_CREDIT.SCORE_70_80)
+✅ Statuts ajoutés : REFUSE + EXPIRE (migration 20260507220440)
+
+### 4.2 Module Remboursements + Cron
+✅ Cron 7h — prélèvement journalier (KKiaPay, SMS client, SMS collecteur)
+✅ Crédit TERMINÉ quand montantRestant ≤ 0
+✅ Crédit EN_DEFAUT après 3 prélèvements consécutifs échoués
+✅ Cron 30min — expiration consentement SMS (30 min)
+✅ POST /cron/remboursements (déclenchement manuel Admin)
+
+### 4.3 Cron Scoring Nocturne (minuit)
+✅ Calcul score : (tauxRégularité×40) + (ancienneté×2 max20) + (remboursement×30) + (bonus×10)
+✅ Mise à jour ScoreCredit en base (upsert)
+✅ Si score ≥ 70 → génération DossierPADME automatique (si pas de dossier récent)
+✅ Notification SMS client PADME généré
+✅ POST /cron/scoring (déclenchement manuel Admin + par clientId)
 
 ---
 
 ## PHASE 5 — ANALYTIQUE
 
 ### 5.1 Module Score Crédit
-• Calcul score (régularité 40% + ancienneté 20% + remboursement 30% + bonus 10%)
-• Recalcul nocturne automatique (cron minuit)
-• Voir son score et éligibilités
-• Historique évolution score
+✅ GET /score/mon-score (score + composantes détaillées + plafond)
+✅ GET /score/evolution (courbe 6 mois approximative)
+✅ GET /score/conseils (personnalisés selon niveau score)
+✅ GET /score/projection (mois estimés pour atteindre 60/70/90)
 
 ### 5.2 Module Dossier PADME
-• Génération automatique dossier PDF (score ≥ 70, cron minuit)
-• Admin : consulter les dossiers GENERES
-• Admin : valider un dossier (VALIDE_ADMIN)
-• Admin : soumettre à PADME (SOUMIS_PADME)
-• Client : voir le statut de son dossier
+✅ GET  /padme/mes-dossiers (Client — tous statuts)
+✅ GET  /padme/tous (Admin — filtre statut + pagination)
+✅ GET  /padme/:id (Admin — détail complet)
+✅ PUT  /padme/:id/valider (GENERE → VALIDE_ADMIN + JournalAudit)
+✅ PUT  /padme/:id/soumettre (VALIDE_ADMIN → SOUMIS_PADME + SMS client)
+✅ PUT  /padme/:id/resultat (ACCEPTE/REJETE + commission 3% + SMS)
+    Commission PADME: BUSINESS.calculerCommissionPADME(500k) = 15 000 FCFA ✅
 
-### 5.3 Module Analytics
-• KPIs Admin : total clients, total épargne, taux de défaillance
-• KPIs Agent : performance, commissions du mois
-• Évolution mensuelle des dépôts
-• Rapport exportable
+### 5.3 Module Analytics (Admin uniquement)
+✅ GET /analytics/kpis (volume, clients, collecteurs, revenus, taux remb.)
+✅ GET /analytics/scores-par-zone (score moyen + éligibles par zone)
+✅ GET /analytics/performance-collecteurs (classement par cotisations)
+✅ GET /analytics/taux-remboursement (global + par collecteur)
+✅ GET /analytics/evolution-revenus (6 mois — commissions/padme/abonnements)
+✅ GET /analytics/clients-eligibles (sans dossier en cours / sans crédit actif)
+
+### 5.4 Module Badges Gamification
+✅ Cron nocturne — attribution automatique après scoring :
+   - 1 mois régulier (taux≥0.5)  → BRONZE 🥉
+   - 3 mois réguliers (taux≥0.6) → ARGENT 🥈
+   - 6 mois réguliers (taux≥0.7) → OR 🥇
+   - 12 mois réguliers (taux≥0.8) → DIAMANT 💎
+✅ SMS client à chaque nouveau badge
+✅ GET /badges/mes-badges (badge actuel + historique)
+✅ GET /badges/classement (top 10 épargnants avec badge + zone)
 
 ---
 
 ## PHASE 6 — SUPPORT
 
 ### 6.1 Module Litiges
-• Ouvrir un litige sur une transaction
-• Admin : examiner un litige
-• Admin : résoudre/rejeter un litige
-• Voir ses litiges (client)
+✅ POST /litiges (client — ouvrir un litige sur une transaction)
+✅ GET  /litiges/mes-litiges (client — voir ses litiges)
+✅ GET  /litiges/:id (client/admin — détail d'un litige)
+✅ GET  /litiges/en-cours/liste (Admin/Superviseur — litiges ouverts + EN_EXAMEN)
+✅ PUT  /litiges/:id/examiner (Admin — prise en charge + SMS client)
+✅ PUT  /litiges/:id/resoudre (Admin — résolution + SMS client)
+✅ PUT  /litiges/:id/rejeter (Admin — rejet + SMS client)
+✅ Protection doublon (litige déjà ouvert → 400)
 
 ### 6.2 Module Notifications
-• Notification push Firebase (PUSH)
-• Notification SMS Twilio (SMS)
-• Notification WhatsApp Business (WHATSAPP)
-• Marquer notification comme lue
-• Voir ses notifications non lues
+✅ PushService (Firebase FCM — envoi simple + multi-tokens)
+✅ WhatsappService (WhatsApp Business API — Graph API v18)
+✅ NotificationsService centralisé (SMS + PUSH + WHATSAPP)
+✅ POST /notifications/token-push (enregistrement token FCM — $executeRaw)
+✅ Mode gracieux sans credentials (simulation en logs)
 
 ### 6.3 Module Badges Gamification
-• Attribuer badge BRONZE (1er mois régulier)
-• Attribuer badge ARGENT (3 mois réguliers)
-• Attribuer badge OR (6 mois réguliers)
-• Attribuer badge DIAMANT (12 mois + crédit remboursé)
-• Voir ses badges
+✅ Attribuer badge BRONZE (1er mois régulier — taux≥0.5)
+✅ Attribuer badge ARGENT (3 mois réguliers — taux≥0.6)
+✅ Attribuer badge OR (6 mois réguliers — taux≥0.7)
+✅ Attribuer badge DIAMANT (12 mois réguliers — taux≥0.8)
+✅ Voir ses badges (GET /badges/mes-badges)
+✅ Classement (GET /badges/classement)
 
 ### 6.4 Cron Jobs restants
-• Rappels cotisation J-3, J-1, Jour J (cron 8h)
-• Détection défaillances groupe (cron 7h)
-• Vérification cohérence comptable (cron minuit)
-• Nettoyage OTP expirés (cron minuit)
+✅ Rappels cotisation J-3, J-1, Jour J (cron 8h) — SMS membres tontine
+✅ Détection défaillances groupe (cron 7h30) — caution + DEFAILLANT/EXCLU + SMS
+✅ Facturation mensuelle collecteurs (cron 1er du mois 9h) — KKiaPay + SMS
+✅ Régénération QR codes expirés (cron 6h)
+✅ Vérification cohérence comptable (cron 0h30) — détection écarts
+✅ Nettoyage OTP expirés (cron minuit) — Phase 1
+✅ Déclenchement manuel : POST /cron/facturation, POST /cron/rappels
 
 ---
 

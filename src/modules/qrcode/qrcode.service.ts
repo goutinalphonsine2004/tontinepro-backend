@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const DUREE_QR_JOURS = 30;
@@ -25,8 +25,8 @@ export class QrcodeService {
       const expireLe = new Date(Date.now() + DUREE_QR_JOURS * 24 * 60 * 60 * 1000);
       qr = await this.prisma.qRCodeCollecteur.upsert({
         where: { collecteurId: utilisateurId },
-        create: { collecteurId: utilisateurId, codeQR: uuidv4(), expireLe, actif: true },
-        update: { codeQR: uuidv4(), expireLe, actif: true },
+        create: { collecteurId: utilisateurId, codeQR: randomUUID(), expireLe, actif: true },
+        update: { codeQR: randomUUID(), expireLe, actif: true },
       });
     }
 
@@ -71,8 +71,8 @@ export class QrcodeService {
     const expireLe = new Date(Date.now() + DUREE_QR_JOURS * 24 * 60 * 60 * 1000);
     const qr = await this.prisma.qRCodeCollecteur.upsert({
       where: { collecteurId: agentId },
-      create: { collecteurId: agentId, codeQR: uuidv4(), expireLe, actif: true },
-      update: { codeQR: uuidv4(), expireLe, actif: true },
+      create: { collecteurId: agentId, codeQR: randomUUID(), expireLe, actif: true },
+      update: { codeQR: randomUUID(), expireLe, actif: true },
     });
 
     return { succes: true, message: `QR code régénéré pour ${agent.nom}.`, donnees: qr };
