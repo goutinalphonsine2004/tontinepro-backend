@@ -151,7 +151,7 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                 ]
                 : []),
         ]);
-        await this.sms.envoyer(transaction.utilisateur.telephone, `TontinePro: Cotisation de ${transaction.montant} FCFA reçue ✅. Frais: ${fraisPlateforme} FCFA. Net crédité: ${montantNet} FCFA.`);
+        await this.sms.envoyer(transaction.utilisateur.telephone, `TontineBénin: Cotisation de ${transaction.montant} FCFA reçue ✅. Frais: ${fraisPlateforme} FCFA. Net crédité: ${montantNet} FCFA.`);
         this.logger.log(`Cotisation traitée: ${transaction.montant} FCFA pour ${transaction.utilisateur.nom}`);
     }
     async historique(utilisateurId) {

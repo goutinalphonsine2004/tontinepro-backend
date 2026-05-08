@@ -41,7 +41,7 @@ let AnalyticsService = class AnalyticsService {
             (abonnements._sum.fraisMensuels ?? 0);
         return {
             succes: true,
-            message: 'KPIs TontinePro.',
+            message: 'KPIs TontineBénin.',
             donnees: {
                 volumeTotal: volumeTotal._sum.montant ?? 0,
                 totalClients,

@@ -19,8 +19,9 @@ async function bootstrap() {
     app.useGlobalFilters(new http_exception_filter_1.HttpExceptionFilter());
     app.enableCors();
     const port = process.env.PORT ?? 3000;
-    await app.listen(port);
-    console.log(`TontinePro API démarrée sur le port ${port}`);
+    await app.listen(port, '0.0.0.0');
+    console.log(`TontineBénin API démarrée sur le port ${port} (0.0.0.0)`);
+    console.log(`Téléphone physique → http://192.168.1.104:${port}`);
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

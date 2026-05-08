@@ -73,7 +73,7 @@ export class CommissionsService {
       montant: dto.montant,
       telephone,
       reference: `comm_${utilisateurId}_${Date.now()}`,
-      motif: 'Retrait commission TontinePro',
+      motif: 'Retrait commission TontineBénin',
     });
 
     if (!transfert.succes) {

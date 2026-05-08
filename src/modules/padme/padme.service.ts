@@ -105,7 +105,7 @@ export class PadmeService {
 
     await this.sms.envoyer(
       dossier.client.telephone,
-      `TontinePro: Votre dossier PADME a été soumis. Vous serez contacté par PADME sous 72h. Score: ${dossier.scoreAuMoment}/100.`,
+      `TontineBénin: Votre dossier PADME a été soumis. Vous serez contacté par PADME sous 72h. Score: ${dossier.scoreAuMoment}/100.`,
     );
 
     return { succes: true, message: 'Dossier soumis à PADME. Client notifié.', donnees: maj };
@@ -150,18 +150,18 @@ export class PadmeService {
 
       await this.sms.envoyer(
         dossier.client.telephone,
-        `TontinePro: 🎉 Félicitations ${dossier.client.nom} ! PADME a accepté votre dossier. Montant accordé: ${dto.montantAccorde.toLocaleString('fr-FR')} FCFA. Vous serez contacté prochainement.`,
+        `TontineBénin: 🎉 Félicitations ${dossier.client.nom} ! PADME a accepté votre dossier. Montant accordé: ${dto.montantAccorde.toLocaleString('fr-FR')} FCFA. Vous serez contacté prochainement.`,
       );
     } else if (dto.statut === 'REJETE') {
       await this.sms.envoyer(
         dossier.client.telephone,
-        `TontinePro: Votre dossier PADME n'a pas été retenu. ${dto.motif ? `Motif: ${dto.motif}.` : ''} Continuez à épargner pour renforcer votre dossier.`,
+        `TontineBénin: Votre dossier PADME n'a pas été retenu. ${dto.motif ? `Motif: ${dto.motif}.` : ''} Continuez à épargner pour renforcer votre dossier.`,
       );
     }
 
     return {
       succes: true,
-      message: `Dossier PADME ${dto.statut}.${dto.montantAccorde ? ` Commission TontinePro: ${BUSINESS.calculerCommissionPADME(dto.montantAccorde)} FCFA` : ''}`,
+      message: `Dossier PADME ${dto.statut}.${dto.montantAccorde ? ` Commission TontineBénin: ${BUSINESS.calculerCommissionPADME(dto.montantAccorde)} FCFA` : ''}`,
       donnees: maj,
     };
   }

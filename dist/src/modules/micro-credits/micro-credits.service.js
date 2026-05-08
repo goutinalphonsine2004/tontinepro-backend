@@ -152,7 +152,7 @@ let MicroCreditsService = class MicroCreditsService {
         });
         if (methode === 'SMS') {
             const telephone = dto.telephone ?? client.telephone;
-            await this.sms.envoyer(telephone, `TontinePro: Votre collecteur vous propose un micro-crédit de ${dto.montantPrincipal} FCFA (remb. ${paiementJournalier} FCFA/jour pendant 30j). Répondez 1 pour ACCEPTER ou 2 pour REFUSER. Offre valable ${DUREE_CONSENTEMENT_MIN} minutes.`);
+            await this.sms.envoyer(telephone, `TontineBénin: Votre collecteur vous propose un micro-crédit de ${dto.montantPrincipal} FCFA (remb. ${paiementJournalier} FCFA/jour pendant 30j). Répondez 1 pour ACCEPTER ou 2 pour REFUSER. Offre valable ${DUREE_CONSENTEMENT_MIN} minutes.`);
         }
         return {
             succes: true,
@@ -202,7 +202,7 @@ let MicroCreditsService = class MicroCreditsService {
                 where: { id: credit.id },
                 data: { consentementObtenu: true, consentementObtenuLe: new Date() },
             });
-            await this.sms.envoyer(telephone, 'TontinePro: Consentement reçu ✅. Votre dossier est transmis à l\'administration pour validation.');
+            await this.sms.envoyer(telephone, 'TontineBénin: Consentement reçu ✅. Votre dossier est transmis à l\'administration pour validation.');
             return { succes: true, message: 'Consentement enregistré.' };
         }
         if (reponse === '2') {
@@ -210,7 +210,7 @@ let MicroCreditsService = class MicroCreditsService {
                 where: { id: credit.id },
                 data: { statut: client_1.StatutCredit.REFUSE },
             });
-            await this.sms.envoyer(telephone, 'TontinePro: Vous avez refusé le micro-crédit. Aucun prélèvement ne sera effectué.');
+            await this.sms.envoyer(telephone, 'TontineBénin: Vous avez refusé le micro-crédit. Aucun prélèvement ne sera effectué.');
             return { succes: true, message: 'Crédit refusé par le client.' };
         }
         return { succes: true, message: 'Réponse non reconnue — ignorée' };
@@ -279,7 +279,7 @@ let MicroCreditsService = class MicroCreditsService {
             montant: credit.montantPrincipal,
             telephone: credit.client.telephone,
             reference: `credit_${creditId}`,
-            motif: `Micro-crédit TontinePro — ${credit.montantPrincipal} FCFA`,
+            motif: `Micro-crédit TontineBénin — ${credit.montantPrincipal} FCFA`,
         });
         if (!transfert.succes) {
             throw new common_1.BadRequestException({ message: 'Échec du décaissement KKiaPay', code: 'DECAISSEMENT_ECHOUE' });
@@ -288,7 +288,7 @@ let MicroCreditsService = class MicroCreditsService {
             where: { id: creditId },
             data: { statut: client_1.StatutCredit.ACTIF, decaisseLE: new Date() },
         });
-        await this.sms.envoyer(credit.client.telephone, `TontinePro: Votre micro-crédit de ${credit.montantPrincipal} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalier} FCFA/jour pendant 30 jours.`);
+        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Votre micro-crédit de ${credit.montantPrincipal} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalier} FCFA/jour pendant 30 jours.`);
         return {
             succes: true,
             message: `Micro-crédit de ${credit.montantPrincipal} FCFA décaissé vers ${credit.client.nom}.`,
@@ -309,7 +309,7 @@ let MicroCreditsService = class MicroCreditsService {
             where: { id: creditId },
             data: { statut: client_1.StatutCredit.REFUSE },
         });
-        await this.sms.envoyer(credit.client.telephone, `TontinePro: Votre demande de micro-crédit a été refusée. Motif: ${dto.motif}. Continuez à épargner pour améliorer votre score.`);
+        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Votre demande de micro-crédit a été refusée. Motif: ${dto.motif}. Continuez à épargner pour améliorer votre score.`);
         return { succes: true, message: 'Micro-crédit refusé. Client notifié.' };
     }
     async mesCredits(clientId) {

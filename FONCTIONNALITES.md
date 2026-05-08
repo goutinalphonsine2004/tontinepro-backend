@@ -1,4 +1,4 @@
-# FONCTIONNALITES.md — TontinePro
+# FONCTIONNALITES.md — TontineBénin
 > Marquer ✅ après chaque test curl réussi. Ne jamais marquer si le test échoue.
 
 ---

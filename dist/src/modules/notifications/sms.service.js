@@ -31,7 +31,7 @@ let SmsService = SmsService_1 = class SmsService {
             await this.sms.send({
                 to: [telephone],
                 message,
-                from: this.config.get('AT_SENDER', 'TontinePro'),
+                from: this.config.get('AT_SENDER', 'TontineBénin'),
             });
             this.logger.log(`SMS envoyé à ${telephone}`);
         }

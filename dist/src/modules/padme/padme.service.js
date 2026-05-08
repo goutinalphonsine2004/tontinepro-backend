@@ -98,7 +98,7 @@ let PadmeService = class PadmeService {
             data: { statut: client_1.StatutDossierPADME.SOUMIS_PADME, soumisLe: new Date() },
         });
         await this.journaliser(adminId, 'PADME_SOUMIS', `Dossier ${dossierId} soumis à PADME`);
-        await this.sms.envoyer(dossier.client.telephone, `TontinePro: Votre dossier PADME a été soumis. Vous serez contacté par PADME sous 72h. Score: ${dossier.scoreAuMoment}/100.`);
+        await this.sms.envoyer(dossier.client.telephone, `TontineBénin: Votre dossier PADME a été soumis. Vous serez contacté par PADME sous 72h. Score: ${dossier.scoreAuMoment}/100.`);
         return { succes: true, message: 'Dossier soumis à PADME. Client notifié.', donnees: maj };
     }
     async resultat(dossierId, adminId, dto) {
@@ -129,14 +129,14 @@ let PadmeService = class PadmeService {
                     type: 'PADME',
                 },
             }).catch(() => { });
-            await this.sms.envoyer(dossier.client.telephone, `TontinePro: 🎉 Félicitations ${dossier.client.nom} ! PADME a accepté votre dossier. Montant accordé: ${dto.montantAccorde.toLocaleString('fr-FR')} FCFA. Vous serez contacté prochainement.`);
+            await this.sms.envoyer(dossier.client.telephone, `TontineBénin: 🎉 Félicitations ${dossier.client.nom} ! PADME a accepté votre dossier. Montant accordé: ${dto.montantAccorde.toLocaleString('fr-FR')} FCFA. Vous serez contacté prochainement.`);
         }
         else if (dto.statut === 'REJETE') {
-            await this.sms.envoyer(dossier.client.telephone, `TontinePro: Votre dossier PADME n'a pas été retenu. ${dto.motif ? `Motif: ${dto.motif}.` : ''} Continuez à épargner pour renforcer votre dossier.`);
+            await this.sms.envoyer(dossier.client.telephone, `TontineBénin: Votre dossier PADME n'a pas été retenu. ${dto.motif ? `Motif: ${dto.motif}.` : ''} Continuez à épargner pour renforcer votre dossier.`);
         }
         return {
             succes: true,
-            message: `Dossier PADME ${dto.statut}.${dto.montantAccorde ? ` Commission TontinePro: ${business_constants_1.BUSINESS.calculerCommissionPADME(dto.montantAccorde)} FCFA` : ''}`,
+            message: `Dossier PADME ${dto.statut}.${dto.montantAccorde ? ` Commission TontineBénin: ${business_constants_1.BUSINESS.calculerCommissionPADME(dto.montantAccorde)} FCFA` : ''}`,
             donnees: maj,
         };
     }

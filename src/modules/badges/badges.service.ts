@@ -67,7 +67,7 @@ export class BadgesService {
 
     await this.sms.envoyer(
       client.telephone,
-      `TontinePro: 🎉 Félicitations ${client.nom} ! Vous venez d'obtenir le badge ${badgeEligible.label} TontinePro. Continuez à épargner régulièrement !`,
+      `TontineBénin: 🎉 Félicitations ${client.nom} ! Vous venez d'obtenir le badge ${badgeEligible.label} TontineBénin. Continuez à épargner régulièrement !`,
     );
   }
 

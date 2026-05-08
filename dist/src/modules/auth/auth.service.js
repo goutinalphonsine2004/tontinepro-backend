@@ -77,11 +77,13 @@ let AuthService = class AuthService {
             data: { telephone: dto.telephone, nom: dto.nom, role, statut: client_1.StatutCompte.EN_ATTENTE },
         });
         const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, 'INSCRIPTION');
-        await this.sms.envoyer(dto.telephone, `TontinePro: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`);
+        await this.sms.envoyer(dto.telephone, `TontineBénin: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`);
         const donnees = { otpId, telephone: dto.telephone };
-        if (this.config.get('NODE_ENV') === 'development')
-            donnees.otp = code;
-        return { succes: true, message: 'Inscription initiée. Code OTP envoyé par SMS.', donnees };
+        if (this.config.get('NODE_ENV') === 'development') {
+            donnees.otpTest = code;
+            donnees.messageTest = '⚠️ Mode test - En production ce code ne sera pas visible';
+        }
+        return { succes: true, message: 'Code OTP envoyé par SMS', donnees };
     }
     async verifierOtp(dto) {
         const otp = await this.prisma.codeOTP.findFirst({

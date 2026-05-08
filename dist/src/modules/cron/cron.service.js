@@ -48,7 +48,7 @@ let CronService = CronService_1 = class CronService {
                 montant: credit.paiementJournalier,
                 telephone: credit.client.telephone,
                 reference: `remb_${credit.id}_${Date.now()}`,
-                description: 'Remboursement micro-crédit TontinePro',
+                description: 'Remboursement micro-crédit TontineBénin',
             });
             const montantRestant = Math.max(0, credit.montantRestant - credit.paiementJournalier);
             const joursPayes = credit.joursPayes + 1;
@@ -73,11 +73,11 @@ let CronService = CronService_1 = class CronService {
                 }),
             ]);
             if (termine) {
-                await this.sms.envoyer(credit.client.telephone, `TontinePro: 🎉 Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipal} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`);
+                await this.sms.envoyer(credit.client.telephone, `TontineBénin: 🎉 Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipal} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`);
                 this.logger.log(`[CRON] Crédit TERMINÉ: ${credit.id} — ${credit.client.nom}`);
             }
             else {
-                await this.sms.envoyer(credit.client.telephone, `TontinePro: Prélèvement ${credit.paiementJournalier} FCFA effectué ✅. Restant: ${montantRestant} FCFA (${joursPayes}/${credit.totalJours} jours).`);
+                await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement ${credit.paiementJournalier} FCFA effectué ✅. Restant: ${montantRestant} FCFA (${joursPayes}/${credit.totalJours} jours).`);
             }
         }
         catch {
@@ -101,14 +101,14 @@ let CronService = CronService_1 = class CronService {
             });
             this.logger.warn(`[CRON] Crédit EN_DEFAUT: ${credit.id} — ${credit.client.nom}`);
         }
-        await this.sms.envoyer(credit.client.telephone, `TontinePro: ⚠️ Prélèvement échoué. Assurez-vous d'avoir ${credit.paiementJournalier} FCFA sur votre compte Mobile Money.`);
+        await this.sms.envoyer(credit.client.telephone, `TontineBénin: ⚠️ Prélèvement échoué. Assurez-vous d'avoir ${credit.paiementJournalier} FCFA sur votre compte Mobile Money.`);
         if (credit.client.collecteurId) {
             const collecteur = await this.prisma.utilisateur.findUnique({
                 where: { id: credit.client.collecteurId },
                 select: { telephone: true },
             });
             if (collecteur) {
-                await this.sms.envoyer(collecteur.telephone, `TontinePro: Alerte — prélèvement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipal} FCFA.`);
+                await this.sms.envoyer(collecteur.telephone, `TontineBénin: Alerte — prélèvement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipal} FCFA.`);
             }
         }
     }
@@ -226,7 +226,7 @@ let CronService = CronService_1 = class CronService {
             },
         });
         if (client) {
-            await this.sms.envoyer(client.telephone, `TontinePro: 🎉 Félicitations ! Votre dossier PADME a été généré automatiquement (score: ${score}/100). L'administration va vous contacter prochainement.`);
+            await this.sms.envoyer(client.telephone, `TontineBénin: 🎉 Félicitations ! Votre dossier PADME a été généré automatiquement (score: ${score}/100). L'administration va vous contacter prochainement.`);
         }
         this.logger.log(`[CRON PADME] Dossier généré pour client ${clientId} — score ${score}`);
     }
@@ -283,13 +283,13 @@ let CronService = CronService_1 = class CronService {
             const joursRestants = Math.ceil((tontine.dateDeverrouillage.getTime() - maintenant.getTime()) / (24 * 60 * 60 * 1000));
             let message = null;
             if (joursRestants === 3) {
-                message = `TontinePro: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque dans 3 jours. Pensez à cotiser !`;
+                message = `TontineBénin: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque dans 3 jours. Pensez à cotiser !`;
             }
             else if (joursRestants === 1) {
-                message = `TontinePro: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque demain ! Dernière chance de cotiser.`;
+                message = `TontineBénin: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque demain ! Dernière chance de cotiser.`;
             }
             else if (joursRestants === 0) {
-                message = `TontinePro: 🎉 Aujourd'hui est le jour J pour votre tontine "${tontine.nom}" ! Cotisez maintenant.`;
+                message = `TontineBénin: 🎉 Aujourd'hui est le jour J pour votre tontine "${tontine.nom}" ! Cotisez maintenant.`;
             }
             if (message) {
                 const destinataires = [
@@ -361,7 +361,7 @@ let CronService = CronService_1 = class CronService {
                             }),
                         },
                     });
-                    await this.sms.envoyer(membre.utilisateur.telephone, `TontinePro: ⚠️ ${membre.utilisateur.nom}, vous n'avez pas cotisé dans "${tontine.nom}" aujourd'hui. ${nouveauStatut === client_1.StatutMembreGroupe.EXCLU ? 'Vous êtes exclu du groupe.' : 'Attention : 2ème défaillance = exclusion.'}`);
+                    await this.sms.envoyer(membre.utilisateur.telephone, `TontineBénin: ⚠️ ${membre.utilisateur.nom}, vous n'avez pas cotisé dans "${tontine.nom}" aujourd'hui. ${nouveauStatut === client_1.StatutMembreGroupe.EXCLU ? 'Vous êtes exclu du groupe.' : 'Attention : 2ème défaillance = exclusion.'}`);
                     defaillances++;
                 }
             }
@@ -384,7 +384,7 @@ let CronService = CronService_1 = class CronService {
                     montant: fact.fraisMensuels,
                     telephone: fact.agent.telephone,
                     reference: `abonnement_${fact.agentId}_${new Date().toISOString().slice(0, 7)}`,
-                    description: `Abonnement TontinePro ${fact.plan} — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
+                    description: `Abonnement TontineBénin ${fact.plan} — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
                 });
                 await this.prisma.facturationAgent.update({
                     where: { id: fact.id },
@@ -393,11 +393,11 @@ let CronService = CronService_1 = class CronService {
                         prochainPaiement: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                     },
                 });
-                await this.sms.envoyer(fact.agent.telephone, `TontinePro: ✅ Abonnement ${fact.plan} (${fact.fraisMensuels} FCFA) prélevé avec succès. Merci !`);
+                await this.sms.envoyer(fact.agent.telephone, `TontineBénin: ✅ Abonnement ${fact.plan} (${fact.fraisMensuels} FCFA) prélevé avec succès. Merci !`);
                 succes++;
             }
             catch {
-                await this.sms.envoyer(fact.agent.telephone, `TontinePro: ⚠️ Impossible de prélever votre abonnement ${fact.plan} (${fact.fraisMensuels} FCFA). Vérifiez votre solde Mobile Money.`);
+                await this.sms.envoyer(fact.agent.telephone, `TontineBénin: ⚠️ Impossible de prélever votre abonnement ${fact.plan} (${fact.fraisMensuels} FCFA). Vérifiez votre solde Mobile Money.`);
                 echecs++;
             }
         }

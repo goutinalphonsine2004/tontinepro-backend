@@ -3,7 +3,7 @@ import { IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validat
 export class ConnexionDto {
   @IsString()
   @IsNotEmpty({ message: 'Le numéro de téléphone est obligatoire' })
-  @Matches(/^\+229\d{8,10}$/, { message: 'Format téléphone invalide' })
+  @Matches(/^\+229\d{8,10}$/, { message: 'Numéro béninois invalide (ex: +2290141193597)' })
   telephone!: string;
 
   @IsString()

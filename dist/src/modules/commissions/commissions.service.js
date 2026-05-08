@@ -78,7 +78,7 @@ let CommissionsService = class CommissionsService {
             montant: dto.montant,
             telephone,
             reference: `comm_${utilisateurId}_${Date.now()}`,
-            motif: 'Retrait commission TontinePro',
+            motif: 'Retrait commission TontineBénin',
         });
         if (!transfert.succes) {
             throw new common_1.BadRequestException({ message: 'Échec du transfert', code: 'TRANSFERT_ECHOUE' });

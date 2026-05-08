@@ -106,7 +106,7 @@ export class LitigesService {
 
     await this.sms.envoyer(
       litige.client.telephone,
-      `TontinePro: Votre litige est en cours d'examen par notre équipe. Nous reviendrons vers vous sous 48h.`,
+      `TontineBénin: Votre litige est en cours d'examen par notre équipe. Nous reviendrons vers vous sous 48h.`,
     );
 
     return { succes: true, message: 'Litige pris en charge', donnees: { litige: litigeMaj } };
@@ -134,7 +134,7 @@ export class LitigesService {
 
     await this.sms.envoyer(
       litige.client.telephone,
-      `TontinePro: ✅ Votre litige a été résolu. ${dto.resolution}`,
+      `TontineBénin: ✅ Votre litige a été résolu. ${dto.resolution}`,
     );
 
     return { succes: true, message: 'Litige résolu avec succès', donnees: { litige: litigeMaj } };
@@ -162,7 +162,7 @@ export class LitigesService {
 
     await this.sms.envoyer(
       litige.client.telephone,
-      `TontinePro: Votre litige a été rejeté. Motif: ${dto.motifRejet}. Pour toute question, contactez notre support.`,
+      `TontineBénin: Votre litige a été rejeté. Motif: ${dto.motifRejet}. Pour toute question, contactez notre support.`,
     );
 
     return { succes: true, message: 'Litige rejeté', donnees: { litige: litigeMaj } };

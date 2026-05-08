@@ -6,7 +6,7 @@ export class AppController {
   health() {
     return {
       succes: true,
-      message: 'TontinePro API opérationnelle',
+      message: 'TontineBénin API opérationnelle',
       donnees: {
         statut: 'ok',
         version: '1.0.0',

@@ -22,7 +22,7 @@ export class SmsService {
       await this.sms.send({
         to: [telephone],
         message,
-        from: this.config.get<string>('AT_SENDER', 'TontinePro'),
+        from: this.config.get<string>('AT_SENDER', 'TontineBénin'),
       });
       this.logger.log(`SMS envoyé à ${telephone}`);
     } catch (error) {

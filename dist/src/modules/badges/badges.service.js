@@ -61,7 +61,7 @@ let BadgesService = class BadgesService {
         await this.prisma.badgeClient.create({
             data: { clientId, niveau: badgeEligible.niveau },
         });
-        await this.sms.envoyer(client.telephone, `TontinePro: 🎉 Félicitations ${client.nom} ! Vous venez d'obtenir le badge ${badgeEligible.label} TontinePro. Continuez à épargner régulièrement !`);
+        await this.sms.envoyer(client.telephone, `TontineBénin: 🎉 Félicitations ${client.nom} ! Vous venez d'obtenir le badge ${badgeEligible.label} TontineBénin. Continuez à épargner régulièrement !`);
     }
     async attribuerBadgesATous() {
         const clients = await this.prisma.utilisateur.findMany({

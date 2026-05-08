@@ -135,7 +135,7 @@ export class MicroCreditsService {
       const telephone = dto.telephone ?? client.telephone;
       await this.sms.envoyer(
         telephone,
-        `TontinePro: Votre collecteur vous propose un micro-crédit de ${dto.montantPrincipal} FCFA (remb. ${paiementJournalier} FCFA/jour pendant 30j). Répondez 1 pour ACCEPTER ou 2 pour REFUSER. Offre valable ${DUREE_CONSENTEMENT_MIN} minutes.`,
+        `TontineBénin: Votre collecteur vous propose un micro-crédit de ${dto.montantPrincipal} FCFA (remb. ${paiementJournalier} FCFA/jour pendant 30j). Répondez 1 pour ACCEPTER ou 2 pour REFUSER. Offre valable ${DUREE_CONSENTEMENT_MIN} minutes.`,
       );
     }
 
@@ -202,7 +202,7 @@ export class MicroCreditsService {
       });
       await this.sms.envoyer(
         telephone,
-        'TontinePro: Consentement reçu ✅. Votre dossier est transmis à l\'administration pour validation.',
+        'TontineBénin: Consentement reçu ✅. Votre dossier est transmis à l\'administration pour validation.',
       );
       return { succes: true, message: 'Consentement enregistré.' };
     }
@@ -212,7 +212,7 @@ export class MicroCreditsService {
         where: { id: credit.id },
         data: { statut: StatutCredit.REFUSE },
       });
-      await this.sms.envoyer(telephone, 'TontinePro: Vous avez refusé le micro-crédit. Aucun prélèvement ne sera effectué.');
+      await this.sms.envoyer(telephone, 'TontineBénin: Vous avez refusé le micro-crédit. Aucun prélèvement ne sera effectué.');
       return { succes: true, message: 'Crédit refusé par le client.' };
     }
 
@@ -291,7 +291,7 @@ export class MicroCreditsService {
       montant: credit.montantPrincipal,
       telephone: credit.client.telephone,
       reference: `credit_${creditId}`,
-      motif: `Micro-crédit TontinePro — ${credit.montantPrincipal} FCFA`,
+      motif: `Micro-crédit TontineBénin — ${credit.montantPrincipal} FCFA`,
     });
 
     if (!transfert.succes) {
@@ -305,7 +305,7 @@ export class MicroCreditsService {
 
     await this.sms.envoyer(
       credit.client.telephone,
-      `TontinePro: Votre micro-crédit de ${credit.montantPrincipal} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalier} FCFA/jour pendant 30 jours.`,
+      `TontineBénin: Votre micro-crédit de ${credit.montantPrincipal} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalier} FCFA/jour pendant 30 jours.`,
     );
 
     return {
@@ -333,7 +333,7 @@ export class MicroCreditsService {
 
     await this.sms.envoyer(
       credit.client.telephone,
-      `TontinePro: Votre demande de micro-crédit a été refusée. Motif: ${dto.motif}. Continuez à épargner pour améliorer votre score.`,
+      `TontineBénin: Votre demande de micro-crédit a été refusée. Motif: ${dto.motif}. Continuez à épargner pour améliorer votre score.`,
     );
 
     return { succes: true, message: 'Micro-crédit refusé. Client notifié.' };

@@ -48,13 +48,16 @@ export class AuthService {
     const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, 'INSCRIPTION');
     await this.sms.envoyer(
       dto.telephone,
-      `TontinePro: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`,
+      `TontineBénin: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`,
     );
 
     const donnees: Record<string, unknown> = { otpId, telephone: dto.telephone };
-    if (this.config.get('NODE_ENV') === 'development') donnees.otp = code;
+    if (this.config.get('NODE_ENV') === 'development') {
+      donnees.otpTest = code;
+      donnees.messageTest = '⚠️ Mode test - En production ce code ne sera pas visible';
+    }
 
-    return { succes: true, message: 'Inscription initiée. Code OTP envoyé par SMS.', donnees };
+    return { succes: true, message: 'Code OTP envoyé par SMS', donnees };
   }
 
   // ─── Vérification OTP ─────────────────────────────────

@@ -40,7 +40,7 @@ export class AnalyticsService {
 
     return {
       succes: true,
-      message: 'KPIs TontinePro.',
+      message: 'KPIs TontineBénin.',
       donnees: {
         volumeTotal: volumeTotal._sum.montant ?? 0,
         totalClients,

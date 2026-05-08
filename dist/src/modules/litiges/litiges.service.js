@@ -105,7 +105,7 @@ let LitigesService = class LitigesService {
             where: { id: litigeId },
             data: { statut: client_1.StatutLitige.EN_EXAMEN, resoluPar: adminId },
         });
-        await this.sms.envoyer(litige.client.telephone, `TontinePro: Votre litige est en cours d'examen par notre équipe. Nous reviendrons vers vous sous 48h.`);
+        await this.sms.envoyer(litige.client.telephone, `TontineBénin: Votre litige est en cours d'examen par notre équipe. Nous reviendrons vers vous sous 48h.`);
         return { succes: true, message: 'Litige pris en charge', donnees: { litige: litigeMaj } };
     }
     async resoudre(litigeId, adminId, dto) {
@@ -127,7 +127,7 @@ let LitigesService = class LitigesService {
                 resoluLe: new Date(),
             },
         });
-        await this.sms.envoyer(litige.client.telephone, `TontinePro: ✅ Votre litige a été résolu. ${dto.resolution}`);
+        await this.sms.envoyer(litige.client.telephone, `TontineBénin: ✅ Votre litige a été résolu. ${dto.resolution}`);
         return { succes: true, message: 'Litige résolu avec succès', donnees: { litige: litigeMaj } };
     }
     async rejeter(litigeId, adminId, dto) {
@@ -149,7 +149,7 @@ let LitigesService = class LitigesService {
                 resoluLe: new Date(),
             },
         });
-        await this.sms.envoyer(litige.client.telephone, `TontinePro: Votre litige a été rejeté. Motif: ${dto.motifRejet}. Pour toute question, contactez notre support.`);
+        await this.sms.envoyer(litige.client.telephone, `TontineBénin: Votre litige a été rejeté. Motif: ${dto.motifRejet}. Pour toute question, contactez notre support.`);
         return { succes: true, message: 'Litige rejeté', donnees: { litige: litigeMaj } };
     }
     async detail(litigeId, userId, role) {
