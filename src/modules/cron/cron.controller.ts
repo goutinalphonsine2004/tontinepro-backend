@@ -28,6 +28,11 @@ export class CronController {
     return this.service.declencherRemboursementsManuellement();
   }
 
+  @Post('deblocage-pin')
+  deblocagePIN() {
+    return this.service.declencherDeblocagePINManuellement();
+  }
+
   @Post('facturation')
   facturation() {
     return this.service.declencherFacturationManuellement();

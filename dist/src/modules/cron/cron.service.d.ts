@@ -32,6 +32,11 @@ export declare class CronService {
         succes: boolean;
         message: string;
     }>;
+    debloquerPINAutomatiquement(): Promise<void>;
+    declencherDeblocagePINManuellement(): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
     envoyerRappelsCotisation(): Promise<void>;
     detecterDefaillancesGroupe(): Promise<void>;
     facturerAbonnementsCollecteurs(): Promise<void>;

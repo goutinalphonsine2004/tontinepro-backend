@@ -263,6 +263,28 @@ let CronService = CronService_1 = class CronService {
         await this.preleverRemboursementsJournaliers();
         return { succes: true, message: 'Prélèvements remboursements déclenchés manuellement.' };
     }
+    async debloquerPINAutomatiquement() {
+        this.logger.log('[CRON Horaire] Déblocage automatique PIN...');
+        const result = await this.prisma.utilisateur.updateMany({
+            where: {
+                bloqueLe: {
+                    lt: new Date(),
+                    not: null,
+                },
+            },
+            data: {
+                bloqueLe: null,
+                tentativesEchouees: 0,
+            },
+        });
+        if (result.count > 0) {
+            this.logger.log(`[CRON] ${result.count} PIN(s) débloqué(s) automatiquement`);
+        }
+    }
+    async declencherDeblocagePINManuellement() {
+        await this.debloquerPINAutomatiquement();
+        return { succes: true, message: 'Déblocage PIN déclenché manuellement.' };
+    }
     async envoyerRappelsCotisation() {
         this.logger.log('[CRON 8h] Rappels cotisation...');
         const maintenant = new Date();
@@ -488,6 +510,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], CronService.prototype, "expirerCreditsConsentementExpires", null);
+__decorate([
+    (0, schedule_1.Cron)('0 * * * *', { name: 'deblocage-auto-pin' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "debloquerPINAutomatiquement", null);
 __decorate([
     (0, schedule_1.Cron)('0 8 * * *', { name: 'rappels-cotisation' }),
     __metadata("design:type", Function),

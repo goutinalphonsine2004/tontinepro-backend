@@ -323,6 +323,34 @@ export class CronService {
   }
 
   // ─────────────────────────────────────────────────
+  // CRON HORAIRE — DÉBLOCAGE AUTOMATIQUE PIN
+  // ─────────────────────────────────────────────────
+  @Cron('0 * * * *', { name: 'deblocage-auto-pin' })
+  async debloquerPINAutomatiquement() {
+    this.logger.log('[CRON Horaire] Déblocage automatique PIN...');
+    const result = await this.prisma.utilisateur.updateMany({
+      where: {
+        bloqueLe: { 
+          lt: new Date(),
+          not: null,
+        },
+      },
+      data: {
+        bloqueLe: null,
+        tentativesEchouees: 0,
+      },
+    });
+    if (result.count > 0) {
+      this.logger.log(`[CRON] ${result.count} PIN(s) débloqué(s) automatiquement`);
+    }
+  }
+
+  async declencherDeblocagePINManuellement() {
+    await this.debloquerPINAutomatiquement();
+    return { succes: true, message: 'Déblocage PIN déclenché manuellement.' };
+  }
+
+  // ─────────────────────────────────────────────────
   // CRON 8H — RAPPELS COTISATION (J-3, J-1, JOUR J)
   // ─────────────────────────────────────────────────
   @Cron('0 8 * * *', { name: 'rappels-cotisation' })

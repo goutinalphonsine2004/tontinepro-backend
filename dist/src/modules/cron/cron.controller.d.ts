@@ -20,6 +20,10 @@ export declare class CronController {
         succes: boolean;
         message: string;
     }>;
+    deblocagePIN(): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
     facturation(): Promise<{
         succes: boolean;
         message: string;

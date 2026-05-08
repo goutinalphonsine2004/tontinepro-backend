@@ -39,6 +39,9 @@ let CronController = class CronController {
     remboursements() {
         return this.service.declencherRemboursementsManuellement();
     }
+    deblocagePIN() {
+        return this.service.declencherDeblocagePINManuellement();
+    }
     facturation() {
         return this.service.declencherFacturationManuellement();
     }
@@ -60,6 +63,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], CronController.prototype, "remboursements", null);
+__decorate([
+    (0, common_1.Post)('deblocage-pin'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CronController.prototype, "deblocagePIN", null);
 __decorate([
     (0, common_1.Post)('facturation'),
     __metadata("design:type", Function),
