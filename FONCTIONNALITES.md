@@ -83,37 +83,47 @@
 
 ## PHASE 3 — CŒUR MÉTIER
 
+### 3.0 KKiaPay Service
+✅ Vérification signature HMAC-SHA256 (webhook sécurisé)
+✅ initierPaiement() → sandbox URL simulée
+✅ initierTransfert() → transfert Mobile Money simulé
+✅ Mode sandbox configurable via KKIAPAY_SANDBOX=true
+
 ### 3.1 Module Tontines
-• Créer une tontine personnelle
-• Créer une tontine de groupe
-• Voir mes tontines
-• Voir le détail d'une tontine
-• Définir l'objectif et la politique de retrait
-• Rejoindre une tontine de groupe
-• Définir l'ordre de tirage (groupe)
-• Voir les membres d'une tontine groupe
+✅ POST /tontines (personnelle + groupe)
+✅ GET  /tontines/mes-tontines (propriétaire + membre)
+✅ GET  /tontines/:id (contrôle accès propriétaire/membre)
+✅ PUT  /tontines/:id (objectif, politique, montant journalier)
+✅ POST /tontines/:id/rejoindre (groupe + caution)
+✅ POST /tontines/:id/quitter (soft-exclusion)
+✅ GET  /tontines/:id/membres
+✅ GET  /tontines/:id/ordre-tirage
+✅ POST /tontines/:id/distribuer (vérif. politique + KKiaPay + chaîne atomique)
 
 ### 3.2 Module Transactions & KKiaPay
-• Effectuer une cotisation (MTN/Moov Money)
-• Webhook KKiaPay (vérification HMAC-SHA256)
-• Idempotence des transactions
-• Historique des transactions
-• Retry automatique en cas d'échec
+✅ POST /transactions/cotiser (initiation paiement KKiaPay sandbox)
+✅ POST /transactions/webhook-kkiapay (HMAC-SHA256 vérifié)
+✅ Idempotence webhook (transaction déjà traitée → 200 sans retraitement)
+✅ Calcul frais: BUSINESS.calculerFraisPlateforme() = 2%
+✅ Calcul commission: BUSINESS.calculerCommissionAgent() = 1% (50% des frais)
+✅ Chaîne de hachage SHA256 (intégrité transactions)
+✅ Notification SMS client après cotisation réussie
+✅ GET  /transactions/historique (50 dernières)
+✅ GET  /transactions/:id/recu (reçu structuré)
 
 ### 3.3 Module Retraits
-• Demander un retrait (politique FLEXIBLE)
-• Validation automatique < 50 000 FCFA
-• Validation manuelle Admin ≥ 50 000 FCFA
-• Refus automatique (politique BLOQUE)
-• Refus si mauvaise date (politique PROGRAMME)
-• Admin : valider/rejeter un retrait
-• Exécution retrait via KKiaPay
+✅ POST /retraits/demander (vérif. politique FLEXIBLE/PROGRAMME/BLOQUE)
+✅ Validation automatique < 50 000 FCFA (BUSINESS.SEUIL_RETRAIT_ADMIN)
+✅ Validation manuelle Admin ≥ 50 000 FCFA
+✅ GET  /retraits/mes-retraits
+✅ GET  /retraits/en-attente (Admin — total calculé)
+✅ PUT  /retraits/:id/valider (Admin + exécution KKiaPay)
+✅ PUT  /retraits/:id/rejeter (Admin + motif)
 
 ### 3.4 Module Commissions
-• Calcul commission agent sur cotisation
-• Voir ses commissions (agent)
-• Admin : voir toutes les commissions
-• Retrait commission agent
+✅ GET  /commissions/mon-solde (solde + total gagné + taux)
+✅ GET  /commissions/historique (liées aux transactions)
+✅ POST /commissions/retirer (KKiaPay → Mobile Money)
 
 ---
 

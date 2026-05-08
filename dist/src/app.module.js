@@ -23,6 +23,8 @@ const tontines_module_1 = require("./modules/tontines/tontines.module");
 const transactions_module_1 = require("./modules/transactions/transactions.module");
 const retraits_module_1 = require("./modules/retraits/retraits.module");
 const commissions_module_1 = require("./modules/commissions/commissions.module");
+const micro_credits_module_1 = require("./modules/micro-credits/micro-credits.module");
+const cron_module_1 = require("./modules/cron/cron.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -43,6 +45,8 @@ exports.AppModule = AppModule = __decorate([
             transactions_module_1.TransactionsModule,
             retraits_module_1.RetraitsModule,
             commissions_module_1.CommissionsModule,
+            micro_credits_module_1.MicroCreditsModule,
+            cron_module_1.CronModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [],

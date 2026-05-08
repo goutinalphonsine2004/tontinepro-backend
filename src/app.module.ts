@@ -14,6 +14,8 @@ import { TontinesModule } from './modules/tontines/tontines.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { RetraitsModule } from './modules/retraits/retraits.module';
 import { CommissionsModule } from './modules/commissions/commissions.module';
+import { MicroCreditsModule } from './modules/micro-credits/micro-credits.module';
+import { CronModule } from './modules/cron/cron.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { CommissionsModule } from './modules/commissions/commissions.module';
     TransactionsModule,
     RetraitsModule,
     CommissionsModule,
+    MicroCreditsModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [],

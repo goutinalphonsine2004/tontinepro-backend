@@ -81,6 +81,8 @@ enum StatutCredit {
   ACTIF
   TERMINE
   EN_DEFAUT
+  REFUSE
+  EXPIRE
 }
 
 enum StatutDossierPADME {
