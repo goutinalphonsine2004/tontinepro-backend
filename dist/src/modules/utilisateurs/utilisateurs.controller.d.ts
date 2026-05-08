@@ -4,6 +4,7 @@ import { ChangerPinDto } from './dto/changer-pin.dto';
 import { FiltrerUtilisateursDto } from './dto/filtrer-utilisateurs.dto';
 import { ChangerStatutDto } from './dto/changer-statut.dto';
 import { ChangerRoleDto } from './dto/changer-role.dto';
+import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 export declare class UtilisateursController {
     private service;
     constructor(service: UtilisateursService);
@@ -58,6 +59,29 @@ export declare class UtilisateursController {
     }, dto: ChangerPinDto): Promise<{
         succes: boolean;
         message: string;
+    }>;
+    configurerEmpreinte(u: {
+        id: string;
+    }, dto: ConfigurerEmpreinteDto): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            telephone: string;
+            nom: string;
+            role: import("@prisma/client").$Enums.Role;
+            id: string;
+            photo: string | null;
+            typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
+            statut: import("@prisma/client").$Enums.StatutCompte;
+            empreinteActive: boolean;
+            kycVerifie: boolean;
+            collecteurId: string | null;
+            zoneId: string | null;
+            soldeCommission: number;
+            montantCaution: number;
+            creeLe: Date;
+            misAJourLe: Date;
+        };
     }>;
     lister(dto: FiltrerUtilisateursDto): Promise<{
         succes: boolean;

@@ -90,6 +90,31 @@ let UtilisateursService = class UtilisateursService {
         await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { pinHash } });
         return { succes: true, message: 'PIN modifié avec succès.' };
     }
+    async configurerEmpreinte(utilisateurId, dto) {
+        const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
+        if (!u || !u.pinHash)
+            throw new common_1.NotFoundException('Utilisateur introuvable');
+        if (u.statut !== client_1.StatutCompte.ACTIF) {
+            throw new common_1.ForbiddenException({
+                message: 'Seul un compte actif peut modifier l’empreinte digitale',
+                code: 'COMPTE_INACTIF',
+            });
+        }
+        const pinValide = await bcrypt.compare(dto.pin, u.pinHash);
+        if (!pinValide) {
+            throw new common_1.BadRequestException({ message: 'PIN incorrect', code: 'PIN_INCORRECT' });
+        }
+        const utilisateur = await this.prisma.utilisateur.update({
+            where: { id: utilisateurId },
+            data: { empreinteActive: dto.actif },
+            select: SELECT_PROFIL,
+        });
+        return {
+            succes: true,
+            message: dto.actif ? 'Empreinte digitale activée.' : 'Empreinte digitale désactivée.',
+            donnees: utilisateur,
+        };
+    }
     async listerUtilisateurs(dto) {
         const page = dto.page ?? 1;
         const limite = dto.limite ?? 20;

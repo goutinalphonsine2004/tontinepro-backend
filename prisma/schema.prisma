@@ -183,6 +183,8 @@ model Utilisateur {
   badges         BadgeClient[]
   membresGroupe  MembreTontineGroupe[]
   qrCode         QRCodeCollecteur?
+  sessions       SessionUtilisateur[]
+  preferenceNotification PreferenceNotification?
 
   @@index([telephone])
   @@index([role])
@@ -245,6 +247,23 @@ model CodeOTP {
   expireLe      DateTime
   utilise       Boolean     @default(false)
   creeLe        DateTime    @default(now())
+}
+
+model SessionUtilisateur {
+  id                  String      @id @default(uuid())
+  utilisateurId       String
+  utilisateur         Utilisateur @relation(fields: [utilisateurId], references: [id])
+  deviceId            String?
+  userAgent           String?
+  adresseIP           String?
+  actif               Boolean     @default(true)
+  derniereUtilisation DateTime    @default(now())
+  expireLe            DateTime
+  revoqueLe           DateTime?
+  creeLe              DateTime    @default(now())
+
+  @@index([utilisateurId, actif])
+  @@index([expireLe])
 }
 
 // ─────────────────────────────────────────────────────
@@ -506,6 +525,16 @@ model Notification {
   creeLe        DateTime         @default(now())
 
   @@index([utilisateurId, lu])
+}
+
+model PreferenceNotification {
+  id            String      @id @default(uuid())
+  utilisateurId String      @unique
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  smsActif      Boolean     @default(true)
+  pushActif     Boolean     @default(true)
+  creeLe        DateTime    @default(now())
+  misAJourLe    DateTime    @updatedAt
 }
 
 model BadgeClient {

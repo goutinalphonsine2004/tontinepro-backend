@@ -21,6 +21,9 @@ const verifier_otp_dto_1 = require("./dto/verifier-otp.dto");
 const creer_pin_dto_1 = require("./dto/creer-pin.dto");
 const connexion_dto_1 = require("./dto/connexion.dto");
 const rafraichir_token_dto_1 = require("./dto/rafraichir-token.dto");
+const demander_reset_pin_dto_1 = require("./dto/demander-reset-pin.dto");
+const verifier_otp_reset_pin_dto_1 = require("./dto/verifier-otp-reset-pin.dto");
+const reinitialiser_pin_dto_1 = require("./dto/reinitialiser-pin.dto");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
 const utilisateur_courant_decorator_1 = require("../../common/decorators/utilisateur-courant.decorator");
 const passport_1 = require("@nestjs/passport");
@@ -35,17 +38,35 @@ let AuthController = class AuthController {
     verifierOtp(dto) {
         return this.authService.verifierOtp(dto);
     }
-    creerPin(utilisateur, dto) {
-        return this.authService.creerPin(utilisateur.id, dto);
+    creerPin(utilisateur, dto, req) {
+        return this.authService.creerPin(utilisateur.id, dto, req);
     }
-    connexion(dto) {
-        return this.authService.connexion(dto);
+    connexion(dto, req) {
+        return this.authService.connexion(dto, req);
+    }
+    demanderResetPin(dto) {
+        return this.authService.demanderResetPin(dto);
+    }
+    verifierOtpResetPin(dto) {
+        return this.authService.verifierOtpResetPin(dto);
+    }
+    reinitialiserPin(dto) {
+        return this.authService.reinitialiserPin(dto);
     }
     rafraichirToken(utilisateur, _dto) {
-        return this.authService.rafraichirToken(utilisateur.id, utilisateur.telephone, utilisateur.role);
+        return this.authService.rafraichirToken(utilisateur.id, utilisateur.telephone, utilisateur.role, utilisateur.sessionId);
     }
     deconnexion(utilisateur) {
-        return this.authService.deconnexion(utilisateur.id);
+        return this.authService.deconnexion(utilisateur.id, utilisateur.sessionId);
+    }
+    deconnexionTout(utilisateur) {
+        return this.authService.deconnexionTout(utilisateur.id, utilisateur.sessionId);
+    }
+    mesSessions(utilisateur) {
+        return this.authService.mesSessions(utilisateur.id, utilisateur.sessionId);
+    }
+    revoquerSession(utilisateur, sessionId) {
+        return this.authService.revoquerSession(utilisateur.id, sessionId, utilisateur.sessionId);
     }
 };
 exports.AuthController = AuthController;
@@ -70,18 +91,44 @@ __decorate([
     (0, common_1.Post)('creer-pin'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, creer_pin_dto_1.CreerPinDto]),
+    __metadata("design:paramtypes", [Object, creer_pin_dto_1.CreerPinDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "creerPin", null);
 __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('connexion'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [connexion_dto_1.ConnexionDto]),
+    __metadata("design:paramtypes", [connexion_dto_1.ConnexionDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "connexion", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }),
+    (0, common_1.Post)('demander-reset-pin'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [demander_reset_pin_dto_1.DemanderResetPinDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "demanderResetPin", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
+    (0, common_1.Post)('verifier-otp-reset-pin'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [verifier_otp_reset_pin_dto_1.VerifierOtpResetPinDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "verifierOtpResetPin", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
+    (0, common_1.Post)('reinitialiser-pin'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [reinitialiser_pin_dto_1.ReinitialiserPinDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "reinitialiserPin", null);
 __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt-refresh')),
     (0, common_1.Post)('rafraichir-token'),
@@ -99,6 +146,31 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "deconnexion", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('deconnexion-tout'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "deconnexionTout", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('sessions'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "mesSessions", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('sessions/:id/revoquer'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "revoquerSession", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

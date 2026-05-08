@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const core_1 = require("@nestjs/core");
 const config_1 = require("@nestjs/config");
 const schedule_1 = require("@nestjs/schedule");
 const throttler_1 = require("@nestjs/throttler");
@@ -30,6 +31,8 @@ const padme_module_1 = require("./modules/padme/padme.module");
 const analytics_module_1 = require("./modules/analytics/analytics.module");
 const badges_module_1 = require("./modules/badges/badges.module");
 const litiges_module_1 = require("./modules/litiges/litiges.module");
+const audit_module_1 = require("./modules/audit/audit.module");
+const audit_interceptor_1 = require("./common/interceptors/audit.interceptor");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -57,9 +60,10 @@ exports.AppModule = AppModule = __decorate([
             analytics_module_1.AnalyticsModule,
             badges_module_1.BadgesModule,
             litiges_module_1.LitigesModule,
+            audit_module_1.AuditModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [],
+        providers: [{ provide: core_1.APP_INTERCEPTOR, useClass: audit_interceptor_1.AuditInterceptor }],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

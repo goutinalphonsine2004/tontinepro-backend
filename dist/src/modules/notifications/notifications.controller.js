@@ -18,16 +18,81 @@ const notifications_service_1 = require("./notifications.service");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
 const utilisateur_courant_decorator_1 = require("../../common/decorators/utilisateur-courant.decorator");
 const enregistrer_token_dto_1 = require("./dto/enregistrer-token.dto");
+const filtrer_notifications_dto_1 = require("./dto/filtrer-notifications.dto");
+const modifier_preferences_notification_dto_1 = require("./dto/modifier-preferences-notification.dto");
 let NotificationsController = class NotificationsController {
     service;
     constructor(service) {
         this.service = service;
+    }
+    lister(u, dto) {
+        return this.service.lister(u.id, dto);
+    }
+    nonLues(u) {
+        return this.service.compterNonLues(u.id);
+    }
+    preferences(u) {
+        return this.service.getPreferences(u.id);
+    }
+    modifierPreferences(u, dto) {
+        return this.service.modifierPreferences(u.id, dto);
+    }
+    toutMarquerLu(u) {
+        return this.service.toutMarquerLu(u.id);
+    }
+    marquerLu(u, id) {
+        return this.service.marquerLu(u.id, id);
     }
     enregistrerToken(u, dto) {
         return this.service.enregistrerTokenPush(u.id, dto.tokenPush);
     }
 };
 exports.NotificationsController = NotificationsController;
+__decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, filtrer_notifications_dto_1.FiltrerNotificationsDto]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "lister", null);
+__decorate([
+    (0, common_1.Get)('non-lues'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "nonLues", null);
+__decorate([
+    (0, common_1.Get)('preferences'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "preferences", null);
+__decorate([
+    (0, common_1.Put)('preferences'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, modifier_preferences_notification_dto_1.ModifierPreferencesNotificationDto]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "modifierPreferences", null);
+__decorate([
+    (0, common_1.Put)('tout-lu'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "toutMarquerLu", null);
+__decorate([
+    (0, common_1.Put)(':id/lu'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "marquerLu", null);
 __decorate([
     (0, common_1.Post)('token-push'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),

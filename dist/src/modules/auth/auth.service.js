@@ -50,6 +50,9 @@ const client_1 = require("@prisma/client");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma_service_1 = require("../../prisma/prisma.service");
 const sms_service_1 = require("../notifications/sms.service");
+const OTP_TYPE_INSCRIPTION = 'INSCRIPTION';
+const OTP_TYPE_RESET_PIN = 'RESET_PIN';
+const JWT_SCOPE_RESET_PIN = 'RESET_PIN';
 let AuthService = class AuthService {
     prisma;
     jwt;
@@ -76,7 +79,7 @@ let AuthService = class AuthService {
         const utilisateur = await this.prisma.utilisateur.create({
             data: { telephone: dto.telephone, nom: dto.nom, role, statut: client_1.StatutCompte.EN_ATTENTE },
         });
-        const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, 'INSCRIPTION');
+        const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, OTP_TYPE_INSCRIPTION);
         await this.sms.envoyer(dto.telephone, `TontineBénin: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`);
         const donnees = { otpId, telephone: dto.telephone };
         if (this.config.get('NODE_ENV') === 'development') {
@@ -90,7 +93,7 @@ let AuthService = class AuthService {
             where: {
                 telephone: dto.telephone,
                 code: dto.code,
-                type: 'INSCRIPTION',
+                type: OTP_TYPE_INSCRIPTION,
                 utilise: false,
                 expireLe: { gt: new Date() },
             },
@@ -110,7 +113,7 @@ let AuthService = class AuthService {
             donnees: { tokenTemporaire },
         };
     }
-    async creerPin(utilisateurId, dto) {
+    async creerPin(utilisateurId, dto, req) {
         const utilisateur = await this.prisma.utilisateur.findUnique({
             where: { id: utilisateurId },
         });
@@ -127,14 +130,15 @@ let AuthService = class AuthService {
             where: { id: utilisateurId },
             data: { pinHash, statut: client_1.StatutCompte.ACTIF },
         });
-        const tokens = await this.genererTokens(utilisateurId, utilisateur.telephone, utilisateur.role);
+        const session = await this.creerSession(utilisateurId, undefined, req);
+        const tokens = await this.genererTokens(utilisateurId, utilisateur.telephone, utilisateur.role, session.id);
         return {
             succes: true,
             message: 'PIN créé avec succès. Compte activé.',
-            donnees: tokens,
+            donnees: { ...tokens, sessionId: session.id },
         };
     }
-    async connexion(dto) {
+    async connexion(dto, req) {
         const utilisateur = await this.prisma.utilisateur.findUnique({
             where: { telephone: dto.telephone },
         });
@@ -193,14 +197,122 @@ let AuthService = class AuthService {
             where: { id: utilisateur.id },
             data: { tentativesEchouees: 0, bloqueLe: null, deviceId: dto.deviceId ?? utilisateur.deviceId },
         });
-        const tokens = await this.genererTokens(utilisateur.id, utilisateur.telephone, utilisateur.role);
+        const session = await this.creerSession(utilisateur.id, dto.deviceId, req);
+        const tokens = await this.genererTokens(utilisateur.id, utilisateur.telephone, utilisateur.role, session.id);
         return {
             succes: true,
             message: 'Connexion réussie.',
-            donnees: { ...tokens, role: utilisateur.role, nom: utilisateur.nom },
+            donnees: { ...tokens, sessionId: session.id, role: utilisateur.role, nom: utilisateur.nom },
         };
     }
-    async rafraichirToken(utilisateurId, telephone, role) {
+    async demanderResetPin(dto) {
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { telephone: dto.telephone },
+        });
+        if (!utilisateur || utilisateur.statut === client_1.StatutCompte.BANNI) {
+            throw new common_1.NotFoundException({
+                message: 'Aucun compte actif ne correspond à ce numéro',
+                code: 'COMPTE_INTROUVABLE',
+            });
+        }
+        if (utilisateur.statut !== client_1.StatutCompte.ACTIF) {
+            throw new common_1.ForbiddenException({
+                message: 'Ce compte ne peut pas encore réinitialiser son PIN',
+                code: 'COMPTE_INACTIF',
+            });
+        }
+        const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, OTP_TYPE_RESET_PIN);
+        await this.sms.envoyer(dto.telephone, `TontineBénin: Code de réinitialisation PIN ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`);
+        const donnees = { otpId, telephone: dto.telephone };
+        if (this.config.get('NODE_ENV') === 'development') {
+            donnees.otpTest = code;
+            donnees.messageTest = 'Mode test - En production ce code ne sera pas visible';
+        }
+        return { succes: true, message: 'Code de réinitialisation envoyé par SMS.', donnees };
+    }
+    async verifierOtpResetPin(dto) {
+        const otp = await this.prisma.codeOTP.findFirst({
+            where: {
+                telephone: dto.telephone,
+                code: dto.code,
+                type: OTP_TYPE_RESET_PIN,
+                utilise: false,
+                expireLe: { gt: new Date() },
+            },
+            include: { utilisateur: true },
+        });
+        if (!otp) {
+            throw new common_1.BadRequestException({
+                message: 'Code OTP invalide ou expiré',
+                code: 'OTP_RESET_INVALIDE',
+            });
+        }
+        if (otp.utilisateur.statut !== client_1.StatutCompte.ACTIF) {
+            throw new common_1.ForbiddenException({
+                message: 'Ce compte ne peut pas réinitialiser son PIN',
+                code: 'COMPTE_INACTIF',
+            });
+        }
+        await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+        const tokenReset = this.jwt.sign({
+            sub: otp.utilisateurId,
+            telephone: dto.telephone,
+            role: otp.utilisateur.role,
+            scope: JWT_SCOPE_RESET_PIN,
+        }, { expiresIn: '15m' });
+        return {
+            succes: true,
+            message: 'Code vérifié. Vous pouvez définir un nouveau PIN.',
+            donnees: { tokenReset },
+        };
+    }
+    async reinitialiserPin(dto) {
+        let payload;
+        try {
+            payload = await this.jwt.verifyAsync(dto.tokenReset);
+        }
+        catch {
+            throw new common_1.UnauthorizedException({
+                message: 'Token de réinitialisation invalide ou expiré',
+                code: 'TOKEN_RESET_INVALIDE',
+            });
+        }
+        if (!payload.sub || payload.scope !== JWT_SCOPE_RESET_PIN) {
+            throw new common_1.UnauthorizedException({
+                message: 'Token de réinitialisation invalide',
+                code: 'TOKEN_RESET_INVALIDE',
+            });
+        }
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { id: payload.sub },
+        });
+        if (!utilisateur)
+            throw new common_1.NotFoundException('Utilisateur introuvable');
+        if (utilisateur.statut !== client_1.StatutCompte.ACTIF) {
+            throw new common_1.ForbiddenException({
+                message: 'Ce compte ne peut pas réinitialiser son PIN',
+                code: 'COMPTE_INACTIF',
+            });
+        }
+        const pinHash = await bcrypt.hash(dto.nouveauPin, 10);
+        await this.prisma.$transaction([
+            this.prisma.utilisateur.update({
+                where: { id: utilisateur.id },
+                data: {
+                    pinHash,
+                    tentativesEchouees: 0,
+                    bloqueLe: null,
+                    deviceId: null,
+                },
+            }),
+            this.prisma.sessionUtilisateur.updateMany({
+                where: { utilisateurId: utilisateur.id, actif: true },
+                data: { actif: false, revoqueLe: new Date() },
+            }),
+        ]);
+        return { succes: true, message: 'PIN réinitialisé avec succès. Veuillez vous reconnecter.' };
+    }
+    async rafraichirToken(utilisateurId, telephone, role, sessionId) {
         const utilisateur = await this.prisma.utilisateur.findUnique({
             where: { id: utilisateurId },
             select: { statut: true },
@@ -208,25 +320,122 @@ let AuthService = class AuthService {
         if (!utilisateur || utilisateur.statut !== client_1.StatutCompte.ACTIF) {
             throw new common_1.UnauthorizedException('Session invalide');
         }
-        const tokens = await this.genererTokens(utilisateurId, telephone, role);
-        return { succes: true, message: 'Token rafraîchi.', donnees: tokens };
+        await this.prisma.sessionUtilisateur.update({
+            where: { id: sessionId },
+            data: { derniereUtilisation: new Date() },
+        });
+        const tokens = await this.genererTokens(utilisateurId, telephone, role, sessionId);
+        return { succes: true, message: 'Token rafraîchi.', donnees: { ...tokens, sessionId } };
     }
-    async deconnexion(utilisateurId) {
+    async deconnexion(utilisateurId, sessionId) {
+        if (sessionId) {
+            await this.prisma.sessionUtilisateur.updateMany({
+                where: { id: sessionId, utilisateurId },
+                data: { actif: false, revoqueLe: new Date() },
+            });
+        }
         await this.prisma.utilisateur.update({
             where: { id: utilisateurId },
             data: { deviceId: null },
         });
         return { succes: true, message: 'Déconnexion réussie.' };
     }
-    async genererTokens(id, telephone, role) {
+    async deconnexionTout(utilisateurId, sessionCouranteId) {
+        const result = await this.prisma.sessionUtilisateur.updateMany({
+            where: { utilisateurId, actif: true },
+            data: { actif: false, revoqueLe: new Date() },
+        });
+        await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { deviceId: null } });
+        return {
+            succes: true,
+            message: `${result.count} session(s) révoquée(s).`,
+            donnees: { sessionCouranteRevoquee: !!sessionCouranteId },
+        };
+    }
+    async mesSessions(utilisateurId, sessionCouranteId) {
+        const sessions = await this.prisma.sessionUtilisateur.findMany({
+            where: { utilisateurId },
+            orderBy: { derniereUtilisation: 'desc' },
+            select: {
+                id: true,
+                deviceId: true,
+                userAgent: true,
+                adresseIP: true,
+                actif: true,
+                derniereUtilisation: true,
+                expireLe: true,
+                revoqueLe: true,
+                creeLe: true,
+            },
+        });
+        return {
+            succes: true,
+            message: `${sessions.length} session(s).`,
+            donnees: sessions.map((session) => ({
+                ...session,
+                sessionCourante: session.id === sessionCouranteId,
+            })),
+        };
+    }
+    async revoquerSession(utilisateurId, sessionId, sessionCouranteId) {
+        const result = await this.prisma.sessionUtilisateur.updateMany({
+            where: { id: sessionId, utilisateurId, actif: true },
+            data: { actif: false, revoqueLe: new Date() },
+        });
+        if (result.count === 0) {
+            throw new common_1.NotFoundException({
+                message: 'Session introuvable ou déjà révoquée',
+                code: 'SESSION_INTROUVABLE',
+            });
+        }
+        return {
+            succes: true,
+            message: 'Session révoquée.',
+            donnees: { sessionCouranteRevoquee: sessionId === sessionCouranteId },
+        };
+    }
+    async genererTokens(id, telephone, role, sessionId) {
         const [accessToken, refreshToken] = await Promise.all([
-            this.jwt.signAsync({ sub: id, telephone, role }, { expiresIn: this.config.get('JWT_EXPIRES_IN', '24h') }),
-            this.jwt.signAsync({ sub: id, telephone, role }, {
+            this.jwt.signAsync({ sub: id, telephone, role, sid: sessionId }, { expiresIn: this.config.get('JWT_EXPIRES_IN', '24h') }),
+            this.jwt.signAsync({ sub: id, telephone, role, sid: sessionId }, {
                 secret: this.config.get('JWT_REFRESH_SECRET'),
                 expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '7d'),
             }),
         ]);
         return { accessToken, refreshToken };
+    }
+    async creerSession(utilisateurId, deviceId, req) {
+        const expireLe = new Date(Date.now() + this.dureeRefreshMs());
+        return this.prisma.sessionUtilisateur.create({
+            data: {
+                utilisateurId,
+                deviceId,
+                userAgent: req?.headers['user-agent'],
+                adresseIP: this.extraireAdresseIP(req),
+                expireLe,
+            },
+        });
+    }
+    dureeRefreshMs() {
+        const valeur = this.config.get('JWT_REFRESH_EXPIRES_IN', '7d');
+        const match = valeur.match(/^(\d+)([dhm])$/);
+        if (!match)
+            return 7 * 24 * 60 * 60 * 1000;
+        const nombre = Number(match[1]);
+        const unite = match[2];
+        if (unite === 'd')
+            return nombre * 24 * 60 * 60 * 1000;
+        if (unite === 'h')
+            return nombre * 60 * 60 * 1000;
+        return nombre * 60 * 1000;
+    }
+    extraireAdresseIP(req) {
+        const forwarded = req?.headers['x-forwarded-for'];
+        if (Array.isArray(forwarded))
+            return forwarded[0];
+        if (typeof forwarded === 'string')
+            return forwarded.split(',')[0]?.trim();
+        return req?.ip;
     }
     async creerOTP(utilisateurId, telephone, type) {
         await this.prisma.codeOTP.updateMany({

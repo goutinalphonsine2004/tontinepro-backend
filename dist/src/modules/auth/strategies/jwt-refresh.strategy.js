@@ -14,23 +14,40 @@ const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
 const config_1 = require("@nestjs/config");
+const prisma_service_1 = require("../../../prisma/prisma.service");
 let JwtRefreshStrategy = class JwtRefreshStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'jwt-refresh') {
-    constructor(config) {
+    prisma;
+    constructor(config, prisma) {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromBodyField('refreshToken'),
             ignoreExpiration: false,
             secretOrKey: config.get('JWT_REFRESH_SECRET', 'fallback-refresh-secret'),
         });
+        this.prisma = prisma;
     }
-    validate(payload) {
+    async validate(payload) {
         if (!payload?.sub)
             throw new common_1.UnauthorizedException('Refresh token invalide');
-        return { id: payload.sub, telephone: payload.telephone, role: payload.role };
+        if (!payload.sid)
+            throw new common_1.UnauthorizedException('Session invalide');
+        const session = await this.prisma.sessionUtilisateur.findFirst({
+            where: {
+                id: payload.sid,
+                utilisateurId: payload.sub,
+                actif: true,
+                expireLe: { gt: new Date() },
+            },
+            select: { id: true },
+        });
+        if (!session)
+            throw new common_1.UnauthorizedException('Session expirée ou révoquée');
+        return { id: payload.sub, telephone: payload.telephone, role: payload.role, sessionId: payload.sid };
     }
 };
 exports.JwtRefreshStrategy = JwtRefreshStrategy;
 exports.JwtRefreshStrategy = JwtRefreshStrategy = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        prisma_service_1.PrismaService])
 ], JwtRefreshStrategy);
 //# sourceMappingURL=jwt-refresh.strategy.js.map

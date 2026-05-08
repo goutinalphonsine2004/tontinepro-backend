@@ -17,8 +17,8 @@ export declare class QrcodeController {
             collecteurId: string;
             creeLe: Date;
             expireLe: Date;
-            codeQR: string;
             actif: boolean;
+            codeQR: string;
         };
     }>;
     scanner(code: string): Promise<{
@@ -44,8 +44,8 @@ export declare class QrcodeController {
             collecteurId: string;
             creeLe: Date;
             expireLe: Date;
-            codeQR: string;
             actif: boolean;
+            codeQR: string;
         };
     }>;
 }

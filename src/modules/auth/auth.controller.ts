@@ -1,4 +1,5 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { InscriptionDto } from './dto/inscription.dto';
@@ -6,6 +7,9 @@ import { VerifierOtpDto } from './dto/verifier-otp.dto';
 import { CreerPinDto } from './dto/creer-pin.dto';
 import { ConnexionDto } from './dto/connexion.dto';
 import { RafraichirTokenDto } from './dto/rafraichir-token.dto';
+import { DemanderResetPinDto } from './dto/demander-reset-pin.dto';
+import { VerifierOtpResetPinDto } from './dto/verifier-otp-reset-pin.dto';
+import { ReinitialiserPinDto } from './dto/reinitialiser-pin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { AuthGuard } from '@nestjs/passport';
@@ -31,28 +35,73 @@ export class AuthController {
   creerPin(
     @UtilisateurCourant() utilisateur: { id: string },
     @Body() dto: CreerPinDto,
+    @Req() req: Request,
   ) {
-    return this.authService.creerPin(utilisateur.id, dto);
+    return this.authService.creerPin(utilisateur.id, dto, req);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('connexion')
-  connexion(@Body() dto: ConnexionDto) {
-    return this.authService.connexion(dto);
+  connexion(@Body() dto: ConnexionDto, @Req() req: Request) {
+    return this.authService.connexion(dto, req);
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post('demander-reset-pin')
+  demanderResetPin(@Body() dto: DemanderResetPinDto) {
+    return this.authService.demanderResetPin(dto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('verifier-otp-reset-pin')
+  verifierOtpResetPin(@Body() dto: VerifierOtpResetPinDto) {
+    return this.authService.verifierOtpResetPin(dto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('reinitialiser-pin')
+  reinitialiserPin(@Body() dto: ReinitialiserPinDto) {
+    return this.authService.reinitialiserPin(dto);
   }
 
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('rafraichir-token')
   rafraichirToken(
-    @UtilisateurCourant() utilisateur: { id: string; telephone: string; role: any },
+    @UtilisateurCourant() utilisateur: { id: string; telephone: string; role: any; sessionId: string },
     @Body() _dto: RafraichirTokenDto,
   ) {
-    return this.authService.rafraichirToken(utilisateur.id, utilisateur.telephone, utilisateur.role);
+    return this.authService.rafraichirToken(
+      utilisateur.id,
+      utilisateur.telephone,
+      utilisateur.role,
+      utilisateur.sessionId,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('deconnexion')
-  deconnexion(@UtilisateurCourant() utilisateur: { id: string }) {
-    return this.authService.deconnexion(utilisateur.id);
+  deconnexion(@UtilisateurCourant() utilisateur: { id: string; sessionId?: string }) {
+    return this.authService.deconnexion(utilisateur.id, utilisateur.sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('deconnexion-tout')
+  deconnexionTout(@UtilisateurCourant() utilisateur: { id: string; sessionId?: string }) {
+    return this.authService.deconnexionTout(utilisateur.id, utilisateur.sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sessions')
+  mesSessions(@UtilisateurCourant() utilisateur: { id: string; sessionId?: string }) {
+    return this.authService.mesSessions(utilisateur.id, utilisateur.sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('sessions/:id/revoquer')
+  revoquerSession(
+    @UtilisateurCourant() utilisateur: { id: string; sessionId?: string },
+    @Param('id') sessionId: string,
+  ) {
+    return this.authService.revoquerSession(utilisateur.id, sessionId, utilisateur.sessionId);
   }
 }

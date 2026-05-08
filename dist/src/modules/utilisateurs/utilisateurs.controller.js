@@ -25,6 +25,7 @@ const changer_pin_dto_1 = require("./dto/changer-pin.dto");
 const filtrer_utilisateurs_dto_1 = require("./dto/filtrer-utilisateurs.dto");
 const changer_statut_dto_1 = require("./dto/changer-statut.dto");
 const changer_role_dto_1 = require("./dto/changer-role.dto");
+const configurer_empreinte_dto_1 = require("./dto/configurer-empreinte.dto");
 let UtilisateursController = class UtilisateursController {
     service;
     constructor(service) {
@@ -38,6 +39,9 @@ let UtilisateursController = class UtilisateursController {
     }
     changerPin(u, dto) {
         return this.service.changerPin(u.id, dto);
+    }
+    configurerEmpreinte(u, dto) {
+        return this.service.configurerEmpreinte(u.id, dto);
     }
     lister(dto) {
         return this.service.listerUtilisateurs(dto);
@@ -76,6 +80,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, changer_pin_dto_1.ChangerPinDto]),
     __metadata("design:returntype", void 0)
 ], UtilisateursController.prototype, "changerPin", null);
+__decorate([
+    (0, common_1.Put)('empreinte'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, configurer_empreinte_dto_1.ConfigurerEmpreinteDto]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "configurerEmpreinte", null);
 __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),

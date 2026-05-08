@@ -1,0 +1,1 @@
+ALTER TABLE "Utilisateur" ADD COLUMN IF NOT EXISTS "tokenPush" TEXT;

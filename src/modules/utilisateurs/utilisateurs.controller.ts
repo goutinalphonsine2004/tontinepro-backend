@@ -10,6 +10,7 @@ import { ChangerPinDto } from './dto/changer-pin.dto';
 import { FiltrerUtilisateursDto } from './dto/filtrer-utilisateurs.dto';
 import { ChangerStatutDto } from './dto/changer-statut.dto';
 import { ChangerRoleDto } from './dto/changer-role.dto';
+import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('utilisateurs')
@@ -29,6 +30,11 @@ export class UtilisateursController {
   @Put('pin')
   changerPin(@UtilisateurCourant() u: { id: string }, @Body() dto: ChangerPinDto) {
     return this.service.changerPin(u.id, dto);
+  }
+
+  @Put('empreinte')
+  configurerEmpreinte(@UtilisateurCourant() u: { id: string }, @Body() dto: ConfigurerEmpreinteDto) {
+    return this.service.configurerEmpreinte(u.id, dto);
   }
 
   @Roles(Role.ADMIN)

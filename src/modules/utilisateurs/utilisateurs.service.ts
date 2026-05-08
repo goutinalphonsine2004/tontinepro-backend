@@ -12,6 +12,7 @@ import { ChangerPinDto } from './dto/changer-pin.dto';
 import { FiltrerUtilisateursDto } from './dto/filtrer-utilisateurs.dto';
 import { ChangerStatutDto } from './dto/changer-statut.dto';
 import { ChangerRoleDto } from './dto/changer-role.dto';
+import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 
 const SELECT_PROFIL = {
   id: true, telephone: true, nom: true, photo: true, role: true,
@@ -59,6 +60,35 @@ export class UtilisateursService {
     const pinHash = await bcrypt.hash(dto.nouveauPin, 10);
     await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { pinHash } });
     return { succes: true, message: 'PIN modifié avec succès.' };
+  }
+
+  // ─── PUT /utilisateurs/empreinte ───────────────────
+  async configurerEmpreinte(utilisateurId: string, dto: ConfigurerEmpreinteDto) {
+    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
+    if (!u || !u.pinHash) throw new NotFoundException('Utilisateur introuvable');
+    if (u.statut !== StatutCompte.ACTIF) {
+      throw new ForbiddenException({
+        message: 'Seul un compte actif peut modifier l’empreinte digitale',
+        code: 'COMPTE_INACTIF',
+      });
+    }
+
+    const pinValide = await bcrypt.compare(dto.pin, u.pinHash);
+    if (!pinValide) {
+      throw new BadRequestException({ message: 'PIN incorrect', code: 'PIN_INCORRECT' });
+    }
+
+    const utilisateur = await this.prisma.utilisateur.update({
+      where: { id: utilisateurId },
+      data: { empreinteActive: dto.actif },
+      select: SELECT_PROFIL,
+    });
+
+    return {
+      succes: true,
+      message: dto.actif ? 'Empreinte digitale activée.' : 'Empreinte digitale désactivée.',
+      donnees: utilisateur,
+    };
   }
 
   // ─── GET /utilisateurs (Admin) ─────────────────────
