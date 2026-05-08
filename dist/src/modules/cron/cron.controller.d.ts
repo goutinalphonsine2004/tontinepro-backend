@@ -24,6 +24,10 @@ export declare class CronController {
         succes: boolean;
         message: string;
     }>;
+    alerteSolde(): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
     facturation(): Promise<{
         succes: boolean;
         message: string;

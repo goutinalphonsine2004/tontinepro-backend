@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { Role, StatutCompte, StatutCredit, StatutDossierPADME, StatutMembreGroupe, TypeTransaction, StatutTransaction } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
@@ -16,6 +17,7 @@ export class CronService {
     private kkiapay: KkiapayService,
     private sms: SmsService,
     private badges: BadgesService,
+    private config: ConfigService,
   ) {}
 
   // ─────────────────────────────────────────────────
@@ -348,6 +350,51 @@ export class CronService {
   async declencherDeblocagePINManuellement() {
     await this.debloquerPINAutomatiquement();
     return { succes: true, message: 'Déblocage PIN déclenché manuellement.' };
+  }
+
+  // ─────────────────────────────────────────────────
+  // CRON 8H — ALERTE SOLDE FAIBLE
+  // ─────────────────────────────────────────────────
+  @Cron('0 8 * * *', { name: 'alerte-solde-faible' })
+  async envoyerAlertesSoldeFaible() {
+    this.logger.log('[CRON 8h] Alerte solde faible...');
+    const seuilAlerte = parseInt(this.config.get('SEUIL_ALERTE_SOLDE_FAIBLE', '5000'));
+
+    const clients = await this.prisma.utilisateur.findMany({
+      where: {
+        role: Role.CLIENT,
+        statut: StatutCompte.ACTIF,
+      },
+      select: {
+        id: true,
+        telephone: true,
+        nom: true,
+        tontines: {
+          select: { soldeActuel: true },
+        },
+      },
+    });
+
+    let alertesEnvoyees = 0;
+    for (const client of clients) {
+      // Calculer solde total (toutes tontines)
+      const soldeTotal = client.tontines.reduce((acc, t) => acc + (t.soldeActuel || 0), 0);
+
+      if (soldeTotal > 0 && soldeTotal < seuilAlerte) {
+        await this.sms.envoyer(
+          client.telephone,
+          `TontineBénin: ⚠️ ${client.nom}, votre solde actuel est faible (${soldeTotal} FCFA). Cotisez pour rester régulier.`,
+        );
+        this.logger.log(`[Alerte solde] ${client.nom} — solde: ${soldeTotal} FCFA`);
+        alertesEnvoyees++;
+      }
+    }
+    this.logger.log(`[CRON 8h] ${alertesEnvoyees} alerte(s) solde faible envoyée(s)`);
+  }
+
+  async declencherAlertesSoldeFaibleManuellement() {
+    await this.envoyerAlertesSoldeFaible();
+    return { succes: true, message: 'Alertes solde faible déclenchées manuellement.' };
   }
 
   // ─────────────────────────────────────────────────

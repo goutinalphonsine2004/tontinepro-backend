@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
 import { SmsService } from '../notifications/sms.service';
@@ -7,8 +8,9 @@ export declare class CronService {
     private kkiapay;
     private sms;
     private badges;
+    private config;
     private readonly logger;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService, badges: BadgesService);
+    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService, badges: BadgesService, config: ConfigService);
     preleverRemboursementsJournaliers(): Promise<void>;
     preleverUnCredit(credit: any): Promise<void>;
     private gererEchecRemboursement;
@@ -34,6 +36,11 @@ export declare class CronService {
     }>;
     debloquerPINAutomatiquement(): Promise<void>;
     declencherDeblocagePINManuellement(): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
+    envoyerAlertesSoldeFaible(): Promise<void>;
+    declencherAlertesSoldeFaibleManuellement(): Promise<{
         succes: boolean;
         message: string;
     }>;

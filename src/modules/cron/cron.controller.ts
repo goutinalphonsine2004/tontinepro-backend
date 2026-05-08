@@ -33,6 +33,11 @@ export class CronController {
     return this.service.declencherDeblocagePINManuellement();
   }
 
+  @Post('alerte-solde')
+  alerteSolde() {
+    return this.service.declencherAlertesSoldeFaibleManuellement();
+  }
+
   @Post('facturation')
   facturation() {
     return this.service.declencherFacturationManuellement();

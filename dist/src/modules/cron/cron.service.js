@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CronService = void 0;
 const common_1 = require("@nestjs/common");
 const schedule_1 = require("@nestjs/schedule");
+const config_1 = require("@nestjs/config");
 const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
@@ -24,12 +25,14 @@ let CronService = CronService_1 = class CronService {
     kkiapay;
     sms;
     badges;
+    config;
     logger = new common_1.Logger(CronService_1.name);
-    constructor(prisma, kkiapay, sms, badges) {
+    constructor(prisma, kkiapay, sms, badges, config) {
         this.prisma = prisma;
         this.kkiapay = kkiapay;
         this.sms = sms;
         this.badges = badges;
+        this.config = config;
     }
     async preleverRemboursementsJournaliers() {
         this.logger.log('[CRON 7h] Prélèvement remboursements journaliers...');
@@ -285,6 +288,38 @@ let CronService = CronService_1 = class CronService {
         await this.debloquerPINAutomatiquement();
         return { succes: true, message: 'Déblocage PIN déclenché manuellement.' };
     }
+    async envoyerAlertesSoldeFaible() {
+        this.logger.log('[CRON 8h] Alerte solde faible...');
+        const seuilAlerte = parseInt(this.config.get('SEUIL_ALERTE_SOLDE_FAIBLE', '5000'));
+        const clients = await this.prisma.utilisateur.findMany({
+            where: {
+                role: client_1.Role.CLIENT,
+                statut: client_1.StatutCompte.ACTIF,
+            },
+            select: {
+                id: true,
+                telephone: true,
+                nom: true,
+                tontines: {
+                    select: { soldeActuel: true },
+                },
+            },
+        });
+        let alertesEnvoyees = 0;
+        for (const client of clients) {
+            const soldeTotal = client.tontines.reduce((acc, t) => acc + (t.soldeActuel || 0), 0);
+            if (soldeTotal > 0 && soldeTotal < seuilAlerte) {
+                await this.sms.envoyer(client.telephone, `TontineBénin: ⚠️ ${client.nom}, votre solde actuel est faible (${soldeTotal} FCFA). Cotisez pour rester régulier.`);
+                this.logger.log(`[Alerte solde] ${client.nom} — solde: ${soldeTotal} FCFA`);
+                alertesEnvoyees++;
+            }
+        }
+        this.logger.log(`[CRON 8h] ${alertesEnvoyees} alerte(s) solde faible envoyée(s)`);
+    }
+    async declencherAlertesSoldeFaibleManuellement() {
+        await this.envoyerAlertesSoldeFaible();
+        return { succes: true, message: 'Alertes solde faible déclenchées manuellement.' };
+    }
     async envoyerRappelsCotisation() {
         this.logger.log('[CRON 8h] Rappels cotisation...');
         const maintenant = new Date();
@@ -517,6 +552,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CronService.prototype, "debloquerPINAutomatiquement", null);
 __decorate([
+    (0, schedule_1.Cron)('0 8 * * *', { name: 'alerte-solde-faible' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CronService.prototype, "envoyerAlertesSoldeFaible", null);
+__decorate([
     (0, schedule_1.Cron)('0 8 * * *', { name: 'rappels-cotisation' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
@@ -551,6 +592,7 @@ exports.CronService = CronService = CronService_1 = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         kkiapay_service_1.KkiapayService,
         sms_service_1.SmsService,
-        badges_service_1.BadgesService])
+        badges_service_1.BadgesService,
+        config_1.ConfigService])
 ], CronService);
 //# sourceMappingURL=cron.service.js.map

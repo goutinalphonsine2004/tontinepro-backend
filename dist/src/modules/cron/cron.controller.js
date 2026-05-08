@@ -42,6 +42,9 @@ let CronController = class CronController {
     deblocagePIN() {
         return this.service.declencherDeblocagePINManuellement();
     }
+    alerteSolde() {
+        return this.service.declencherAlertesSoldeFaibleManuellement();
+    }
     facturation() {
         return this.service.declencherFacturationManuellement();
     }
@@ -69,6 +72,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], CronController.prototype, "deblocagePIN", null);
+__decorate([
+    (0, common_1.Post)('alerte-solde'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CronController.prototype, "alerteSolde", null);
 __decorate([
     (0, common_1.Post)('facturation'),
     __metadata("design:type", Function),
