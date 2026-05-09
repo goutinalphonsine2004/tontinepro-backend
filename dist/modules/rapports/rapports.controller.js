@@ -41,6 +41,18 @@ let RapportsController = class RapportsController {
         const { buffer, filename } = await this.service.rapportFinancierPdf(dto);
         return this.envoyerFichier(res, buffer, filename);
     }
+    async microCreditsPdf(dto, res) {
+        const { buffer, filename } = await this.service.microCreditsPdf(dto);
+        return this.envoyerFichier(res, buffer, filename);
+    }
+    async agentsPdf(dto, res) {
+        const { buffer, filename } = await this.service.rapportAgentsPdf(dto);
+        return this.envoyerFichier(res, buffer, filename);
+    }
+    async bilanPdf(dto, res) {
+        const { buffer, filename } = await this.service.bilanComptablePdf(dto);
+        return this.envoyerFichier(res, buffer, filename);
+    }
     envoyerFichier(res, buffer, filename) {
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         return res.send(buffer);
@@ -83,6 +95,33 @@ __decorate([
     __metadata("design:paramtypes", [filtrer_rapport_dto_1.FiltrerRapportDto, Object]),
     __metadata("design:returntype", Promise)
 ], RapportsController.prototype, "financierPdf", null);
+__decorate([
+    (0, common_1.Get)('micro-credits.pdf'),
+    (0, common_1.Header)('Content-Type', 'application/pdf'),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [filtrer_rapport_dto_1.FiltrerRapportDto, Object]),
+    __metadata("design:returntype", Promise)
+], RapportsController.prototype, "microCreditsPdf", null);
+__decorate([
+    (0, common_1.Get)('agents.pdf'),
+    (0, common_1.Header)('Content-Type', 'application/pdf'),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [filtrer_rapport_dto_1.FiltrerRapportDto, Object]),
+    __metadata("design:returntype", Promise)
+], RapportsController.prototype, "agentsPdf", null);
+__decorate([
+    (0, common_1.Get)('bilan.pdf'),
+    (0, common_1.Header)('Content-Type', 'application/pdf'),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [filtrer_rapport_dto_1.FiltrerRapportDto, Object]),
+    __metadata("design:returntype", Promise)
+], RapportsController.prototype, "bilanPdf", null);
 exports.RapportsController = RapportsController = __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

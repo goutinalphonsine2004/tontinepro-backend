@@ -465,6 +465,133 @@ let AuthService = class AuthService {
         }
         return codeRecu === codeStocke;
     }
+    async enregistrerAppareilBiometrique(utilisateurId, dto) {
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { id: utilisateurId },
+            select: { id: true, nom: true, statut: true },
+        });
+        if (!utilisateur)
+            throw new common_1.NotFoundException('Utilisateur introuvable');
+        if (utilisateur.statut !== client_1.StatutCompte.ACTIF) {
+            throw new common_1.ForbiddenException({ message: 'Compte non actif', code: 'COMPTE_INACTIF' });
+        }
+        const empreinteHash = await bcrypt.hash(dto.empreinteToken, 10);
+        const appareil = await this.prisma.appareilBiometrique.upsert({
+            where: { utilisateurId_deviceId: { utilisateurId, deviceId: dto.deviceId } },
+            create: { utilisateurId, deviceId: dto.deviceId, empreinteHash, nomAppareil: dto.nomAppareil, modeleAppareil: dto.modeleAppareil, systemeExploitation: dto.systemeExploitation, actif: true },
+            update: { empreinteHash, nomAppareil: dto.nomAppareil, modeleAppareil: dto.modeleAppareil, actif: true },
+        });
+        await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { empreinteActive: true } });
+        return {
+            succes: true,
+            message: 'Appareil biométrique enregistré. Connexion par empreinte activée.',
+            donnees: { appareilId: appareil.id, deviceId: appareil.deviceId, nomAppareil: appareil.nomAppareil },
+        };
+    }
+    async connexionBiometrique(dto, req) {
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { telephone: dto.telephone },
+            select: { id: true, telephone: true, nom: true, role: true, statut: true, empreinteActive: true },
+        });
+        if (!utilisateur)
+            throw new common_1.UnauthorizedException({ message: 'Identifiants invalides', code: 'UTILISATEUR_INTROUVABLE' });
+        if (utilisateur.statut === client_1.StatutCompte.BANNI)
+            throw new common_1.ForbiddenException({ message: 'Compte banni', code: 'COMPTE_BANNI' });
+        if (!utilisateur.empreinteActive)
+            throw new common_1.ForbiddenException({ message: 'Biométrie non activée', code: 'BIOMETRIE_INACTIVE' });
+        const appareil = await this.prisma.appareilBiometrique.findUnique({
+            where: { utilisateurId_deviceId: { utilisateurId: utilisateur.id, deviceId: dto.deviceId } },
+        });
+        if (!appareil || !appareil.actif)
+            throw new common_1.UnauthorizedException({ message: 'Appareil non reconnu', code: 'APPAREIL_INCONNU' });
+        const valide = await bcrypt.compare(dto.empreinteToken, appareil.empreinteHash);
+        if (!valide)
+            throw new common_1.UnauthorizedException({ message: 'Empreinte invalide', code: 'EMPREINTE_INVALIDE' });
+        await this.prisma.appareilBiometrique.update({ where: { id: appareil.id }, data: { derniereAuthentification: new Date() } });
+        const expireLe = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const session = await this.prisma.sessionUtilisateur.create({
+            data: { utilisateurId: utilisateur.id, deviceId: dto.deviceId, adresseIP: req.ip, expireLe, actif: true },
+        });
+        const payload = { sub: utilisateur.id, telephone: utilisateur.telephone, role: utilisateur.role, sessionId: session.id };
+        const accessToken = this.jwt.sign(payload, { expiresIn: '24h' });
+        return {
+            succes: true,
+            message: `Connexion biométrique réussie. Bienvenue ${utilisateur.nom}.`,
+            donnees: { accessToken, utilisateur: { id: utilisateur.id, nom: utilisateur.nom, role: utilisateur.role } },
+        };
+    }
+    async mesAppareils(utilisateurId) {
+        const appareils = await this.prisma.appareilBiometrique.findMany({
+            where: { utilisateurId, actif: true },
+            select: { id: true, deviceId: true, nomAppareil: true, modeleAppareil: true, systemeExploitation: true, derniereAuthentification: true, creeLe: true },
+        });
+        return { succes: true, message: `${appareils.length} appareil(s).`, donnees: appareils };
+    }
+    async revoquerAppareil(utilisateurId, appareilId) {
+        const appareil = await this.prisma.appareilBiometrique.findUnique({ where: { id: appareilId } });
+        if (!appareil || appareil.utilisateurId !== utilisateurId)
+            throw new common_1.NotFoundException('Appareil introuvable');
+        await this.prisma.appareilBiometrique.update({ where: { id: appareilId }, data: { actif: false } });
+        const restants = await this.prisma.appareilBiometrique.count({ where: { utilisateurId, actif: true } });
+        if (restants === 0)
+            await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { empreinteActive: false } });
+        return { succes: true, message: 'Appareil révoqué.' };
+    }
+    async connexionsSuspectes(page = 1, limite = 50) {
+        const skip = (page - 1) * limite;
+        const dernierJour = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const derniereMois = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const sessionsRecentes = await this.prisma.sessionUtilisateur.findMany({
+            where: { creeLe: { gte: derniereMois } },
+            select: {
+                id: true,
+                utilisateurId: true,
+                adresseIP: true,
+                deviceId: true,
+                creeLe: true,
+                actif: true,
+                utilisateur: { select: { id: true, nom: true, telephone: true, role: true } },
+            },
+            orderBy: { creeLe: 'desc' },
+        });
+        const parUtilisateur = new Map();
+        for (const s of sessionsRecentes) {
+            const existantes = parUtilisateur.get(s.utilisateurId) ?? [];
+            existantes.push(s);
+            parUtilisateur.set(s.utilisateurId, existantes);
+        }
+        const alertes = [];
+        for (const [uid, sessions] of parUtilisateur.entries()) {
+            const ips = [...new Set(sessions.map((s) => s.adresseIP).filter(Boolean))];
+            const sessionsRecentes24h = sessions.filter((s) => s.creeLe >= dernierJour);
+            const ipsRecentes = [...new Set(sessionsRecentes24h.map((s) => s.adresseIP).filter(Boolean))];
+            if (ipsRecentes.length >= 3 || ips.length >= 5) {
+                const derniereSession = sessions[0];
+                alertes.push({
+                    utilisateur: derniereSession.utilisateur,
+                    nbrIPs: ips.length,
+                    ips: ips.slice(0, 5),
+                    derniereSession: derniereSession.creeLe,
+                    derniereIP: derniereSession.adresseIP ?? 'inconnue',
+                    suspicion: ipsRecentes.length >= 3
+                        ? `${ipsRecentes.length} IPs différentes en 24h`
+                        : `${ips.length} IPs différentes en 30 jours`,
+                });
+            }
+        }
+        const total = alertes.length;
+        const paginees = alertes.slice(skip, skip + limite);
+        return {
+            succes: true,
+            message: `${total} compte(s) avec activité suspecte.`,
+            donnees: {
+                alertes: paginees,
+                total,
+                page,
+                pages: Math.ceil(total / limite),
+            },
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([

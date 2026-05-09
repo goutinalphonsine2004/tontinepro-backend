@@ -34,6 +34,9 @@ const litiges_module_1 = require("./modules/litiges/litiges.module");
 const audit_module_1 = require("./modules/audit/audit.module");
 const alertes_module_1 = require("./modules/alertes/alertes.module");
 const rapports_module_1 = require("./modules/rapports/rapports.module");
+const collecteur_terrain_module_1 = require("./modules/collecteur-terrain/collecteur-terrain.module");
+const parametres_module_1 = require("./modules/parametres/parametres.module");
+const support_module_1 = require("./modules/support/support.module");
 const audit_interceptor_1 = require("./common/interceptors/audit.interceptor");
 let AppModule = class AppModule {
 };
@@ -65,6 +68,9 @@ exports.AppModule = AppModule = __decorate([
             audit_module_1.AuditModule,
             alertes_module_1.AlertesModule,
             rapports_module_1.RapportsModule,
+            collecteur_terrain_module_1.CollecteurTerrainModule,
+            parametres_module_1.ParametresModule,
+            support_module_1.SupportModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [{ provide: core_1.APP_INTERCEPTOR, useClass: audit_interceptor_1.AuditInterceptor }],

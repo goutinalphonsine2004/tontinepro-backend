@@ -86,4 +86,29 @@ export declare class ScoreController {
             };
         };
     }>;
+    calendrierRegularite(u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            calendrier: {
+                mois: string;
+                label: string;
+                jours: {
+                    date: string;
+                    cotise: boolean;
+                    montant: number;
+                }[];
+                nbJoursCotises: number;
+                nbJoursOuvres: number;
+                tauxMois: number;
+            }[];
+            resume: {
+                totalJours: number;
+                totalCotises: number;
+                tauxGlobal: number;
+            };
+        };
+    }>;
 }

@@ -23,6 +23,18 @@ export declare class RapportsService {
     private csv;
     private csvCell;
     private pdf;
+    microCreditsPdf(dto: FiltrerRapportDto): Promise<{
+        buffer: Buffer;
+        filename: string;
+    }>;
+    rapportAgentsPdf(dto: FiltrerRapportDto): Promise<{
+        buffer: Buffer;
+        filename: string;
+    }>;
+    bilanComptablePdf(dto: FiltrerRapportDto): Promise<{
+        buffer: Buffer;
+        filename: string;
+    }>;
     private section;
     private ligne;
     private fcfa;

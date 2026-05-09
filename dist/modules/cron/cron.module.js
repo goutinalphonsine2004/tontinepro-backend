@@ -14,14 +14,16 @@ const kkiapay_service_1 = require("../../common/services/kkiapay.service");
 const pdf_service_1 = require("../../common/services/pdf.service");
 const notifications_module_1 = require("../notifications/notifications.module");
 const badges_module_1 = require("../badges/badges.module");
+const whatsapp_service_1 = require("../notifications/whatsapp.service");
+const axios_1 = require("@nestjs/axios");
 let CronModule = class CronModule {
 };
 exports.CronModule = CronModule;
 exports.CronModule = CronModule = __decorate([
     (0, common_1.Module)({
-        imports: [notifications_module_1.NotificationsModule, badges_module_1.BadgesModule],
+        imports: [notifications_module_1.NotificationsModule, badges_module_1.BadgesModule, axios_1.HttpModule],
         controllers: [cron_controller_1.CronController],
-        providers: [cron_service_1.CronService, kkiapay_service_1.KkiapayService, pdf_service_1.PdfService],
+        providers: [cron_service_1.CronService, kkiapay_service_1.KkiapayService, pdf_service_1.PdfService, whatsapp_service_1.WhatsappService],
         exports: [cron_service_1.CronService],
     })
 ], CronModule);

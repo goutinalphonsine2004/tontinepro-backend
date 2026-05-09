@@ -224,6 +224,7 @@ model FacturationAgent {
   fraisParClient   Float       @default(10)
   totalClients     Int         @default(0)
   actif            Boolean     @default(true)
+  cautionMontant   Float       @default(0)   // Caution déposée (INDEPENDANT uniquement)
   dernierPaiement  DateTime    @default(now())
   prochainPaiement DateTime
   creeLe           DateTime    @default(now())

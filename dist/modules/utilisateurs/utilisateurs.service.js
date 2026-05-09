@@ -171,6 +171,97 @@ let UtilisateursService = class UtilisateursService {
         });
         return { succes: true, message: `Rôle mis à jour → ${dto.role}.`, donnees: u };
     }
+    async monDashboard(clientId) {
+        const maintenant = new Date();
+        const sixMoisDate = new Date(maintenant);
+        sixMoisDate.setMonth(sixMoisDate.getMonth() - 5);
+        sixMoisDate.setDate(1);
+        const [utilisateur, scoreCredit, badge, dernieresTransactions, creditActif, prochainsGroupes] = await Promise.all([
+            this.prisma.utilisateur.findUnique({
+                where: { id: clientId },
+                select: {
+                    id: true, nom: true, photo: true, telephone: true,
+                    tontines: {
+                        select: {
+                            id: true, nom: true, soldeActuel: true, objectifMontant: true,
+                            montantJournalier: true, type: true, dateDeverrouillage: true,
+                        },
+                    },
+                },
+            }),
+            this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+            this.prisma.badgeClient.findFirst({
+                where: { clientId },
+                orderBy: { obtenuLe: 'desc' },
+            }),
+            this.prisma.transaction.findMany({
+                where: { utilisateurId: clientId },
+                orderBy: { creeLe: 'desc' },
+                take: 5,
+                include: { tontine: { select: { nom: true } } },
+            }),
+            this.prisma.microCredit.findFirst({
+                where: { clientId, statut: { in: ['ACTIF'] } },
+                select: { id: true, montantRestant: true, paiementJournalier: true, joursPayes: true, totalJours: true },
+            }),
+            this.prisma.ordreTirage.findMany({
+                where: { utilisateurId: clientId, aRecu: false },
+                include: { tontine: { select: { id: true, nom: true, montantJournalier: true } } },
+                orderBy: { position: 'asc' },
+                take: 1,
+            }),
+        ]);
+        if (!utilisateur)
+            throw new common_1.NotFoundException('Utilisateur introuvable');
+        const cotisations6mois = await this.prisma.transaction.findMany({
+            where: {
+                utilisateurId: clientId,
+                type: 'COTISATION',
+                statut: 'SUCCES',
+                creeLe: { gte: sixMoisDate },
+            },
+            select: { montantNet: true, creeLe: true },
+        });
+        const graphique = {};
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(maintenant);
+            d.setMonth(d.getMonth() - i);
+            graphique[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] = 0;
+        }
+        for (const tx of cotisations6mois) {
+            const key = `${tx.creeLe.getFullYear()}-${String(tx.creeLe.getMonth() + 1).padStart(2, '0')}`;
+            if (graphique[key] !== undefined)
+                graphique[key] += tx.montantNet;
+        }
+        const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+        const score = scoreCredit?.score ?? 0;
+        const eligibleMicroCredit = scoreCredit?.eligibleMicroCredit ?? false;
+        const eligiblePADME = scoreCredit?.eligiblePADME ?? false;
+        return {
+            succes: true,
+            message: 'Tableau de bord récupéré.',
+            donnees: {
+                profil: { id: utilisateur.id, nom: utilisateur.nom, photo: utilisateur.photo },
+                soldeTotal,
+                tontines: utilisateur.tontines,
+                graphiqueEpargne: Object.entries(graphique).map(([mois, montant]) => ({ mois, montant: Math.round(montant) })),
+                badge: badge ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe } : null,
+                score: {
+                    valeur: score,
+                    eligibleMicroCredit,
+                    eligiblePADME,
+                    dernierCalcul: scoreCredit?.dernierCalcul ?? null,
+                },
+                creditActif,
+                alertes: {
+                    microCreditDisponible: eligibleMicroCredit && !creditActif,
+                    eligiblePADME,
+                },
+                prochaineDistribution: prochainsGroupes[0] ?? null,
+                dernieresTransactions,
+            },
+        };
+    }
     async supprimerUtilisateur(adminId, cibleId) {
         if (adminId === cibleId) {
             throw new common_1.ForbiddenException('Impossible de supprimer votre propre compte');
@@ -190,6 +281,93 @@ let UtilisateursService = class UtilisateursService {
         }
         await this.prisma.utilisateur.delete({ where: { id: cibleId } });
         return { succes: true, message: 'Utilisateur supprimé définitivement.', donnees: { id: cibleId } };
+    }
+    async reassignerClient(clientId, nouveauCollecteurId, adminId) {
+        const client = await this.prisma.utilisateur.findUnique({
+            where: { id: clientId },
+            select: { id: true, nom: true, telephone: true, collecteurId: true, role: true },
+        });
+        if (!client)
+            throw new common_1.NotFoundException('Client introuvable');
+        if (client.role !== client_1.Role.CLIENT) {
+            throw new common_1.BadRequestException({ message: 'Seul un client peut être réassigné', code: 'ROLE_INVALIDE' });
+        }
+        const nouveauCollecteur = await this.prisma.utilisateur.findUnique({
+            where: { id: nouveauCollecteurId },
+            select: { id: true, nom: true, role: true, statut: true },
+        });
+        if (!nouveauCollecteur)
+            throw new common_1.NotFoundException('Nouveau collecteur introuvable');
+        if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT].includes(nouveauCollecteur.role)) {
+            throw new common_1.BadRequestException({ message: 'Le destinataire doit être un collecteur', code: 'ROLE_INVALIDE' });
+        }
+        if (nouveauCollecteur.statut !== client_1.StatutCompte.ACTIF) {
+            throw new common_1.BadRequestException({ message: 'Collecteur inactif', code: 'COLLECTEUR_INACTIF' });
+        }
+        const ancienCollecteurId = client.collecteurId;
+        await this.prisma.utilisateur.update({
+            where: { id: clientId },
+            data: { collecteurId: nouveauCollecteurId },
+        });
+        await this.prisma.journalAudit.create({
+            data: {
+                utilisateurId: adminId,
+                action: 'REASSIGNER_CLIENT',
+                details: JSON.stringify({
+                    clientId,
+                    clientNom: client.nom,
+                    ancienCollecteurId,
+                    nouveauCollecteurId,
+                    nouveauCollecteurNom: nouveauCollecteur.nom,
+                }),
+            },
+        });
+        return {
+            succes: true,
+            message: `${client.nom} réassigné à ${nouveauCollecteur.nom}.`,
+            donnees: { clientId, ancienCollecteurId, nouveauCollecteurId },
+        };
+    }
+    async supprimerMonCompte(clientId, pin) {
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { id: clientId },
+            include: {
+                _count: { select: { microCredits: true } },
+                tontines: { select: { soldeActuel: true } },
+            },
+        });
+        if (!utilisateur)
+            throw new common_1.NotFoundException('Utilisateur introuvable');
+        const pinValide = await bcrypt.compare(pin, utilisateur.pinHash ?? '');
+        if (!pinValide) {
+            throw new common_1.UnauthorizedException({ message: 'Code PIN incorrect', code: 'PIN_INVALIDE' });
+        }
+        const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+        if (soldeTotal > 0) {
+            throw new common_1.BadRequestException({
+                message: `Impossible de supprimer votre compte : vous avez ${soldeTotal} FCFA de solde. Faites d'abord un retrait.`,
+                code: 'SOLDE_NON_NUL',
+            });
+        }
+        const creditActif = await this.prisma.microCredit.findFirst({
+            where: { clientId, statut: { in: ['ACTIF', 'EN_DEFAUT'] } },
+        });
+        if (creditActif) {
+            throw new common_1.BadRequestException({
+                message: 'Impossible de supprimer votre compte : vous avez un micro-crédit en cours.',
+                code: 'CREDIT_ACTIF',
+            });
+        }
+        const aHistorique = utilisateur._count.microCredits > 0;
+        if (aHistorique) {
+            await this.prisma.utilisateur.update({
+                where: { id: clientId },
+                data: { statut: client_1.StatutCompte.BANNI, nom: '[Compte supprimé]', telephone: `DELETED_${clientId}` },
+            });
+            return { succes: true, message: 'Compte supprimé. Vos données financières sont anonymisées.' };
+        }
+        await this.prisma.utilisateur.delete({ where: { id: clientId } });
+        return { succes: true, message: 'Compte supprimé définitivement.' };
     }
 };
 exports.UtilisateursService = UtilisateursService;

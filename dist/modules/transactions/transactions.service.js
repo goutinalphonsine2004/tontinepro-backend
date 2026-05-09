@@ -49,6 +49,66 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         const fraisAgent = utilisateur.collecteurId
             ? business_constants_1.BUSINESS.calculerCommissionAgent(dto.montant)
             : 0;
+        if (utilisateur.collecteurId) {
+            const collecteur = await this.prisma.utilisateur.findUnique({
+                where: { id: utilisateur.collecteurId },
+                select: { id: true, role: true },
+            });
+            if (collecteur?.role === 'INDEPENDANT') {
+                const facturation = await this.prisma.facturationAgent.findFirst({
+                    where: { agentId: collecteur.id },
+                });
+                const caution = facturation?.cautionMontant ?? 0;
+                if (caution > 0) {
+                    const debutMois = new Date();
+                    debutMois.setDate(1);
+                    debutMois.setHours(0, 0, 0, 0);
+                    const totalMois = await this.prisma.transaction.aggregate({
+                        where: {
+                            utilisateur: { collecteurId: collecteur.id },
+                            type: client_1.TypeTransaction.COTISATION,
+                            statut: client_1.StatutTransaction.SUCCES,
+                            creeLe: { gte: debutMois },
+                        },
+                        _sum: { montant: true },
+                    });
+                    const collecteMois = (totalMois._sum.montant ?? 0) + dto.montant;
+                    const pourcentage = (collecteMois / caution) * 100;
+                    if (collecteMois >= caution) {
+                        throw new common_1.ForbiddenException({
+                            message: `Plafond de caution atteint pour ce collecteur (${caution.toLocaleString()} FCFA/mois). Le client doit payer directement via Mobile Money.`,
+                            code: 'PLAFOND_CAUTION_ATTEINT',
+                            donnees: { caution, collecteMois: collecteMois - dto.montant, pourcentage: Math.round(pourcentage) },
+                        });
+                    }
+                    if (pourcentage >= 80) {
+                        this.logger.warn(`[CAUTION] Collecteur ${collecteur.id} à ${Math.round(pourcentage)}% de sa caution (${collecteMois.toLocaleString()}/${caution.toLocaleString()} FCFA)`);
+                        const alerteExistante = await this.prisma.alerteSysteme.findFirst({
+                            where: {
+                                type: 'SEUIL_CAUTION',
+                                resourceType: 'UTILISATEUR',
+                                resourceId: collecteur.id,
+                                statut: 'OUVERTE',
+                            },
+                        });
+                        if (!alerteExistante) {
+                            await this.prisma.alerteSysteme.create({
+                                data: {
+                                    type: 'SEUIL_CAUTION',
+                                    severite: 'AVERTISSEMENT',
+                                    statut: 'OUVERTE',
+                                    titre: `Collecteur indépendant à ${Math.round(pourcentage)}% de sa caution`,
+                                    message: `Le collecteur ${collecteur.id} a atteint ${Math.round(pourcentage)}% de sa caution mensuelle (${collecteMois.toLocaleString()} / ${caution.toLocaleString()} FCFA). Blocage automatique à 100%.`,
+                                    resourceType: 'UTILISATEUR',
+                                    resourceId: collecteur.id,
+                                    metadata: JSON.stringify({ caution, collecteMois, pourcentage: Math.round(pourcentage) }),
+                                },
+                            });
+                        }
+                    }
+                }
+            }
+        }
         const transaction = await this.prisma.transaction.create({
             data: {
                 montant: dto.montant,
@@ -120,6 +180,40 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                 where: { id: transaction.id },
                 data: { statut: client_1.StatutTransaction.ECHOUE, motifEchec: body.reason ?? 'Paiement refusé' },
             });
+            const FENETRE_MS = 60_000;
+            const SEUIL_ECHECS = 10;
+            const depuis = new Date(Date.now() - FENETRE_MS);
+            const nbEchouees = await this.prisma.transaction.count({
+                where: {
+                    utilisateurId: transaction.utilisateur.id,
+                    statut: client_1.StatutTransaction.ECHOUE,
+                    creeLe: { gte: depuis },
+                },
+            });
+            if (nbEchouees >= SEUIL_ECHECS) {
+                this.logger.error(`[CIRCUIT BREAKER] Compte ${transaction.utilisateur.id} — ${nbEchouees} échecs en <60s → SUSPENSION`);
+                await this.prisma.utilisateur.update({
+                    where: { id: transaction.utilisateur.id },
+                    data: { statut: 'SUSPENDU' },
+                });
+                await this.prisma.alerteSysteme.create({
+                    data: {
+                        type: 'CIRCUIT_BREAKER',
+                        severite: 'CRITIQUE',
+                        statut: 'OUVERTE',
+                        titre: `Circuit breaker déclenché — ${transaction.utilisateur.nom}`,
+                        message: `${nbEchouees} transactions échouées en moins d'une minute sur le compte ${transaction.utilisateur.telephone}. Compte suspendu automatiquement.`,
+                        resourceType: 'UTILISATEUR',
+                        resourceId: transaction.utilisateur.id,
+                        metadata: JSON.stringify({
+                            nbEchouees,
+                            fenetreMs: FENETRE_MS,
+                            telephone: transaction.utilisateur.telephone,
+                            declencheLe: new Date().toISOString(),
+                        }),
+                    },
+                });
+            }
             this.logger.log(`Transaction échouée: ${body.transactionId}`);
         }
         return { succes: true, message: 'Webhook traité avec succès' };

@@ -8,6 +8,93 @@ import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 export declare class UtilisateursController {
     private service;
     constructor(service: UtilisateursService);
+    monDashboard(u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            profil: {
+                id: string;
+                nom: string;
+                photo: string | null;
+            };
+            soldeTotal: number;
+            tontines: {
+                nom: string;
+                id: string;
+                type: import("@prisma/client").$Enums.TypeTontine;
+                soldeActuel: number;
+                objectifMontant: number | null;
+                dateDeverrouillage: Date | null;
+                montantJournalier: number;
+            }[];
+            graphiqueEpargne: {
+                mois: string;
+                montant: number;
+            }[];
+            badge: {
+                niveau: import("@prisma/client").$Enums.NiveauBadge;
+                obtenuLe: Date;
+            } | null;
+            score: {
+                valeur: number;
+                eligibleMicroCredit: boolean;
+                eligiblePADME: boolean;
+                dernierCalcul: Date | null;
+            };
+            creditActif: {
+                id: string;
+                paiementJournalier: number;
+                totalJours: number;
+                joursPayes: number;
+                montantRestant: number;
+            } | null;
+            alertes: {
+                microCreditDisponible: boolean;
+                eligiblePADME: boolean;
+            };
+            prochaineDistribution: {
+                tontine: {
+                    nom: string;
+                    id: string;
+                    montantJournalier: number;
+                };
+            } & {
+                id: string;
+                creeLe: Date;
+                utilisateurId: string;
+                tontineId: string;
+                position: number;
+                aRecu: boolean;
+                recuLe: Date | null;
+                montantRecu: number | null;
+            };
+            dernieresTransactions: ({
+                tontine: {
+                    nom: string;
+                } | null;
+            } & {
+                id: string;
+                statut: import("@prisma/client").$Enums.StatutTransaction;
+                creeLe: Date;
+                type: import("@prisma/client").$Enums.TypeTransaction;
+                utilisateurId: string;
+                reference: string;
+                montant: number;
+                montantNet: number;
+                refKKiaPay: string | null;
+                operateur: string | null;
+                fraisPlateforme: number;
+                fraisAgent: number;
+                hashPrecedent: string | null;
+                hashActuel: string | null;
+                tontineId: string | null;
+                tentatives: number;
+                motifEchec: string | null;
+            })[];
+        };
+    }>;
     getProfil(u: {
         id: string;
     }): Promise<{
@@ -83,6 +170,14 @@ export declare class UtilisateursController {
             misAJourLe: Date;
         };
     }>;
+    supprimerMonCompte(u: {
+        id: string;
+    }, body: {
+        pin: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
     lister(dto: FiltrerUtilisateursDto): Promise<{
         succes: boolean;
         message: string;
@@ -108,6 +203,19 @@ export declare class UtilisateursController {
             page: number;
             limite: number;
             pages: number;
+        };
+    }>;
+    reassignerClient(id: string, body: {
+        nouveauCollecteurId: string;
+    }, u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            clientId: string;
+            ancienCollecteurId: string | null;
+            nouveauCollecteurId: string;
         };
     }>;
     changerStatut(u: {

@@ -39,10 +39,10 @@ export declare class RetraitsController {
             statut: import("@prisma/client").$Enums.StatutRetrait;
             creeLe: Date;
             utilisateurId: string;
-            motifRejet: string | null;
+            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            montant: number;
+            motifRejet: string | null;
             validePar: string | null;
             executeLe: Date | null;
         };
@@ -62,10 +62,10 @@ export declare class RetraitsController {
             statut: import("@prisma/client").$Enums.StatutRetrait;
             creeLe: Date;
             utilisateurId: string;
-            motifRejet: string | null;
+            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            montant: number;
+            motifRejet: string | null;
             validePar: string | null;
             executeLe: Date | null;
         })[];
@@ -89,10 +89,10 @@ export declare class RetraitsController {
             statut: import("@prisma/client").$Enums.StatutRetrait;
             creeLe: Date;
             utilisateurId: string;
-            motifRejet: string | null;
+            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            montant: number;
+            motifRejet: string | null;
             validePar: string | null;
             executeLe: Date | null;
         })[];

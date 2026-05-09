@@ -19,6 +19,7 @@ export declare class FacturationController {
             fraisMensuels: number;
             fraisParClient: number;
             totalClients: number;
+            cautionMontant: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
         };
@@ -37,6 +38,7 @@ export declare class FacturationController {
             fraisMensuels: number;
             fraisParClient: number;
             totalClients: number;
+            cautionMontant: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
         };
@@ -55,6 +57,7 @@ export declare class FacturationController {
             fraisMensuels: number;
             fraisParClient: number;
             totalClients: number;
+            cautionMontant: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
         };
@@ -79,6 +82,7 @@ export declare class FacturationController {
                 fraisMensuels: number;
                 fraisParClient: number;
                 totalClients: number;
+                cautionMontant: number;
                 dernierPaiement: Date;
                 prochainPaiement: Date;
             })[];

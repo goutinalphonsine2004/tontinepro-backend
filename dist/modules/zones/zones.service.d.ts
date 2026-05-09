@@ -58,4 +58,53 @@ export declare class ZonesService {
             }[];
         };
     }>;
+    assignerSuperviseur(zoneId: string, superviseurId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            zoneId: string;
+            superviseurId: string;
+            superviseurNom: string;
+        };
+    }>;
+    statsZone(zoneId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            zone: {
+                id: string;
+                nom: string;
+                ville: string;
+            };
+            nbAgents: number;
+            nbClients: number;
+            scoreMoyen: number;
+            volumeCeMois: number;
+            transactionsCeMois: number;
+            agents: {
+                nom: string;
+                role: import("@prisma/client").$Enums.Role;
+                id: string;
+                statut: import("@prisma/client").$Enums.StatutCompte;
+            }[];
+        };
+    }>;
+    heatmap(): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            zones: {
+                id: string;
+                nom: string;
+                ville: string;
+                nbAgents: number;
+                nbClients: number;
+                volumeTotal: number;
+                scoreMoyen: number;
+                eligiblesPADME: number;
+                activite: string;
+            }[];
+            totalVolume: number;
+        };
+    }>;
 }

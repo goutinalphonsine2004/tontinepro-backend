@@ -144,11 +144,109 @@ export declare class UtilisateursService {
             misAJourLe: Date;
         };
     }>;
+    monDashboard(clientId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            profil: {
+                id: string;
+                nom: string;
+                photo: string | null;
+            };
+            soldeTotal: number;
+            tontines: {
+                nom: string;
+                id: string;
+                type: import("@prisma/client").$Enums.TypeTontine;
+                soldeActuel: number;
+                objectifMontant: number | null;
+                dateDeverrouillage: Date | null;
+                montantJournalier: number;
+            }[];
+            graphiqueEpargne: {
+                mois: string;
+                montant: number;
+            }[];
+            badge: {
+                niveau: import("@prisma/client").$Enums.NiveauBadge;
+                obtenuLe: Date;
+            } | null;
+            score: {
+                valeur: number;
+                eligibleMicroCredit: boolean;
+                eligiblePADME: boolean;
+                dernierCalcul: Date | null;
+            };
+            creditActif: {
+                id: string;
+                paiementJournalier: number;
+                totalJours: number;
+                joursPayes: number;
+                montantRestant: number;
+            } | null;
+            alertes: {
+                microCreditDisponible: boolean;
+                eligiblePADME: boolean;
+            };
+            prochaineDistribution: {
+                tontine: {
+                    nom: string;
+                    id: string;
+                    montantJournalier: number;
+                };
+            } & {
+                id: string;
+                creeLe: Date;
+                utilisateurId: string;
+                tontineId: string;
+                position: number;
+                aRecu: boolean;
+                recuLe: Date | null;
+                montantRecu: number | null;
+            };
+            dernieresTransactions: ({
+                tontine: {
+                    nom: string;
+                } | null;
+            } & {
+                id: string;
+                statut: import("@prisma/client").$Enums.StatutTransaction;
+                creeLe: Date;
+                type: import("@prisma/client").$Enums.TypeTransaction;
+                utilisateurId: string;
+                reference: string;
+                montant: number;
+                montantNet: number;
+                refKKiaPay: string | null;
+                operateur: string | null;
+                fraisPlateforme: number;
+                fraisAgent: number;
+                hashPrecedent: string | null;
+                hashActuel: string | null;
+                tontineId: string | null;
+                tentatives: number;
+                motifEchec: string | null;
+            })[];
+        };
+    }>;
     supprimerUtilisateur(adminId: string, cibleId: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
             id: string;
         };
+    }>;
+    reassignerClient(clientId: string, nouveauCollecteurId: string, adminId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            clientId: string;
+            ancienCollecteurId: string | null;
+            nouveauCollecteurId: string;
+        };
+    }>;
+    supprimerMonCompte(clientId: string, pin: string): Promise<{
+        succes: boolean;
+        message: string;
     }>;
 }

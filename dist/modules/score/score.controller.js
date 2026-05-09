@@ -34,6 +34,9 @@ let ScoreController = class ScoreController {
     projection(u) {
         return this.service.projection(u.id);
     }
+    calendrierRegularite(u) {
+        return this.service.calendrierRegularite(u.id);
+    }
 };
 exports.ScoreController = ScoreController;
 __decorate([
@@ -64,6 +67,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ScoreController.prototype, "projection", null);
+__decorate([
+    (0, common_1.Get)('calendrier-regularite'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ScoreController.prototype, "calendrierRegularite", null);
 exports.ScoreController = ScoreController = __decorate([
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('score'),

@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnalyticsController = void 0;
 const common_1 = require("@nestjs/common");
@@ -28,6 +31,9 @@ let AnalyticsController = class AnalyticsController {
     evolutionRevenus() { return this.service.evolutionRevenus(); }
     clientsEligibles() { return this.service.clientsEligibles(); }
     padme() { return this.service.padme(); }
+    leaderboard(limite) {
+        return this.service.leaderboard(limite);
+    }
 };
 exports.AnalyticsController = AnalyticsController;
 __decorate([
@@ -72,6 +78,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AnalyticsController.prototype, "padme", null);
+__decorate([
+    (0, common_1.Get)('leaderboard'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERVISEUR, client_1.Role.CLIENT),
+    __param(0, (0, common_1.Query)('limite', new common_1.DefaultValuePipe(50), common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], AnalyticsController.prototype, "leaderboard", null);
 exports.AnalyticsController = AnalyticsController = __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERVISEUR),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

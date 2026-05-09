@@ -23,8 +23,8 @@ export declare class LitigesService {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -47,8 +47,8 @@ export declare class LitigesService {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -76,8 +76,8 @@ export declare class LitigesService {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -96,8 +96,8 @@ export declare class LitigesService {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -113,8 +113,8 @@ export declare class LitigesService {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -130,8 +130,8 @@ export declare class LitigesService {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -154,17 +154,52 @@ export declare class LitigesService {
                     nom: string;
                     id: string;
                 };
+                commentaires: {
+                    message: string;
+                    id: string;
+                    creeLe: Date;
+                    auteurId: string;
+                    pieceJointeUrl: string | null;
+                    litigeId: string;
+                }[];
             } & {
                 id: string;
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
             };
         };
+    }>;
+    ajouterCommentaire(litigeId: string, auteurId: string, dto: {
+        message: string;
+        pieceJointeUrl?: string;
+    }, role: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            message: string;
+            id: string;
+            creeLe: Date;
+            auteurId: string;
+            pieceJointeUrl: string | null;
+            litigeId: string;
+        };
+    }>;
+    commentaires(litigeId: string, userId: string, role: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            message: string;
+            id: string;
+            creeLe: Date;
+            auteurId: string;
+            pieceJointeUrl: string | null;
+            litigeId: string;
+        }[];
     }>;
 }

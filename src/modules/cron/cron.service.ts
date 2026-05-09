@@ -673,6 +673,8 @@ export class CronService {
     });
 
     let anomalies = 0;
+
+    // ─── VÉRIF 1 : Soldes internes ───────────────────
     for (const tontine of tontines) {
       const totalTransactions = await this.prisma.transaction.aggregate({
         where: {
@@ -715,8 +717,61 @@ export class CronService {
         await this.resoudreAlerteCoherence(tontine.id);
       }
     }
-    this.logger.log(`[CRON 0h30] Cohérence vérifiée — ${anomalies} anomalie(s) détectée(s)`);
+
+    // ─── VÉRIF 2 : Solde KKiaPay (à activer quand l'API expose un endpoint de solde) ─
+    // Note : KKiaPay ne propose pas encore d'endpoint de consultation de solde marchand
+    // dans leur API publique. Cette vérification sera activée dès qu'elle sera disponible.
+    // Structure prévue :
+    //   const soldeKKiaPay = await this.kkiapay.consulterSolde();
+    //   const totalPlatforme = somme des montantsNet des cotisations réussies;
+    //   if (Math.abs(soldeKKiaPay - totalPlateforme) > SEUIL) → alerte CRITIQUE + suspend retraits
+    this.logger.log('[CRON 0h30] Vérif2 KKiaPay : en attente endpoint API marchand KKiaPay.');
+
+    // ─── VÉRIF 3 : Intégrité de la chaîne de hachage ─
+    const txsRecentes = await this.prisma.transaction.findMany({
+      where: { statut: StatutTransaction.SUCCES },
+      orderBy: { creeLe: 'asc' },
+      take: 500, // On vérifie les 500 dernières pour la performance
+      select: { id: true, utilisateurId: true, hashPrecedent: true, hashActuel: true, creeLe: true },
+    });
+
+    let chaineBrisee = 0;
+    for (let i = 1; i < txsRecentes.length; i++) {
+      const txCourante = txsRecentes[i];
+      const txPrecedente = txsRecentes[i - 1];
+
+      // Si même utilisateur, vérifier que hashPrecedent de la tx courante = hashActuel de la précédente
+      if (txCourante.utilisateurId === txPrecedente.utilisateurId) {
+        if (txCourante.hashPrecedent !== null && txCourante.hashPrecedent !== txPrecedente.hashActuel) {
+          chaineBrisee++;
+          this.logger.error(
+            `[CHAÎNE HASH] Rupture détectée — tx: ${txCourante.id} | attendu: ${txPrecedente.hashActuel} | reçu: ${txCourante.hashPrecedent}`,
+          );
+        }
+      }
+    }
+
+    if (chaineBrisee > 0) {
+      anomalies += chaineBrisee;
+      await this.prisma.alerteSysteme.create({
+        data: {
+          type: 'INTEGRITE_CHAINE',
+          severite: 'CRITIQUE',
+          statut: 'OUVERTE',
+          titre: `Intégrité chaîne de hachage compromise — ${chaineBrisee} rupture(s)`,
+          message: `La vérification nocturne a détecté ${chaineBrisee} rupture(s) dans la chaîne de hachage des transactions. Une modification directe de la base de données est suspectée.`,
+          resourceType: 'SYSTEME',
+          resourceId: 'HASH_CHAIN',
+          metadata: JSON.stringify({ chaineBrisee, txsVerifiees: txsRecentes.length }),
+        },
+      });
+    }
+
+    this.logger.log(
+      `[CRON 0h30] Triple-check terminé — Vérif1: ${anomalies - chaineBrisee} anomalie(s) solde | Vérif3: ${chaineBrisee} rupture(s) chaîne`,
+    );
   }
+
 
   private async creerOuMettreAJourAlerteCoherence(
     tontine: { id: string; nom: string; soldeActuel: number },

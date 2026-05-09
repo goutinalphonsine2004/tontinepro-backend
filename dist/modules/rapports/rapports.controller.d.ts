@@ -8,5 +8,8 @@ export declare class RapportsController {
     retraitsCsv(dto: FiltrerRapportDto, res: Response): Promise<Response<any, Record<string, any>>>;
     microCreditsCsv(dto: FiltrerRapportDto, res: Response): Promise<Response<any, Record<string, any>>>;
     financierPdf(dto: FiltrerRapportDto, res: Response): Promise<Response<any, Record<string, any>>>;
+    microCreditsPdf(dto: FiltrerRapportDto, res: Response): Promise<Response<any, Record<string, any>>>;
+    agentsPdf(dto: FiltrerRapportDto, res: Response): Promise<Response<any, Record<string, any>>>;
+    bilanPdf(dto: FiltrerRapportDto, res: Response): Promise<Response<any, Record<string, any>>>;
     private envoyerFichier;
 }

@@ -19,6 +19,7 @@ const prisma_service_1 = require("../../prisma/prisma.service");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
 const pdf_service_1 = require("../../common/services/pdf.service");
 const sms_service_1 = require("../notifications/sms.service");
+const whatsapp_service_1 = require("../notifications/whatsapp.service");
 const notifications_service_1 = require("../notifications/notifications.service");
 const badges_service_1 = require("../badges/badges.service");
 const business_constants_1 = require("../../common/constants/business.constants");
@@ -26,15 +27,17 @@ let CronService = CronService_1 = class CronService {
     prisma;
     kkiapay;
     sms;
+    whatsapp;
     pdf;
     notifications;
     badges;
     config;
     logger = new common_1.Logger(CronService_1.name);
-    constructor(prisma, kkiapay, sms, pdf, notifications, badges, config) {
+    constructor(prisma, kkiapay, sms, whatsapp, pdf, notifications, badges, config) {
         this.prisma = prisma;
         this.kkiapay = kkiapay;
         this.sms = sms;
+        this.whatsapp = whatsapp;
         this.pdf = pdf;
         this.notifications = notifications;
         this.badges = badges;
@@ -175,6 +178,17 @@ let CronService = CronService_1 = class CronService {
                 dernierCalcul: new Date(),
             },
         });
+        const scoreCreditRecord = await this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } });
+        if (scoreCreditRecord) {
+            await this.prisma.historiqueScore.create({
+                data: {
+                    scoreCreditId: scoreCreditRecord.id,
+                    score: scoreFinal,
+                    tauxRegularite,
+                    scoreRemboursement,
+                },
+            });
+        }
         if (eligiblePADME) {
             await this.genererDossierPADME(clientId, scoreFinal, tauxRegularite);
         }
@@ -367,6 +381,7 @@ let CronService = CronService_1 = class CronService {
                 ];
                 for (const tel of destinataires) {
                     await this.sms.envoyer(tel, message);
+                    this.whatsapp.envoyerMessage(tel, message).catch((err) => this.logger.warn(`[WhatsApp] Échec rappel cotisation → ${tel}: ${err.message}`));
                     rappelsEnvoyes++;
                 }
             }
@@ -556,7 +571,40 @@ let CronService = CronService_1 = class CronService {
                 await this.resoudreAlerteCoherence(tontine.id);
             }
         }
-        this.logger.log(`[CRON 0h30] Cohérence vérifiée — ${anomalies} anomalie(s) détectée(s)`);
+        this.logger.log('[CRON 0h30] Vérif2 KKiaPay : en attente endpoint API marchand KKiaPay.');
+        const txsRecentes = await this.prisma.transaction.findMany({
+            where: { statut: client_1.StatutTransaction.SUCCES },
+            orderBy: { creeLe: 'asc' },
+            take: 500,
+            select: { id: true, utilisateurId: true, hashPrecedent: true, hashActuel: true, creeLe: true },
+        });
+        let chaineBrisee = 0;
+        for (let i = 1; i < txsRecentes.length; i++) {
+            const txCourante = txsRecentes[i];
+            const txPrecedente = txsRecentes[i - 1];
+            if (txCourante.utilisateurId === txPrecedente.utilisateurId) {
+                if (txCourante.hashPrecedent !== null && txCourante.hashPrecedent !== txPrecedente.hashActuel) {
+                    chaineBrisee++;
+                    this.logger.error(`[CHAÎNE HASH] Rupture détectée — tx: ${txCourante.id} | attendu: ${txPrecedente.hashActuel} | reçu: ${txCourante.hashPrecedent}`);
+                }
+            }
+        }
+        if (chaineBrisee > 0) {
+            anomalies += chaineBrisee;
+            await this.prisma.alerteSysteme.create({
+                data: {
+                    type: 'INTEGRITE_CHAINE',
+                    severite: 'CRITIQUE',
+                    statut: 'OUVERTE',
+                    titre: `Intégrité chaîne de hachage compromise — ${chaineBrisee} rupture(s)`,
+                    message: `La vérification nocturne a détecté ${chaineBrisee} rupture(s) dans la chaîne de hachage des transactions. Une modification directe de la base de données est suspectée.`,
+                    resourceType: 'SYSTEME',
+                    resourceId: 'HASH_CHAIN',
+                    metadata: JSON.stringify({ chaineBrisee, txsVerifiees: txsRecentes.length }),
+                },
+            });
+        }
+        this.logger.log(`[CRON 0h30] Triple-check terminé — Vérif1: ${anomalies - chaineBrisee} anomalie(s) solde | Vérif3: ${chaineBrisee} rupture(s) chaîne`);
     }
     async creerOuMettreAJourAlerteCoherence(tontine, soldeCalcule, ecart) {
         const metadata = JSON.stringify({
@@ -721,6 +769,7 @@ exports.CronService = CronService = CronService_1 = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         kkiapay_service_1.KkiapayService,
         sms_service_1.SmsService,
+        whatsapp_service_1.WhatsappService,
         pdf_service_1.PdfService,
         notifications_service_1.NotificationsService,
         badges_service_1.BadgesService,

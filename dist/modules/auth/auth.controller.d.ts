@@ -121,4 +121,70 @@ export declare class AuthController {
             sessionCouranteRevoquee: boolean;
         };
     }>;
+    enregistrerAppareil(u: {
+        id: string;
+    }, dto: any): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            appareilId: string;
+            deviceId: string;
+            nomAppareil: string | null;
+        };
+    }>;
+    connexionBiometrique(dto: any, req: Request): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            accessToken: string;
+            utilisateur: {
+                id: string;
+                nom: string;
+                role: import("@prisma/client").$Enums.Role;
+            };
+        };
+    }>;
+    mesAppareils(u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            deviceId: string;
+            id: string;
+            creeLe: Date;
+            nomAppareil: string | null;
+            modeleAppareil: string | null;
+            systemeExploitation: string | null;
+            derniereAuthentification: Date | null;
+        }[];
+    }>;
+    revoquerAppareil(u: {
+        id: string;
+    }, appareilId: string): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
+    connexionsSuspectes(page: number, limite: number): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            alertes: {
+                utilisateur: {
+                    id: string;
+                    nom: string;
+                    telephone: string;
+                    role: string;
+                };
+                nbrIPs: number;
+                ips: string[];
+                derniereSession: Date;
+                derniereIP: string;
+                suspicion: string;
+            }[];
+            total: number;
+            page: number;
+            pages: number;
+        };
+    }>;
 }

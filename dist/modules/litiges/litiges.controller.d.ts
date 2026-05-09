@@ -21,8 +21,8 @@ export declare class LitigesController {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -45,41 +45,12 @@ export declare class LitigesController {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
             })[];
-        };
-    }>;
-    detail(id: string, u: any): Promise<{
-        succes: boolean;
-        message: string;
-        donnees: {
-            litige: {
-                transaction: {
-                    id: string;
-                    creeLe: Date;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
-                    montant: number;
-                };
-                client: {
-                    telephone: string;
-                    nom: string;
-                    id: string;
-                };
-            } & {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
-                motif: string;
-                transactionId: string;
-                clientId: string;
-                resoluLe: Date | null;
-                resolution: string | null;
-                resoluPar: string | null;
-            };
         };
     }>;
     enCours(page: number, limite: number): Promise<{
@@ -103,8 +74,8 @@ export declare class LitigesController {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -123,8 +94,8 @@ export declare class LitigesController {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -140,8 +111,8 @@ export declare class LitigesController {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;
@@ -157,8 +128,72 @@ export declare class LitigesController {
                 statut: import("@prisma/client").$Enums.StatutLitige;
                 creeLe: Date;
                 motif: string;
-                transactionId: string;
                 clientId: string;
+                transactionId: string;
+                resoluLe: Date | null;
+                resolution: string | null;
+                resoluPar: string | null;
+            };
+        };
+    }>;
+    ajouterCommentaire(id: string, u: any, dto: {
+        message: string;
+        pieceJointeUrl?: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            message: string;
+            id: string;
+            creeLe: Date;
+            auteurId: string;
+            pieceJointeUrl: string | null;
+            litigeId: string;
+        };
+    }>;
+    commentaires(id: string, u: any): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            message: string;
+            id: string;
+            creeLe: Date;
+            auteurId: string;
+            pieceJointeUrl: string | null;
+            litigeId: string;
+        }[];
+    }>;
+    detail(id: string, u: any): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            litige: {
+                transaction: {
+                    id: string;
+                    creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
+                    montant: number;
+                };
+                client: {
+                    telephone: string;
+                    nom: string;
+                    id: string;
+                };
+                commentaires: {
+                    message: string;
+                    id: string;
+                    creeLe: Date;
+                    auteurId: string;
+                    pieceJointeUrl: string | null;
+                    litigeId: string;
+                }[];
+            } & {
+                id: string;
+                statut: import("@prisma/client").$Enums.StatutLitige;
+                creeLe: Date;
+                motif: string;
+                clientId: string;
+                transactionId: string;
                 resoluLe: Date | null;
                 resolution: string | null;
                 resoluPar: string | null;

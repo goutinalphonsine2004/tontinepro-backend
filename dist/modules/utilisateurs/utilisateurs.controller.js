@@ -31,6 +31,9 @@ let UtilisateursController = class UtilisateursController {
     constructor(service) {
         this.service = service;
     }
+    monDashboard(u) {
+        return this.service.monDashboard(u.id);
+    }
     getProfil(u) {
         return this.service.getProfil(u.id);
     }
@@ -43,8 +46,14 @@ let UtilisateursController = class UtilisateursController {
     configurerEmpreinte(u, dto) {
         return this.service.configurerEmpreinte(u.id, dto);
     }
+    supprimerMonCompte(u, body) {
+        return this.service.supprimerMonCompte(u.id, body.pin);
+    }
     lister(dto) {
         return this.service.listerUtilisateurs(dto);
+    }
+    reassignerClient(id, body, u) {
+        return this.service.reassignerClient(id, body.nouveauCollecteurId, u.id);
     }
     changerStatut(u, id, dto) {
         return this.service.changerStatut(u.id, id, dto);
@@ -57,6 +66,13 @@ let UtilisateursController = class UtilisateursController {
     }
 };
 exports.UtilisateursController = UtilisateursController;
+__decorate([
+    (0, common_1.Get)('mon-dashboard'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "monDashboard", null);
 __decorate([
     (0, common_1.Get)('profil'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
@@ -89,6 +105,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UtilisateursController.prototype, "configurerEmpreinte", null);
 __decorate([
+    (0, common_1.Delete)('mon-compte'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "supprimerMonCompte", null);
+__decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, common_1.Get)(),
@@ -97,6 +121,17 @@ __decorate([
     __metadata("design:paramtypes", [filtrer_utilisateurs_dto_1.FiltrerUtilisateursDto]),
     __metadata("design:returntype", void 0)
 ], UtilisateursController.prototype, "lister", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERVISEUR),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, common_1.Put)(':id/reassigner'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "reassignerClient", null);
 __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),

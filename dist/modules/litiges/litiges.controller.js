@@ -34,9 +34,6 @@ let LitigesController = class LitigesController {
     mesList(u) {
         return this.service.mesList(u.id);
     }
-    detail(id, u) {
-        return this.service.detail(id, u.id, u.role);
-    }
     enCours(page, limite) {
         return this.service.listeEnCours(page, limite);
     }
@@ -48,6 +45,15 @@ let LitigesController = class LitigesController {
     }
     rejeter(id, u, dto) {
         return this.service.rejeter(id, u.id, dto);
+    }
+    ajouterCommentaire(id, u, dto) {
+        return this.service.ajouterCommentaire(id, u.id, dto, u.role);
+    }
+    commentaires(id, u) {
+        return this.service.commentaires(id, u.id, u.role);
+    }
+    detail(id, u) {
+        return this.service.detail(id, u.id, u.role);
     }
 };
 exports.LitigesController = LitigesController;
@@ -66,14 +72,6 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], LitigesController.prototype, "mesList", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], LitigesController.prototype, "detail", null);
 __decorate([
     (0, common_1.Get)('en-cours/liste'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERVISEUR),
@@ -116,6 +114,31 @@ __decorate([
     __metadata("design:paramtypes", [String, Object, rejeter_litige_dto_1.RejeterLitigeDto]),
     __metadata("design:returntype", void 0)
 ], LitigesController.prototype, "rejeter", null);
+__decorate([
+    (0, common_1.Post)(':id/commentaire'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", void 0)
+], LitigesController.prototype, "ajouterCommentaire", null);
+__decorate([
+    (0, common_1.Get)(':id/commentaires'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], LitigesController.prototype, "commentaires", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], LitigesController.prototype, "detail", null);
 exports.LitigesController = LitigesController = __decorate([
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('litiges'),

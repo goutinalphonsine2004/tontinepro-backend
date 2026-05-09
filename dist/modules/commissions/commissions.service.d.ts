@@ -34,8 +34,8 @@ export declare class CommissionsService {
             id: string;
             creeLe: Date;
             type: string;
-            agentId: string;
             montant: number;
+            agentId: string;
             transactionId: string;
         })[];
     }>;

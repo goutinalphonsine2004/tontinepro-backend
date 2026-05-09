@@ -141,8 +141,8 @@ export declare class MicroCreditsService {
             remboursements: {
                 id: string;
                 statut: string;
-                refKKiaPay: string | null;
                 montant: number;
+                refKKiaPay: string | null;
                 microCreditId: string;
                 payeLe: Date;
             }[];

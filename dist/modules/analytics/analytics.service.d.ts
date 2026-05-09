@@ -122,9 +122,9 @@ export declare class AnalyticsService {
                 id: string;
                 statut: import("@prisma/client").$Enums.StatutDossierPADME;
                 creeLe: Date;
+                tauxRegularite: number;
                 clientId: string;
                 scoreAuMoment: number;
-                tauxRegularite: number;
                 scoreCreditId: string;
                 totalEpargne: number;
                 creditsRembourses: number;
@@ -133,6 +133,24 @@ export declare class AnalyticsService {
                 soumisLe: Date | null;
                 examineLE: Date | null;
             })[];
+        };
+    }>;
+    leaderboard(limite?: number): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            classement: {
+                id: string;
+                nom: string;
+                score: number;
+                scoreClassement: number;
+                regularite: number;
+                solde: number;
+                totalCotise: number;
+                anciennete: number;
+                badge: import("@prisma/client").$Enums.NiveauBadge;
+                rang: number;
+            }[];
         };
     }>;
 }
