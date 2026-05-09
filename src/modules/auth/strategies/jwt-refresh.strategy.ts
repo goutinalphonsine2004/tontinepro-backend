@@ -11,6 +11,14 @@ interface JwtPayload {
   sid?: string;
 }
 
+function secretRefreshJwt(config: ConfigService) {
+  const secret = config.get<string>('JWT_REFRESH_SECRET');
+  if (!secret && config.get<string>('NODE_ENV') === 'production') {
+    throw new Error('JWT_REFRESH_SECRET est obligatoire en production');
+  }
+  return secret ?? 'dev-refresh-secret-change-me';
+}
+
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor(
@@ -20,7 +28,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_REFRESH_SECRET', 'fallback-refresh-secret'),
+      secretOrKey: secretRefreshJwt(config),
     });
   }
 

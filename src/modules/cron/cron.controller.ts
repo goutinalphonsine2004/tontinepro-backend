@@ -47,4 +47,9 @@ export class CronController {
   rappels() {
     return this.service.declencherRappelsManuellement();
   }
+
+  @Post('revoquer-sessions')
+  revoquerSessions() {
+    return this.service.declencherRevocationManuellement();
+  }
 }

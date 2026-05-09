@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Role, StatutCompte, StatutCredit, StatutTransaction, TypeTransaction } from '@prisma/client';
+import { Role, StatutCompte, StatutCredit, StatutDossierPADME, StatutTransaction, TypeTransaction } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BUSINESS } from '../../common/constants/business.constants';
 
@@ -247,6 +247,55 @@ export class AnalyticsService {
             .filter((e) => e.utilisateur.microCredits.length === 0)
             .map((e) => ({ id: e.utilisateur.id, nom: e.utilisateur.nom, telephone: e.utilisateur.telephone, score: e.score })),
         },
+      },
+    };
+  }
+
+  // ─── GET /analytics/padme ─────────────────────────
+  async padme() {
+    const [
+      parStatut,
+      commissionsPADME,
+      dossiersAcceptes,
+      derniersDossiers,
+    ] = await Promise.all([
+      this.prisma.dossierPADME.groupBy({
+        by: ['statut'],
+        _count: true,
+      }),
+      this.prisma.commission.aggregate({
+        where: { type: 'PADME' },
+        _sum: { montant: true },
+        _count: true,
+      }),
+      this.prisma.dossierPADME.count({ where: { statut: StatutDossierPADME.ACCEPTE } }),
+      this.prisma.dossierPADME.findMany({
+        take: 10,
+        orderBy: { creeLe: 'desc' },
+        include: { client: { select: { id: true, nom: true, telephone: true } } },
+      }),
+    ]);
+
+    const total = parStatut.reduce((s, row) => s + row._count, 0);
+    const statsParStatut = Object.fromEntries(parStatut.map((row) => [row.statut, row._count]));
+    const soumis = (statsParStatut[StatutDossierPADME.SOUMIS_PADME] ?? 0)
+      + (statsParStatut[StatutDossierPADME.ACCEPTE] ?? 0)
+      + (statsParStatut[StatutDossierPADME.REJETE] ?? 0);
+
+    return {
+      succes: true,
+      message: 'Statistiques PADME.',
+      donnees: {
+        total,
+        parStatut: statsParStatut,
+        soumis,
+        acceptes: dossiersAcceptes,
+        tauxAcceptation: soumis > 0 ? Math.round((dossiersAcceptes / soumis) * 100) : 0,
+        commissions: {
+          total: commissionsPADME._sum.montant ?? 0,
+          nombre: commissionsPADME._count,
+        },
+        derniersDossiers,
       },
     };
   }

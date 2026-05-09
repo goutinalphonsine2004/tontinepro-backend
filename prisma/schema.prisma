@@ -185,6 +185,7 @@ model Utilisateur {
   qrCode         QRCodeCollecteur?
   sessions       SessionUtilisateur[]
   preferenceNotification PreferenceNotification?
+  appareilsBiometriques AppareilBiometrique[]
 
   @@index([telephone])
   @@index([role])
@@ -193,12 +194,13 @@ model Utilisateur {
 }
 
 model Zone {
-  id          String        @id @default(uuid())
-  nom         String
-  ville       String
-  description String?
-  agents      Utilisateur[]
-  creeLe      DateTime      @default(now())
+  id            String        @id @default(uuid())
+  nom           String
+  ville         String
+  description   String?
+  superviseurId String?
+  agents        Utilisateur[]
+  creeLe        DateTime      @default(now())
 }
 
 model DocumentKYC {
@@ -249,6 +251,24 @@ model CodeOTP {
   creeLe        DateTime    @default(now())
 }
 
+model AppareilBiometrique {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  deviceId      String
+  empreinteHash String
+  nomAppareil   String?
+  modeleAppareil String?
+  systemeExploitation String?
+  actif         Boolean     @default(true)
+  derniereAuthentification DateTime?
+  creeLe        DateTime    @default(now())
+  misAJourLe    DateTime    @updatedAt
+
+  @@unique([utilisateurId, deviceId])
+  @@index([utilisateurId])
+}
+
 model SessionUtilisateur {
   id                  String      @id @default(uuid())
   utilisateurId       String
@@ -260,6 +280,7 @@ model SessionUtilisateur {
   derniereUtilisation DateTime    @default(now())
   expireLe            DateTime
   revoqueLe           DateTime?
+  refreshTokenHash    String?
   creeLe              DateTime    @default(now())
 
   @@index([utilisateurId, actif])
@@ -282,6 +303,7 @@ model Tontine {
   proprietaireId     String
   proprietaire       Utilisateur         @relation(fields: [proprietaireId], references: [id])
   transactions       Transaction[]
+  retraits           Retrait[]
   membres            MembreTontineGroupe[]
   ordresTirage       OrdreTirage[]
   creeLe             DateTime            @default(now())
@@ -299,6 +321,8 @@ model MembreTontineGroupe {
   statut         StatutMembreGroupe @default(ACTIF)
   montantCaution Float              @default(0)
   cautionBloquee Boolean            @default(true)
+  nombreDefaillances Int            @default(0)
+  derniereDefaillanceLe DateTime?
   rejointLe      DateTime           @default(now())
   excluLe        DateTime?
   motifExclusion String?
@@ -367,6 +391,8 @@ model Retrait {
   id            String        @id @default(uuid())
   utilisateurId String
   utilisateur   Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  tontineId     String
+  tontine       Tontine       @relation(fields: [tontineId], references: [id])
   montant       Float
   statut        StatutRetrait @default(EN_ATTENTE)
   validePar     String?
@@ -434,17 +460,18 @@ model RemboursementCredit {
 // ─────────────────────────────────────────────────────
 
 model Litige {
-  id            String       @id @default(uuid())
+  id            String             @id @default(uuid())
   transactionId String
-  transaction   Transaction  @relation(fields: [transactionId], references: [id])
+  transaction   Transaction        @relation(fields: [transactionId], references: [id])
   clientId      String
-  client        Utilisateur  @relation(fields: [clientId], references: [id])
+  client        Utilisateur        @relation(fields: [clientId], references: [id])
   motif         String
-  statut        StatutLitige @default(OUVERT)
+  statut        StatutLitige       @default(OUVERT)
   resoluPar     String?
   resolution    String?
-  creeLe        DateTime     @default(now())
+  creeLe        DateTime           @default(now())
   resoluLe      DateTime?
+  commentaires  CommentaireLitige[]
 }
 
 model PresenceCollecteur {
@@ -473,23 +500,44 @@ model JournalAudit {
   @@index([creeLe])
 }
 
+model AlerteSysteme {
+  id           String    @id @default(uuid())
+  type         String
+  severite     String
+  statut       String    @default("OUVERTE")
+  titre        String
+  message      String
+  resourceType String?
+  resourceId   String?
+  metadata     String?
+  detecteeLe   DateTime  @default(now())
+  resolueLe    DateTime?
+  creeLe       DateTime  @default(now())
+  misAJourLe   DateTime  @updatedAt
+
+  @@index([statut, severite])
+  @@index([resourceType, resourceId])
+  @@index([type])
+}
+
 // ─────────────────────────────────────────────────────
 // ANALYTIQUE & PADME
 // ─────────────────────────────────────────────────────
 
 model ScoreCredit {
-  id                  String         @id @default(uuid())
-  utilisateurId       String         @unique
-  utilisateur         Utilisateur    @relation(fields: [utilisateurId], references: [id])
-  score               Int            @default(0)
-  totalDepots         Int            @default(0)
-  tauxRegularite      Float          @default(0)
-  totalMois           Int            @default(0)
-  scoreRemboursement  Float          @default(0)
-  eligiblePADME       Boolean        @default(false)
-  eligibleMicroCredit Boolean        @default(false)
-  dernierCalcul       DateTime       @default(now())
+  id                  String           @id @default(uuid())
+  utilisateurId       String           @unique
+  utilisateur         Utilisateur      @relation(fields: [utilisateurId], references: [id])
+  score               Int              @default(0)
+  totalDepots         Int              @default(0)
+  tauxRegularite      Float            @default(0)
+  totalMois           Int              @default(0)
+  scoreRemboursement  Float            @default(0)
+  eligiblePADME       Boolean          @default(false)
+  eligibleMicroCredit Boolean          @default(false)
+  dernierCalcul       DateTime         @default(now())
   dossiersPADME       DossierPADME[]
+  historique          HistoriqueScore[]
 }
 
 model DossierPADME {
@@ -543,4 +591,58 @@ model BadgeClient {
   client   Utilisateur @relation(fields: [clientId], references: [id])
   niveau   NiveauBadge
   obtenuLe DateTime    @default(now())
+}
+
+// ─────────────────────────────────────────────────────
+// NOUVELLES TABLES
+// ─────────────────────────────────────────────────────
+
+model HistoriqueScore {
+  id            String      @id @default(uuid())
+  scoreCreditId String
+  scoreCredit   ScoreCredit @relation(fields: [scoreCreditId], references: [id])
+  score         Int
+  tauxRegularite Float
+  scoreRemboursement Float
+  calculeLe     DateTime    @default(now())
+
+  @@index([scoreCreditId, calculeLe])
+}
+
+model ParametreSysteme {
+  id         String   @id @default(uuid())
+  cle        String   @unique
+  valeur     String
+  description String?
+  modifiePar String?
+  creeLe     DateTime @default(now())
+  misAJourLe DateTime @updatedAt
+
+  @@index([cle])
+}
+
+model ArticleFAQ {
+  id        String   @id @default(uuid())
+  categorie String
+  question  String
+  reponse   String
+  ordre     Int      @default(0)
+  actif     Boolean  @default(true)
+  creePar   String?
+  creeLe    DateTime @default(now())
+  misAJourLe DateTime @updatedAt
+
+  @@index([categorie, actif])
+}
+
+model CommentaireLitige {
+  id          String   @id @default(uuid())
+  litigeId    String
+  litige      Litige   @relation(fields: [litigeId], references: [id])
+  auteurId    String
+  message     String
+  pieceJointeUrl String?
+  creeLe      DateTime @default(now())
+
+  @@index([litigeId, creeLe])
 }

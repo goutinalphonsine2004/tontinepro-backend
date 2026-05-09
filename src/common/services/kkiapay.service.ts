@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 export interface InitierPaiementParams {
   montant: number;
@@ -59,13 +59,16 @@ export class KkiapayService {
   // Vérification signature HMAC-SHA256 du webhook KKiaPay
   verifierSignature(rawBody: string, signatureRecue: string): boolean {
     if (!this.secretKey) {
+      const production = this.config.get<string>('NODE_ENV') === 'production';
       this.logger.warn('KKIAPAY_SECRET_KEY non configuré — signature non vérifiée');
-      return true; // permissif en dev si clé absente
+      return !production; // permissif uniquement hors production
     }
     const signatureCalculee = createHmac('sha256', this.secretKey)
       .update(rawBody)
       .digest('hex');
-    const valide = signatureCalculee === signatureRecue;
+    const recue = Buffer.from(signatureRecue ?? '', 'hex');
+    const calculee = Buffer.from(signatureCalculee, 'hex');
+    const valide = recue.length === calculee.length && timingSafeEqual(recue, calculee);
     if (!valide) {
       this.logger.warn(`Signature invalide. Reçue: ${signatureRecue} | Calculée: ${signatureCalculee}`);
     }

@@ -28,4 +28,7 @@ export class AnalyticsController {
 
   @Get('clients-eligibles')
   clientsEligibles() { return this.service.clientsEligibles(); }
+
+  @Get('padme')
+  padme() { return this.service.padme(); }
 }

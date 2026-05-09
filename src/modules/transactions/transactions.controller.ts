@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Headers, Param, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, Header, Headers, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { TransactionsService } from './transactions.service';
 import { CotiserDto } from './dto/cotiser.dto';
 import { WebhookKkiapayDto } from './dto/webhook-kkiapay.dto';
+import { FiltrerTransactionsDto } from './dto/filtrer-transactions.dto';
+import { PartagerRecuWhatsappDto } from './dto/partager-recu-whatsapp.dto';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -29,13 +31,36 @@ export class TransactionsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('historique')
-  historique(@UtilisateurCourant() u: { id: string }) {
-    return this.service.historique(u.id);
+  historique(@UtilisateurCourant() u: { id: string }, @Query() filtres: FiltrerTransactionsDto) {
+    return this.service.historique(u.id, filtres);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/recu')
   recu(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
     return this.service.recu(id, u.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/recu.pdf')
+  @Header('Content-Type', 'application/pdf')
+  async recuPdf(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.service.recuPdf(id, u.id);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/partager-whatsapp')
+  partagerWhatsapp(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: PartagerRecuWhatsappDto,
+  ) {
+    return this.service.partagerRecuWhatsapp(id, u.id, dto.telephone);
   }
 }

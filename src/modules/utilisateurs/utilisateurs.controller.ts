@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -16,6 +17,11 @@ import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 @Controller('utilisateurs')
 export class UtilisateursController {
   constructor(private service: UtilisateursService) {}
+
+  @Get('mon-dashboard')
+  monDashboard(@UtilisateurCourant() u: { id: string }) {
+    return this.service.monDashboard(u.id);
+  }
 
   @Get('profil')
   getProfil(@UtilisateurCourant() u: { id: string }) {

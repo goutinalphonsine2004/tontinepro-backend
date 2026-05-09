@@ -1,10 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
-import { Role, StatutCompte, StatutCredit, StatutDossierPADME, StatutMembreGroupe, TypeTransaction, StatutTransaction } from '@prisma/client';
+import { Role, StatutCompte, StatutCredit, StatutDossierPADME, StatutMembreGroupe, TypeNotification, TypeTransaction, StatutTransaction } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
+import { PdfService } from '../../common/services/pdf.service';
 import { SmsService } from '../notifications/sms.service';
+import { WhatsappService } from '../notifications/whatsapp.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BadgesService } from '../badges/badges.service';
 import { BUSINESS } from '../../common/constants/business.constants';
 
@@ -16,6 +19,9 @@ export class CronService {
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
     private sms: SmsService,
+    private whatsapp: WhatsappService,
+    private pdf: PdfService,
+    private notifications: NotificationsService,
     private badges: BadgesService,
     private config: ConfigService,
   ) {}
@@ -45,42 +51,19 @@ export class CronService {
         description: 'Remboursement micro-crédit TontineBénin',
       });
 
-      const montantRestant = Math.max(0, credit.montantRestant - credit.paiementJournalier);
-      const joursPayes = credit.joursPayes + 1;
-      const termine = montantRestant <= 0;
+      await this.prisma.remboursementCredit.create({
+        data: {
+          microCreditId: credit.id,
+          montant: credit.paiementJournalier,
+          statut: 'EN_ATTENTE',
+          refKKiaPay: transfert.refKKiaPay,
+        },
+      });
 
-      await this.prisma.$transaction([
-        this.prisma.remboursementCredit.create({
-          data: {
-            microCreditId: credit.id,
-            montant: credit.paiementJournalier,
-            statut: 'SUCCES',
-            refKKiaPay: transfert.refKKiaPay,
-          },
-        }),
-        this.prisma.microCredit.update({
-          where: { id: credit.id },
-          data: {
-            joursPayes,
-            montantRestant,
-            statut: termine ? StatutCredit.TERMINE : StatutCredit.ACTIF,
-            ...(termine && { termineLe: new Date() }),
-          },
-        }),
-      ]);
-
-      if (termine) {
-        await this.sms.envoyer(
-          credit.client.telephone,
-          `TontineBénin: 🎉 Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipal} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`,
-        );
-        this.logger.log(`[CRON] Crédit TERMINÉ: ${credit.id} — ${credit.client.nom}`);
-      } else {
-        await this.sms.envoyer(
-          credit.client.telephone,
-          `TontineBénin: Prélèvement ${credit.paiementJournalier} FCFA effectué ✅. Restant: ${montantRestant} FCFA (${joursPayes}/${credit.totalJours} jours).`,
-        );
-      }
+      await this.sms.envoyer(
+        credit.client.telephone,
+        `TontineBénin: Prélèvement de ${credit.paiementJournalier} FCFA initié pour votre micro-crédit. Confirmation en cours.`,
+      );
     } catch {
       await this.gererEchecRemboursement(credit);
     }
@@ -221,6 +204,19 @@ export class CronService {
       },
     });
 
+    // Enregistrer snapshot dans l'historique du score
+    const scoreCreditRecord = await this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } });
+    if (scoreCreditRecord) {
+      await this.prisma.historiqueScore.create({
+        data: {
+          scoreCreditId: scoreCreditRecord.id,
+          score: scoreFinal,
+          tauxRegularite,
+          scoreRemboursement,
+        },
+      });
+    }
+
     if (eligiblePADME) {
       await this.genererDossierPADME(clientId, scoreFinal, tauxRegularite);
     }
@@ -244,7 +240,7 @@ export class CronService {
 
     const [scoreCredit, client, totalEpargne, creditsRembourses] = await Promise.all([
       this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
-      this.prisma.utilisateur.findUnique({ where: { id: clientId }, select: { telephone: true } }),
+      this.prisma.utilisateur.findUnique({ where: { id: clientId }, select: { telephone: true, nom: true } }),
       this.prisma.transaction.aggregate({
         where: { utilisateurId: clientId, type: TypeTransaction.COTISATION, statut: StatutTransaction.SUCCES },
         _sum: { montantNet: true },
@@ -254,7 +250,7 @@ export class CronService {
 
     if (!scoreCredit) return;
 
-    await this.prisma.dossierPADME.create({
+    const dossier = await this.prisma.dossierPADME.create({
       data: {
         clientId,
         scoreCreditId: scoreCredit.id,
@@ -268,12 +264,49 @@ export class CronService {
     });
 
     if (client) {
+      const urlPDF = await this.pdf.genererEtSauverDossierPadme({
+        dossierId: dossier.id,
+        clientNom: client.nom,
+        clientTelephone: client.telephone,
+        score,
+        totalEpargne: totalEpargne._sum.montantNet ?? 0,
+        tauxRegularite,
+        creditsRembourses,
+        genereLe: dossier.creeLe,
+      });
+
+      await this.prisma.dossierPADME.update({
+        where: { id: dossier.id },
+        data: { urlPDF },
+      });
+    }
+
+    if (client) {
       await this.sms.envoyer(
         client.telephone,
         `TontineBénin: 🎉 Félicitations ! Votre dossier PADME a été généré automatiquement (score: ${score}/100). L'administration va vous contacter prochainement.`,
       );
     }
+
+    await this.notifierAdminsDossierPADME(dossier.id, client?.nom ?? clientId, score);
     this.logger.log(`[CRON PADME] Dossier généré pour client ${clientId} — score ${score}`);
+  }
+
+  private async notifierAdminsDossierPADME(dossierId: string, clientNom: string, score: number) {
+    const admins = await this.prisma.utilisateur.findMany({
+      where: { role: Role.ADMIN, statut: StatutCompte.ACTIF },
+      select: { id: true },
+    });
+
+    for (const admin of admins) {
+      await this.notifications.envoyerAUtilisateur(
+        admin.id,
+        'Dossier PADME prêt',
+        `Un dossier PADME est prêt pour ${clientNom}. Score: ${score}/100. Dossier: ${dossierId}.`,
+        'PUSH',
+        TypeNotification.DOSSIER_PADME_SOUMIS,
+      );
+    }
   }
 
   // ─────────────────────────────────────────────────
@@ -438,6 +471,10 @@ export class CronService {
         ];
         for (const tel of destinataires) {
           await this.sms.envoyer(tel, message);
+          // Envoi WhatsApp en parallèle (non bloquant)
+          this.whatsapp.envoyerMessage(tel, message).catch((err) =>
+            this.logger.warn(`[WhatsApp] Échec rappel cotisation → ${tel}: ${err.message}`),
+          );
           rappelsEnvoyes++;
         }
       }
@@ -453,12 +490,12 @@ export class CronService {
     this.logger.log('[CRON 7h30] Détection défaillances groupe...');
     const il24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    // Tontines de groupe avec au moins un membre actif
+    // Tontines de groupe avec membres actifs ou déjà en première défaillance.
     const tontines = await this.prisma.tontine.findMany({
       where: { type: 'GROUPE' },
       include: {
         membres: {
-          where: { statut: StatutMembreGroupe.ACTIF },
+          where: { statut: { in: [StatutMembreGroupe.ACTIF, StatutMembreGroupe.DEFAILLANT] } },
           include: {
             utilisateur: {
               select: { id: true, telephone: true, nom: true, soldeCommission: true },
@@ -481,41 +518,63 @@ export class CronService {
       const membresAyantCotise = new Set(tontine.transactions.map((t) => t.utilisateurId));
 
       for (const membre of tontine.membres) {
-        if (!membresAyantCotise.has(membre.utilisateurId) && tontine.montantJournalier > 0) {
-          // Utiliser la caution si disponible
-          if (membre.montantCaution > 0) {
-            const montantPreleveCalution = Math.min(membre.montantCaution, tontine.montantJournalier);
+        if (membresAyantCotise.has(membre.utilisateurId)) {
+          if (membre.statut === StatutMembreGroupe.DEFAILLANT || membre.nombreDefaillances > 0) {
             await this.prisma.membreTontineGroupe.update({
               where: { id: membre.id },
-              data: { montantCaution: { decrement: montantPreleveCalution } },
+              data: {
+                statut: StatutMembreGroupe.ACTIF,
+                nombreDefaillances: 0,
+                derniereDefaillanceLe: null,
+              },
             });
-            this.logger.warn(`[Défaillance] Caution prélevée pour ${membre.utilisateur.nom} dans ${tontine.nom}: ${montantPreleveCalution} FCFA`);
+          }
+          continue;
+        }
+
+        if (!membresAyantCotise.has(membre.utilisateurId) && tontine.montantJournalier > 0) {
+          // Utiliser la caution si disponible
+          let cautionUtilisee = 0;
+          if (membre.montantCaution > 0) {
+            cautionUtilisee = Math.min(membre.montantCaution, tontine.montantJournalier);
+            await this.prisma.membreTontineGroupe.update({
+              where: { id: membre.id },
+              data: { montantCaution: { decrement: cautionUtilisee } },
+            });
+            this.logger.warn(`[Défaillance] Caution prélevée pour ${membre.utilisateur.nom} dans ${tontine.nom}: ${cautionUtilisee} FCFA`);
           }
 
-          // Comptabiliser les défaillances
-          const defaillancesActuelles = await this.prisma.membreTontineGroupe.count({
-            where: {
-              tontineId: tontine.id,
-              utilisateurId: membre.utilisateurId,
-              statut: StatutMembreGroupe.DEFAILLANT,
-            },
-          });
+          const nombreDefaillances = membre.nombreDefaillances + 1;
 
-          // Marquer DEFAILLANT ou EXCLU selon historique
-          const nouveauStatut = defaillancesActuelles >= 1
+          // Marquer DEFAILLANT ou EXCLU selon les défauts consécutifs.
+          const nouveauStatut = nombreDefaillances >= 2
             ? StatutMembreGroupe.EXCLU
             : StatutMembreGroupe.DEFAILLANT;
 
-          await this.prisma.membreTontineGroupe.update({
-            where: { id: membre.id },
-            data: {
-              statut: nouveauStatut,
-              ...(nouveauStatut === StatutMembreGroupe.EXCLU && {
-                excluLe: new Date(),
-                motifExclusion: '2 défaillances consécutives',
-              }),
-            },
-          });
+          await this.prisma.$transaction([
+            this.prisma.defaillanceGroupe.create({
+              data: {
+                tontineId: tontine.id,
+                membreId: membre.id,
+                montantManquant: Math.max(0, tontine.montantJournalier - cautionUtilisee),
+                cautionUtilisee,
+                statut: nouveauStatut === StatutMembreGroupe.EXCLU ? 'EXCLU' : 'EN_COURS',
+                ...(nouveauStatut === StatutMembreGroupe.EXCLU && { resoluLe: new Date() }),
+              },
+            }),
+            this.prisma.membreTontineGroupe.update({
+              where: { id: membre.id },
+              data: {
+                statut: nouveauStatut,
+                nombreDefaillances,
+                derniereDefaillanceLe: new Date(),
+                ...(nouveauStatut === StatutMembreGroupe.EXCLU && {
+                  excluLe: new Date(),
+                  motifExclusion: '2 défaillances consécutives',
+                }),
+              },
+            }),
+          ]);
 
           await this.sms.envoyer(
             membre.utilisateur.telephone,
@@ -594,7 +653,7 @@ export class CronService {
         where: { id: qr.id },
         data: {
           codeQR: randomUUID(),
-          expireLe: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          expireLe: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
       });
     }
@@ -626,24 +685,100 @@ export class CronService {
 
       const totalRetraits = await this.prisma.retrait.aggregate({
         where: {
-          utilisateur: { tontines: { some: { id: tontine.id } } },
+          tontineId: tontine.id,
           statut: 'EXECUTE',
         },
         _sum: { montant: true },
       });
 
+      const totalDistributions = await this.prisma.transaction.aggregate({
+        where: {
+          tontineId: tontine.id,
+          type: TypeTransaction.DISTRIBUTION_GROUPE,
+        },
+        _sum: { montant: true },
+      });
+
       const soldeCalcule =
-        ((totalTransactions._sum as any).montantNet ?? 0) - ((totalRetraits._sum as any).montant ?? 0);
+        ((totalTransactions._sum as any).montantNet ?? 0) -
+        ((totalRetraits._sum as any).montant ?? 0) -
+        ((totalDistributions._sum as any).montant ?? 0);
       const ecart = Math.abs(soldeCalcule - tontine.soldeActuel);
 
       if (ecart > 1) {
         this.logger.warn(
           `[Cohérence] Tontine ${tontine.nom}: solde BD=${tontine.soldeActuel} FCFA, calculé=${soldeCalcule} FCFA, écart=${ecart} FCFA`,
         );
+        await this.creerOuMettreAJourAlerteCoherence(tontine, soldeCalcule, ecart);
         anomalies++;
+      } else {
+        await this.resoudreAlerteCoherence(tontine.id);
       }
     }
     this.logger.log(`[CRON 0h30] Cohérence vérifiée — ${anomalies} anomalie(s) détectée(s)`);
+  }
+
+  private async creerOuMettreAJourAlerteCoherence(
+    tontine: { id: string; nom: string; soldeActuel: number },
+    soldeCalcule: number,
+    ecart: number,
+  ) {
+    const metadata = JSON.stringify({
+      soldeBase: tontine.soldeActuel,
+      soldeCalcule,
+      ecart,
+      detectePar: 'cron.coherence-comptable',
+    });
+
+    const existante = await this.prisma.alerteSysteme.findFirst({
+      where: {
+        type: 'COHERENCE_COMPTABLE',
+        resourceType: 'TONTINE',
+        resourceId: tontine.id,
+        statut: 'OUVERTE',
+      },
+    });
+
+    if (existante) {
+      await this.prisma.alerteSysteme.update({
+        where: { id: existante.id },
+        data: {
+          severite: 'CRITIQUE',
+          titre: `Solde incohérent: ${tontine.nom}`,
+          message: `Solde BD ${tontine.soldeActuel} FCFA, solde calculé ${soldeCalcule} FCFA, écart ${ecart} FCFA.`,
+          metadata,
+        },
+      });
+      return;
+    }
+
+    await this.prisma.alerteSysteme.create({
+      data: {
+        type: 'COHERENCE_COMPTABLE',
+        severite: 'CRITIQUE',
+        statut: 'OUVERTE',
+        titre: `Solde incohérent: ${tontine.nom}`,
+        message: `Solde BD ${tontine.soldeActuel} FCFA, solde calculé ${soldeCalcule} FCFA, écart ${ecart} FCFA.`,
+        resourceType: 'TONTINE',
+        resourceId: tontine.id,
+        metadata,
+      },
+    });
+  }
+
+  private async resoudreAlerteCoherence(tontineId: string) {
+    await this.prisma.alerteSysteme.updateMany({
+      where: {
+        type: 'COHERENCE_COMPTABLE',
+        resourceType: 'TONTINE',
+        resourceId: tontineId,
+        statut: 'OUVERTE',
+      },
+      data: {
+        statut: 'RESOLUE',
+        resolueLe: new Date(),
+      },
+    });
   }
 
   async declencherFacturationManuellement() {
@@ -654,5 +789,35 @@ export class CronService {
   async declencherRappelsManuellement() {
     await this.envoyerRappelsCotisation();
     return { succes: true, message: 'Rappels cotisation déclenchés manuellement.' };
+  }
+
+  // ─────────────────────────────────────────────────
+  // CRON HORAIRE — REVOCATION SESSIONS EXPIRÉES
+  // ─────────────────────────────────────────────────
+  @Cron('0 * * * *', { name: 'revoquer-sessions-expirees' })
+  async revoquerSessionsExpirees() {
+    this.logger.log('[CRON Horaire] Révocation sessions expirées...');
+    const maintenant = new Date();
+
+    const result = await this.prisma.sessionUtilisateur.updateMany({
+      where: {
+        expireLe: { lt: maintenant },
+        revoqueLe: null,
+        actif: true,
+      },
+      data: {
+        revoqueLe: maintenant,
+        actif: false,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`[CRON] ${result.count} session(s) expirée(s) révoquée(s) automatiquement`);
+    }
+  }
+
+  async declencherRevocationManuellement() {
+    await this.revoquerSessionsExpirees();
+    return { succes: true, message: 'Révocation sessions expirées déclenchée manuellement.' };
   }
 }

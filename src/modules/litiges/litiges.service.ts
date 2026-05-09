@@ -174,6 +174,7 @@ export class LitigesService {
       include: {
         client: { select: { id: true, nom: true, telephone: true } },
         transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+        commentaires: { orderBy: { creeLe: 'asc' } },
       },
     });
     if (!litige) throw new NotFoundException('Litige introuvable');
@@ -184,5 +185,54 @@ export class LitigesService {
     }
 
     return { succes: true, message: 'Détail du litige', donnees: { litige } };
+  }
+
+  // ─── POST /litiges/:id/commentaire ────────────────
+  async ajouterCommentaire(
+    litigeId: string,
+    auteurId: string,
+    dto: { message: string; pieceJointeUrl?: string },
+    role: string,
+  ) {
+    const litige = await this.prisma.litige.findUnique({
+      where: { id: litigeId },
+      select: { id: true, clientId: true, statut: true },
+    });
+    if (!litige) throw new NotFoundException('Litige introuvable');
+
+    const isAdmin = ['ADMIN', 'SUPERVISEUR'].includes(role);
+    if (!isAdmin && litige.clientId !== auteurId) {
+      throw new ForbiddenException('Accès refusé au litige');
+    }
+    if (['RESOLU', 'REJETE'].includes(litige.statut)) {
+      throw new BadRequestException({ message: 'Impossible de commenter un litige clôturé', code: 'LITIGE_CLOTURE' });
+    }
+
+    const commentaire = await this.prisma.commentaireLitige.create({
+      data: { litigeId, auteurId, message: dto.message, pieceJointeUrl: dto.pieceJointeUrl },
+    });
+
+    return { succes: true, message: 'Commentaire ajouté.', donnees: commentaire };
+  }
+
+  // ─── GET /litiges/:id/commentaires ────────────────
+  async commentaires(litigeId: string, userId: string, role: string) {
+    const litige = await this.prisma.litige.findUnique({
+      where: { id: litigeId },
+      select: { id: true, clientId: true },
+    });
+    if (!litige) throw new NotFoundException('Litige introuvable');
+
+    const isAdmin = ['ADMIN', 'SUPERVISEUR'].includes(role);
+    if (!isAdmin && litige.clientId !== userId) {
+      throw new ForbiddenException('Accès refusé');
+    }
+
+    const commentaires = await this.prisma.commentaireLitige.findMany({
+      where: { litigeId },
+      orderBy: { creeLe: 'asc' },
+    });
+
+    return { succes: true, message: `${commentaires.length} commentaire(s).`, donnees: commentaires };
   }
 }

@@ -25,6 +25,13 @@ export class ZonesController {
 
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
+  @Get('heatmap')
+  heatmap() {
+    return this.service.heatmap();
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
   @Put(':id')
   modifier(@Param('id') id: string, @Body() dto: Partial<CreerZoneDto>) {
     return this.service.modifier(id, dto);
@@ -35,5 +42,19 @@ export class ZonesController {
   @Get(':id/agents')
   agentsDeLaZone(@Param('id') id: string) {
     return this.service.agentsDeLaZone(id);
+  }
+
+  @Roles(Role.ADMIN, Role.SUPERVISEUR)
+  @UseGuards(RolesGuard)
+  @Get(':id/stats')
+  statsZone(@Param('id') id: string) {
+    return this.service.statsZone(id);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Put(':id/superviseur')
+  assignerSuperviseur(@Param('id') id: string, @Body() body: { superviseurId: string }) {
+    return this.service.assignerSuperviseur(id, body.superviseurId);
   }
 }

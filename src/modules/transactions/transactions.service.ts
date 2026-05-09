@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { StatutTransaction, TypeTransaction } from '@prisma/client';
+import { StatutCredit, StatutTransaction, TypeTransaction } from '@prisma/client';
 import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
+import { PdfService, RecuTransactionPdf } from '../../common/services/pdf.service';
 import { SmsService } from '../notifications/sms.service';
+import { WhatsappService } from '../notifications/whatsapp.service';
 import { BUSINESS } from '../../common/constants/business.constants';
 import { CotiserDto } from './dto/cotiser.dto';
 import { WebhookKkiapayDto } from './dto/webhook-kkiapay.dto';
+import { FiltrerTransactionsDto } from './dto/filtrer-transactions.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -16,6 +19,8 @@ export class TransactionsService {
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
     private sms: SmsService,
+    private pdf: PdfService,
+    private whatsapp: WhatsappService,
   ) {}
 
   // ─── POST /transactions/cotiser ───────────────────
@@ -100,6 +105,11 @@ export class TransactionsService {
 
     // Webhook pour transaction inconnue → 200 OK (éviter les retentatives KKiaPay)
     if (!transaction) {
+      const remboursementTraite = await this.traiterWebhookRemboursement(body);
+      if (remboursementTraite) {
+        return { succes: true, message: 'Webhook remboursement traité' };
+      }
+
       this.logger.warn(`Transaction inconnue pour refKKiaPay: ${body.transactionId}`);
       return { succes: true, message: 'Webhook reçu' };
     }
@@ -172,19 +182,189 @@ export class TransactionsService {
     this.logger.log(`Cotisation traitée: ${transaction.montant} FCFA pour ${transaction.utilisateur.nom}`);
   }
 
-  // ─── GET /transactions/historique ─────────────────
-  async historique(utilisateurId: string) {
-    const transactions = await this.prisma.transaction.findMany({
-      where: { utilisateurId },
-      include: { tontine: { select: { id: true, nom: true } } },
-      orderBy: { creeLe: 'desc' },
-      take: 50,
+  private async traiterWebhookRemboursement(body: WebhookKkiapayDto) {
+    const remboursement = await this.prisma.remboursementCredit.findFirst({
+      where: { refKKiaPay: body.transactionId },
+      include: {
+        microCredit: {
+          include: {
+            client: { select: { id: true, nom: true, telephone: true, collecteurId: true } },
+          },
+        },
+      },
     });
-    return { succes: true, message: `${transactions.length} transaction(s).`, donnees: transactions };
+
+    if (!remboursement) return false;
+
+    if (remboursement.statut !== 'EN_ATTENTE') {
+      this.logger.log(`Remboursement déjà traité: ${body.transactionId} (${remboursement.statut})`);
+      return true;
+    }
+
+    if (body.status === 'SUCCESS') {
+      await this.confirmerRemboursementSucces(remboursement as any);
+      return true;
+    }
+
+    await this.confirmerRemboursementEchec(remboursement as any, body.reason ?? 'Paiement refusé');
+    return true;
+  }
+
+  private async confirmerRemboursementSucces(remboursement: any) {
+    const credit = remboursement.microCredit;
+    const montantRestant = Math.max(0, credit.montantRestant - remboursement.montant);
+    const joursPayes = credit.joursPayes + 1;
+    const termine = montantRestant <= 0;
+
+    await this.prisma.$transaction([
+      this.prisma.remboursementCredit.update({
+        where: { id: remboursement.id },
+        data: { statut: 'SUCCES' },
+      }),
+      this.prisma.microCredit.update({
+        where: { id: credit.id },
+        data: {
+          joursPayes,
+          montantRestant,
+          statut: termine ? StatutCredit.TERMINE : StatutCredit.ACTIF,
+          ...(termine && { termineLe: new Date() }),
+        },
+      }),
+    ]);
+
+    if (termine) {
+      await this.sms.envoyer(
+        credit.client.telephone,
+        `TontineBénin: Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipal} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`,
+      );
+      this.logger.log(`[Webhook remboursement] Crédit terminé: ${credit.id} — ${credit.client.nom}`);
+      return;
+    }
+
+    await this.sms.envoyer(
+      credit.client.telephone,
+      `TontineBénin: Prélèvement ${remboursement.montant} FCFA confirmé. Restant: ${montantRestant} FCFA (${joursPayes}/${credit.totalJours} jours).`,
+    );
+  }
+
+  private async confirmerRemboursementEchec(remboursement: any, motif: string) {
+    const credit = remboursement.microCredit;
+
+    await this.prisma.remboursementCredit.update({
+      where: { id: remboursement.id },
+      data: { statut: 'ECHEC' },
+    });
+
+    const echecsRecents = await this.prisma.remboursementCredit.findMany({
+      where: { microCreditId: credit.id, statut: 'ECHEC' },
+      orderBy: { payeLe: 'desc' },
+      take: 3,
+    });
+
+    if (echecsRecents.length === 3) {
+      await this.prisma.microCredit.update({
+        where: { id: credit.id },
+        data: { statut: StatutCredit.EN_DEFAUT },
+      });
+      this.logger.warn(`[Webhook remboursement] Crédit en défaut: ${credit.id} — ${credit.client.nom}`);
+    }
+
+    await this.sms.envoyer(
+      credit.client.telephone,
+      `TontineBénin: Prélèvement micro-crédit échoué (${motif}). Assurez-vous d'avoir ${remboursement.montant} FCFA sur votre compte Mobile Money.`,
+    );
+
+    if (!credit.client.collecteurId) return;
+
+    const collecteur = await this.prisma.utilisateur.findUnique({
+      where: { id: credit.client.collecteurId },
+      select: { telephone: true },
+    });
+    if (collecteur) {
+      await this.sms.envoyer(
+        collecteur.telephone,
+        `TontineBénin: Alerte remboursement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipal} FCFA.`,
+      );
+    }
+  }
+
+  // ─── GET /transactions/historique ─────────────────
+  async historique(utilisateurId: string, filtres: FiltrerTransactionsDto) {
+    const page = filtres.page ?? 1;
+    const limite = Math.min(filtres.limite ?? 20, 100);
+    const skip = (page - 1) * limite;
+
+    const where: Record<string, unknown> = { utilisateurId };
+    if (filtres.type) where.type = filtres.type;
+    if (filtres.statut) where.statut = filtres.statut;
+    if (filtres.tontineId) where.tontineId = filtres.tontineId;
+    if (filtres.dateDebut || filtres.dateFin) {
+      where.creeLe = {
+        ...(filtres.dateDebut && { gte: new Date(filtres.dateDebut) }),
+        ...(filtres.dateFin && { lte: this.finDeJournee(filtres.dateFin) }),
+      };
+    }
+
+    const [total, transactions] = await Promise.all([
+      this.prisma.transaction.count({ where }),
+      this.prisma.transaction.findMany({
+        where,
+        include: { tontine: { select: { id: true, nom: true } } },
+        orderBy: { creeLe: 'desc' },
+        skip,
+        take: limite,
+      }),
+    ]);
+
+    return {
+      succes: true,
+      message: `${total} transaction(s).`,
+      donnees: { transactions, total, page, limite, pages: Math.ceil(total / limite) },
+    };
   }
 
   // ─── GET /transactions/:id/recu ───────────────────
   async recu(transactionId: string, utilisateurId: string) {
+    const recu = await this.donneesRecu(transactionId, utilisateurId);
+    return {
+      succes: true,
+      message: 'Reçu de transaction.',
+      donnees: recu,
+    };
+  }
+
+  async recuPdf(transactionId: string, utilisateurId: string) {
+    const recu = await this.donneesRecu(transactionId, utilisateurId);
+    const buffer = await this.pdf.genererRecuTransaction(recu);
+    return { buffer, filename: `recu-${recu.reference}.pdf` };
+  }
+
+  async partagerRecuWhatsapp(transactionId: string, utilisateurId: string, telephone?: string) {
+    const recu = await this.donneesRecu(transactionId, utilisateurId);
+    const destinataire = telephone ?? recu.telephone;
+    const message = [
+      'TontineBenin - Recu de transaction',
+      `Reference: ${recu.reference}`,
+      `Date: ${recu.date.toLocaleString('fr-FR')}`,
+      `Client: ${recu.client}`,
+      `Tontine: ${recu.tontine}`,
+      `Type: ${recu.type}`,
+      `Statut: ${recu.statut}`,
+      `Montant: ${recu.montant.toLocaleString('fr-FR')} FCFA`,
+      `Frais: ${recu.fraisPlateforme.toLocaleString('fr-FR')} FCFA`,
+      `Net: ${recu.montantNet.toLocaleString('fr-FR')} FCFA`,
+      `Ref KKiaPay: ${recu.refKKiaPay}`,
+    ].join('\n');
+
+    const resultat = await this.whatsapp.envoyerMessage(destinataire, message);
+    return {
+      succes: resultat.success,
+      message: resultat.success ? 'Reçu partagé via WhatsApp.' : 'Échec du partage WhatsApp.',
+      donnees: { destinataire, resultat },
+    };
+  }
+
+  private async donneesRecu(transactionId: string, utilisateurId: string): Promise<RecuTransactionPdf> {
     const tx = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
       include: {
@@ -196,23 +376,25 @@ export class TransactionsService {
     if (tx.utilisateurId !== utilisateurId) throw new UnauthorizedException('Accès refusé');
 
     return {
-      succes: true,
-      message: 'Reçu de transaction.',
-      donnees: {
-        reference: tx.reference,
-        date: tx.creeLe,
-        type: tx.type,
-        statut: tx.statut,
-        client: tx.utilisateur.nom,
-        telephone: tx.utilisateur.telephone,
-        tontine: tx.tontine?.nom ?? 'N/A',
-        montant: tx.montant,
-        fraisPlateforme: tx.fraisPlateforme,
-        montantNet: tx.montantNet,
-        operateur: tx.operateur ?? 'N/A',
-        refKKiaPay: tx.refKKiaPay ?? 'N/A',
-        hashIntegrite: tx.hashActuel ?? 'En attente',
-      },
+      reference: tx.reference,
+      date: tx.creeLe,
+      type: tx.type,
+      statut: tx.statut,
+      client: tx.utilisateur.nom,
+      telephone: tx.utilisateur.telephone,
+      tontine: tx.tontine?.nom ?? 'N/A',
+      montant: tx.montant,
+      fraisPlateforme: tx.fraisPlateforme,
+      montantNet: tx.montantNet,
+      operateur: tx.operateur ?? 'N/A',
+      refKKiaPay: tx.refKKiaPay ?? 'N/A',
+      hashIntegrite: tx.hashActuel ?? 'En attente',
     };
+  }
+
+  private finDeJournee(date: string) {
+    const fin = new Date(date);
+    fin.setHours(23, 59, 59, 999);
+    return fin;
   }
 }

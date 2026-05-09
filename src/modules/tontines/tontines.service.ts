@@ -203,6 +203,7 @@ export class TontinesService {
 
     // Vérifier politique
     this.verifierPolitique(t);
+    await this.verifierAucuneAlerteBloquante(tontineId);
 
     // Prochain bénéficiaire
     const prochainTirage = await this.prisma.ordreTirage.findFirst({
@@ -279,6 +280,27 @@ export class TontinesService {
       if (!tontine.dateDeverrouillage || tontine.dateDeverrouillage > new Date()) {
         throw new BadRequestException({ message: 'Retrait non autorisé : date programmée non atteinte', code: 'DATE_NON_ATTEINTE' });
       }
+    }
+  }
+
+  private async verifierAucuneAlerteBloquante(tontineId: string) {
+    const alerte = await this.prisma.alerteSysteme.findFirst({
+      where: {
+        type: 'COHERENCE_COMPTABLE',
+        severite: 'CRITIQUE',
+        statut: 'OUVERTE',
+        resourceType: 'TONTINE',
+        resourceId: tontineId,
+      },
+      select: { id: true, titre: true },
+    });
+
+    if (alerte) {
+      throw new ForbiddenException({
+        message: 'Distribution temporairement bloquée: anomalie comptable en cours de vérification.',
+        code: 'CIRCUIT_BREAKER_COMPTABLE',
+        alerteId: alerte.id,
+      });
     }
   }
 }

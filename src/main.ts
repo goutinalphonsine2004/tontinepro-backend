@@ -19,7 +19,14 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.enableCors();
+  const corsOrigins = process.env.CORS_ORIGINS
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: corsOrigins?.length ? corsOrigins : process.env.NODE_ENV === 'production' ? false : true,
+    credentials: true,
+  });
 
   const port = process.env.PORT ?? 3000;
   // '0.0.0.0' → accessible depuis téléphone physique sur le même réseau

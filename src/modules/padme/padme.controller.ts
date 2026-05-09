@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Put, Query, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -23,6 +24,18 @@ export class PadmeController {
   @Get('tous')
   tous(@Query() dto: FiltrerDossiersDto) {
     return this.service.tous(dto);
+  }
+
+  @Get(':id/pdf')
+  @Header('Content-Type', 'application/pdf')
+  async pdf(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string; role: Role },
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.service.pdf(id, u.id, u.role);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
   }
 
   @Roles(Role.ADMIN, Role.SUPERVISEUR)

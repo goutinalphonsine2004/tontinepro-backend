@@ -6,6 +6,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { RetraitsService } from './retraits.service';
 import { DemanderRetraitDto } from './dto/demander-retrait.dto';
+import { ConfirmerRetraitDto } from './dto/confirmer-retrait.dto';
 import { RejeterRetraitDto } from './dto/rejeter-retrait.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -15,7 +16,17 @@ export class RetraitsController {
 
   @Post('demander')
   demander(@UtilisateurCourant() u: { id: string }, @Body() dto: DemanderRetraitDto) {
-    return this.service.demander(u.id, dto);
+    return this.service.demanderOtp(u.id, dto);
+  }
+
+  @Post('demander-otp')
+  demanderOtp(@UtilisateurCourant() u: { id: string }, @Body() dto: DemanderRetraitDto) {
+    return this.service.demanderOtp(u.id, dto);
+  }
+
+  @Post('confirmer')
+  confirmer(@UtilisateurCourant() u: { id: string }, @Body() dto: ConfirmerRetraitDto) {
+    return this.service.confirmer(u.id, dto);
   }
 
   @Get('mes-retraits')

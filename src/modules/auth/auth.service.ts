@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Role, StatutCompte } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
@@ -73,15 +74,15 @@ export class AuthService {
     const otp = await this.prisma.codeOTP.findFirst({
       where: {
         telephone: dto.telephone,
-        code: dto.code,
         type: OTP_TYPE_INSCRIPTION,
         utilise: false,
         expireLe: { gt: new Date() },
       },
       include: { utilisateur: true },
+      orderBy: { creeLe: 'desc' },
     });
 
-    if (!otp) {
+    if (!otp || !(await this.verifierCodeOTP(dto.code, otp.code))) {
       throw new BadRequestException({
         message: 'Code OTP invalide ou expiré',
         code: 'OTP_INVALIDE',
@@ -251,15 +252,15 @@ export class AuthService {
     const otp = await this.prisma.codeOTP.findFirst({
       where: {
         telephone: dto.telephone,
-        code: dto.code,
         type: OTP_TYPE_RESET_PIN,
         utilise: false,
         expireLe: { gt: new Date() },
       },
       include: { utilisateur: true },
+      orderBy: { creeLe: 'desc' },
     });
 
-    if (!otp) {
+    if (!otp || !(await this.verifierCodeOTP(dto.code, otp.code))) {
       throw new BadRequestException({
         message: 'Code OTP invalide ou expiré',
         code: 'OTP_RESET_INVALIDE',
@@ -441,6 +442,7 @@ export class AuthService {
 
   // ─── Helpers ──────────────────────────────────────────
   private async genererTokens(id: string, telephone: string, role: Role, sessionId: string) {
+    const refreshSecret = this.secretRefreshJwt();
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
         { sub: id, telephone, role, sid: sessionId },
@@ -449,12 +451,20 @@ export class AuthService {
       this.jwt.signAsync(
         { sub: id, telephone, role, sid: sessionId },
         {
-          secret: this.config.get('JWT_REFRESH_SECRET'),
+          secret: refreshSecret,
           expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '7d'),
         },
       ),
     ]);
     return { accessToken, refreshToken };
+  }
+
+  private secretRefreshJwt() {
+    const secret = this.config.get<string>('JWT_REFRESH_SECRET');
+    if (!secret && this.config.get<string>('NODE_ENV') === 'production') {
+      throw new Error('JWT_REFRESH_SECRET est obligatoire en production');
+    }
+    return secret ?? 'dev-refresh-secret-change-me';
   }
 
   private async creerSession(utilisateurId: string, deviceId?: string, req?: Request) {
@@ -496,14 +506,110 @@ export class AuthService {
       data: { utilise: true },
     });
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = randomInt(100000, 1000000).toString();
+    const codeHash = await bcrypt.hash(code, 10);
     const expireLe = new Date(
       Date.now() + parseInt(this.config.get('DUREE_OTP_MINUTES', '10')) * 60 * 1000,
     );
 
     const otp = await this.prisma.codeOTP.create({
-      data: { utilisateurId, telephone, code, type, expireLe },
+      data: { utilisateurId, telephone, code: codeHash, type, expireLe },
     });
-    return otp;
+    return { ...otp, code };
+  }
+
+  private async verifierCodeOTP(codeRecu: string, codeStocke: string) {
+    if (codeStocke.startsWith('$2')) {
+      return bcrypt.compare(codeRecu, codeStocke);
+    }
+    return codeRecu === codeStocke;
+  }
+
+  // ─── POST /auth/biometrique/enregistrer ───────────
+  async enregistrerAppareilBiometrique(
+    utilisateurId: string,
+    dto: { deviceId: string; empreinteToken: string; nomAppareil?: string; modeleAppareil?: string; systemeExploitation?: string },
+  ) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { id: true, nom: true, statut: true },
+    });
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
+    if (utilisateur.statut !== StatutCompte.ACTIF) {
+      throw new ForbiddenException({ message: 'Compte non actif', code: 'COMPTE_INACTIF' });
+    }
+
+    const empreinteHash = await bcrypt.hash(dto.empreinteToken, 10);
+
+    const appareil = await this.prisma.appareilBiometrique.upsert({
+      where: { utilisateurId_deviceId: { utilisateurId, deviceId: dto.deviceId } },
+      create: { utilisateurId, deviceId: dto.deviceId, empreinteHash, nomAppareil: dto.nomAppareil, modeleAppareil: dto.modeleAppareil, systemeExploitation: dto.systemeExploitation, actif: true },
+      update: { empreinteHash, nomAppareil: dto.nomAppareil, modeleAppareil: dto.modeleAppareil, actif: true },
+    });
+
+    await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { empreinteActive: true } });
+
+    return {
+      succes: true,
+      message: 'Appareil biométrique enregistré. Connexion par empreinte activée.',
+      donnees: { appareilId: appareil.id, deviceId: appareil.deviceId, nomAppareil: appareil.nomAppareil },
+    };
+  }
+
+  // ─── POST /auth/biometrique/connexion ─────────────
+  async connexionBiometrique(dto: { telephone: string; deviceId: string; empreinteToken: string }, req: Request) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({
+      where: { telephone: dto.telephone },
+      select: { id: true, telephone: true, nom: true, role: true, statut: true, empreinteActive: true },
+    });
+    if (!utilisateur) throw new UnauthorizedException({ message: 'Identifiants invalides', code: 'UTILISATEUR_INTROUVABLE' });
+    if (utilisateur.statut === StatutCompte.BANNI) throw new ForbiddenException({ message: 'Compte banni', code: 'COMPTE_BANNI' });
+    if (!utilisateur.empreinteActive) throw new ForbiddenException({ message: 'Biométrie non activée', code: 'BIOMETRIE_INACTIVE' });
+
+    const appareil = await this.prisma.appareilBiometrique.findUnique({
+      where: { utilisateurId_deviceId: { utilisateurId: utilisateur.id, deviceId: dto.deviceId } },
+    });
+    if (!appareil || !appareil.actif) throw new UnauthorizedException({ message: 'Appareil non reconnu', code: 'APPAREIL_INCONNU' });
+
+    const valide = await bcrypt.compare(dto.empreinteToken, appareil.empreinteHash);
+    if (!valide) throw new UnauthorizedException({ message: 'Empreinte invalide', code: 'EMPREINTE_INVALIDE' });
+
+    await this.prisma.appareilBiometrique.update({ where: { id: appareil.id }, data: { derniereAuthentification: new Date() } });
+
+    const expireLe = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const session = await this.prisma.sessionUtilisateur.create({
+      data: { utilisateurId: utilisateur.id, deviceId: dto.deviceId, adresseIP: (req as any).ip, expireLe, actif: true },
+    });
+
+    const payload = { sub: utilisateur.id, telephone: utilisateur.telephone, role: utilisateur.role, sessionId: session.id };
+    const accessToken = this.jwt.sign(payload, { expiresIn: '24h' });
+
+    return {
+      succes: true,
+      message: `Connexion biométrique réussie. Bienvenue ${utilisateur.nom}.`,
+      donnees: { accessToken, utilisateur: { id: utilisateur.id, nom: utilisateur.nom, role: utilisateur.role } },
+    };
+  }
+
+  // ─── GET /auth/biometrique/appareils ──────────────
+  async mesAppareils(utilisateurId: string) {
+    const appareils = await this.prisma.appareilBiometrique.findMany({
+      where: { utilisateurId, actif: true },
+      select: { id: true, deviceId: true, nomAppareil: true, modeleAppareil: true, systemeExploitation: true, derniereAuthentification: true, creeLe: true },
+    });
+    return { succes: true, message: `${appareils.length} appareil(s).`, donnees: appareils };
+  }
+
+  // ─── DELETE /auth/biometrique/appareils/:id ───────
+  async revoquerAppareil(utilisateurId: string, appareilId: string) {
+    const appareil = await this.prisma.appareilBiometrique.findUnique({ where: { id: appareilId } });
+    if (!appareil || appareil.utilisateurId !== utilisateurId) throw new NotFoundException('Appareil introuvable');
+    await this.prisma.appareilBiometrique.update({ where: { id: appareilId }, data: { actif: false } });
+
+    const restants = await this.prisma.appareilBiometrique.count({ where: { utilisateurId, actif: true } });
+    if (restants === 0) await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { empreinteActive: false } });
+
+    return { succes: true, message: 'Appareil révoqué.' };
   }
 }
+

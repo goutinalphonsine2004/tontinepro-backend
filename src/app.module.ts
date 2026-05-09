@@ -23,6 +23,11 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { LitigesModule } from './modules/litiges/litiges.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { AlertesModule } from './modules/alertes/alertes.module';
+import { RapportsModule } from './modules/rapports/rapports.module';
+import { CollecteurTerrainModule } from './modules/collecteur-terrain/collecteur-terrain.module';
+import { ParametresModule } from './modules/parametres/parametres.module';
+import { SupportModule } from './modules/support/support.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
@@ -49,6 +54,11 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     BadgesModule,
     LitigesModule,
     AuditModule,
+    AlertesModule,
+    RapportsModule,
+    CollecteurTerrainModule,
+    ParametresModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],

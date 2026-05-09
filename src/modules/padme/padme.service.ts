@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { StatutDossierPADME } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Role, StatutDossierPADME } from '@prisma/client';
+import { readFile } from 'fs/promises';
+import { basename, join, normalize } from 'path';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
 import { BUSINESS } from '../../common/constants/business.constants';
@@ -66,6 +68,37 @@ export class PadmeService {
     });
     if (!dossier) throw new NotFoundException('Dossier PADME introuvable');
     return { succes: true, message: 'Dossier récupéré.', donnees: dossier };
+  }
+
+  // ─── GET /padme/:id/pdf ───────────────────────────
+  async pdf(dossierId: string, utilisateurId: string, role: Role) {
+    const dossier = await this.prisma.dossierPADME.findUnique({
+      where: { id: dossierId },
+      select: { id: true, clientId: true, urlPDF: true },
+    });
+    if (!dossier) throw new NotFoundException('Dossier PADME introuvable');
+
+    const estAdmin = role === Role.ADMIN || role === Role.SUPERVISEUR;
+    if (!estAdmin && dossier.clientId !== utilisateurId) {
+      throw new ForbiddenException('Accès refusé à ce dossier PADME');
+    }
+
+    if (!dossier.urlPDF) {
+      throw new NotFoundException('PDF PADME non généré pour ce dossier');
+    }
+
+    const cheminNormalise = normalize(dossier.urlPDF);
+    if (cheminNormalise.startsWith('..') || cheminNormalise.startsWith('/')) {
+      throw new BadRequestException('Chemin PDF invalide');
+    }
+
+    const chemin = join(process.cwd(), cheminNormalise);
+    try {
+      const buffer = await readFile(chemin);
+      return { buffer, filename: basename(chemin) };
+    } catch {
+      throw new NotFoundException('Fichier PDF PADME introuvable');
+    }
   }
 
   // ─── PUT /padme/:id/valider (Admin) ───────────────

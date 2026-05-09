@@ -24,11 +24,6 @@ export class LitigesController {
     return this.service.mesList(u.id);
   }
 
-  @Get(':id')
-  detail(@Param('id') id: string, @UtilisateurCourant() u: any) {
-    return this.service.detail(id, u.id, u.role);
-  }
-
   @Get('en-cours/liste')
   @Roles(Role.ADMIN, Role.SUPERVISEUR)
   @UseGuards(RolesGuard)
@@ -58,5 +53,24 @@ export class LitigesController {
   @UseGuards(RolesGuard)
   rejeter(@Param('id') id: string, @UtilisateurCourant() u: any, @Body() dto: RejeterLitigeDto) {
     return this.service.rejeter(id, u.id, dto);
+  }
+
+  @Post(':id/commentaire')
+  ajouterCommentaire(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: any,
+    @Body() dto: { message: string; pieceJointeUrl?: string },
+  ) {
+    return this.service.ajouterCommentaire(id, u.id, dto, u.role);
+  }
+
+  @Get(':id/commentaires')
+  commentaires(@Param('id') id: string, @UtilisateurCourant() u: any) {
+    return this.service.commentaires(id, u.id, u.role);
+  }
+
+  @Get(':id')
+  detail(@Param('id') id: string, @UtilisateurCourant() u: any) {
+    return this.service.detail(id, u.id, u.role);
   }
 }

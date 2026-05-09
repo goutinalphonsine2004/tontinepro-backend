@@ -8,13 +8,21 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+function secretJwt(config: ConfigService) {
+  const secret = config.get<string>('JWT_SECRET');
+  if (!secret && config.get<string>('NODE_ENV') === 'production') {
+    throw new Error('JWT_SECRET est obligatoire en production');
+  }
+  return secret ?? 'dev-secret-change-me';
+}
+
 @Module({
   imports: [
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
+        secret: secretJwt(config),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '24h') as any },
       }),

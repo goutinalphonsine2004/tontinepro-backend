@@ -3,7 +3,7 @@ import { Role } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 
-const DUREE_QR_JOURS = 30;
+const DUREE_QR_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class QrcodeService {
@@ -22,7 +22,7 @@ export class QrcodeService {
 
     // Générer ou régénérer si expiré / inexistant
     if (!qr || qr.expireLe < new Date()) {
-      const expireLe = new Date(Date.now() + DUREE_QR_JOURS * 24 * 60 * 60 * 1000);
+      const expireLe = new Date(Date.now() + DUREE_QR_MS);
       qr = await this.prisma.qRCodeCollecteur.upsert({
         where: { collecteurId: utilisateurId },
         create: { collecteurId: utilisateurId, codeQR: randomUUID(), expireLe, actif: true },
@@ -68,7 +68,7 @@ export class QrcodeService {
       throw new BadRequestException({ message: 'Cet utilisateur n\'est pas un collecteur', code: 'ROLE_INVALIDE' });
     }
 
-    const expireLe = new Date(Date.now() + DUREE_QR_JOURS * 24 * 60 * 60 * 1000);
+    const expireLe = new Date(Date.now() + DUREE_QR_MS);
     const qr = await this.prisma.qRCodeCollecteur.upsert({
       where: { collecteurId: agentId },
       create: { collecteurId: agentId, codeQR: randomUUID(), expireLe, actif: true },

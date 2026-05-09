@@ -153,6 +153,104 @@ export class UtilisateursService {
     return { succes: true, message: `Rôle mis à jour → ${dto.role}.`, donnees: u };
   }
 
+  // ─── GET /utilisateurs/mon-dashboard ──────────────
+  async monDashboard(clientId: string) {
+    const maintenant = new Date();
+    const sixMoisDate = new Date(maintenant);
+    sixMoisDate.setMonth(sixMoisDate.getMonth() - 5);
+    sixMoisDate.setDate(1);
+
+    const [utilisateur, scoreCredit, badge, dernieresTransactions, creditActif, prochainsGroupes] = await Promise.all([
+      this.prisma.utilisateur.findUnique({
+        where: { id: clientId },
+        select: {
+          id: true, nom: true, photo: true, telephone: true,
+          tontines: {
+            select: {
+              id: true, nom: true, soldeActuel: true, objectifMontant: true,
+              montantJournalier: true, type: true, dateDeverrouillage: true,
+            },
+          },
+        },
+      }),
+      this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+      this.prisma.badgeClient.findFirst({
+        where: { clientId },
+        orderBy: { obtenuLe: 'desc' },
+      }),
+      this.prisma.transaction.findMany({
+        where: { utilisateurId: clientId },
+        orderBy: { creeLe: 'desc' },
+        take: 5,
+        include: { tontine: { select: { nom: true } } },
+      }),
+      this.prisma.microCredit.findFirst({
+        where: { clientId, statut: { in: ['ACTIF'] as any } },
+        select: { id: true, montantRestant: true, paiementJournalier: true, joursPayes: true, totalJours: true },
+      }),
+      this.prisma.ordreTirage.findMany({
+        where: { utilisateurId: clientId, aRecu: false },
+        include: { tontine: { select: { id: true, nom: true, montantJournalier: true } } },
+        orderBy: { position: 'asc' },
+        take: 1,
+      }),
+    ]);
+
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
+
+    // Graphique épargne 6 mois
+    const cotisations6mois = await this.prisma.transaction.findMany({
+      where: {
+        utilisateurId: clientId,
+        type: 'COTISATION' as any,
+        statut: 'SUCCES' as any,
+        creeLe: { gte: sixMoisDate },
+      },
+      select: { montantNet: true, creeLe: true },
+    });
+
+    const graphique: Record<string, number> = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(maintenant);
+      d.setMonth(d.getMonth() - i);
+      graphique[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] = 0;
+    }
+    for (const tx of cotisations6mois) {
+      const key = `${tx.creeLe.getFullYear()}-${String(tx.creeLe.getMonth() + 1).padStart(2, '0')}`;
+      if (graphique[key] !== undefined) graphique[key] += tx.montantNet;
+    }
+
+    const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+    const score = scoreCredit?.score ?? 0;
+    const eligibleMicroCredit = scoreCredit?.eligibleMicroCredit ?? false;
+    const eligiblePADME = scoreCredit?.eligiblePADME ?? false;
+
+    return {
+      succes: true,
+      message: 'Tableau de bord récupéré.',
+      donnees: {
+        profil: { id: utilisateur.id, nom: utilisateur.nom, photo: utilisateur.photo },
+        soldeTotal,
+        tontines: utilisateur.tontines,
+        graphiqueEpargne: Object.entries(graphique).map(([mois, montant]) => ({ mois, montant: Math.round(montant) })),
+        badge: badge ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe } : null,
+        score: {
+          valeur: score,
+          eligibleMicroCredit,
+          eligiblePADME,
+          dernierCalcul: scoreCredit?.dernierCalcul ?? null,
+        },
+        creditActif,
+        alertes: {
+          microCreditDisponible: eligibleMicroCredit && !creditActif,
+          eligiblePADME,
+        },
+        prochaineDistribution: prochainsGroupes[0] ?? null,
+        dernieresTransactions,
+      },
+    };
+  }
+
   // ─── DELETE /utilisateurs/:id (Admin) ──────────────
   async supprimerUtilisateur(adminId: string, cibleId: string) {
     if (adminId === cibleId) {

@@ -12,6 +12,14 @@ interface JwtPayload {
   sid?: string;
 }
 
+function secretJwt(config: ConfigService) {
+  const secret = config.get<string>('JWT_SECRET');
+  if (!secret && config.get<string>('NODE_ENV') === 'production') {
+    throw new Error('JWT_SECRET est obligatoire en production');
+  }
+  return secret ?? 'dev-secret-change-me';
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
@@ -21,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET', 'fallback-secret'),
+      secretOrKey: secretJwt(config),
     });
   }
 
@@ -41,6 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         id: payload.sid,
         utilisateurId: payload.sub,
         actif: true,
+        revoqueLe: null,
         expireLe: { gt: new Date() },
       },
       select: { id: true },

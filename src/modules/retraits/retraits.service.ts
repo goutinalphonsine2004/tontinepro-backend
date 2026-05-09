@@ -1,29 +1,123 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PolitiqueRetrait, StatutRetrait, TypeTransaction } from '@prisma/client';
+import { PolitiqueRetrait, StatutRetrait } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
+import { SmsService } from '../notifications/sms.service';
 import { BUSINESS } from '../../common/constants/business.constants';
 import { DemanderRetraitDto } from './dto/demander-retrait.dto';
+import { ConfirmerRetraitDto } from './dto/confirmer-retrait.dto';
 import { RejeterRetraitDto } from './dto/rejeter-retrait.dto';
+
+const OTP_TYPE_RETRAIT = 'RETRAIT';
+const DUREE_OTP_RETRAIT_MINUTES = 10;
 
 @Injectable()
 export class RetraitsService {
   constructor(
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
+    private sms: SmsService,
   ) {}
 
-  // ─── POST /retraits/demander ───────────────────────
+  // ─── POST /retraits/demander-otp ───────────────────
+  async demanderOtp(utilisateurId: string, dto: DemanderRetraitDto) {
+    const [utilisateur, tontine] = await Promise.all([
+      this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } }),
+      this.prisma.tontine.findUnique({ where: { id: dto.tontineId } }),
+    ]);
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
+    if (!tontine) throw new NotFoundException('Tontine introuvable');
+    await this.verifierRetraitPossible(utilisateurId, tontine, dto.montant);
+
+    const telephone = dto.telephone ?? utilisateur.telephone;
+    const { code, expireLe } = await this.creerOtpRetrait(utilisateurId, telephone, dto.tontineId, dto.montant);
+
+    await this.sms.envoyer(
+      telephone,
+      `TontineBénin: Code retrait ${code}. Montant: ${dto.montant} FCFA. Valable ${DUREE_OTP_RETRAIT_MINUTES} min.`,
+    );
+
+    return {
+      succes: true,
+      message: 'Code OTP de confirmation envoyé par SMS.',
+      donnees: { tontineId: tontine.id, montant: dto.montant, telephone, expireLe },
+    };
+  }
+
+  // ─── POST /retraits/confirmer ──────────────────────
+  async confirmer(utilisateurId: string, dto: ConfirmerRetraitDto) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
+
+    const telephone = dto.telephone ?? utilisateur.telephone;
+    const otp = await this.prisma.codeOTP.findFirst({
+      where: {
+        utilisateurId,
+        telephone,
+        type: this.typeOtpRetrait(dto.tontineId, dto.montant),
+        utilise: false,
+        expireLe: { gt: new Date() },
+      },
+      orderBy: { creeLe: 'desc' },
+    });
+
+    if (!otp || !(await this.verifierCodeOtp(dto.code, otp.code))) {
+      throw new BadRequestException({ message: 'Code OTP de retrait invalide ou expiré', code: 'OTP_RETRAIT_INVALIDE' });
+    }
+
+    await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+    return this.demander(utilisateurId, dto);
+  }
+
+  // ─── Ancienne logique d'exécution, appelée après OTP ─
   async demander(utilisateurId: string, dto: DemanderRetraitDto) {
     const [utilisateur, tontine] = await Promise.all([
       this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } }),
       this.prisma.tontine.findUnique({ where: { id: dto.tontineId } }),
     ]);
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
     if (!tontine) throw new NotFoundException('Tontine introuvable');
+    await this.verifierRetraitPossible(utilisateurId, tontine, dto.montant);
+
+    const seuilAdmin = BUSINESS.SEUIL_RETRAIT_ADMIN;
+    const needsAdmin = dto.montant >= seuilAdmin;
+
+    const retrait = await this.prisma.retrait.create({
+      data: {
+        utilisateurId,
+        tontineId: tontine.id,
+        montant: dto.montant,
+        statut: needsAdmin ? StatutRetrait.EN_ATTENTE : StatutRetrait.VALIDE,
+      },
+    });
+
+    if (!needsAdmin) {
+      // Validation et exécution automatique
+      await this.executer(retrait.id, utilisateur.telephone, tontine.id, dto.montant);
+    }
+
+    return {
+      succes: true,
+      message: needsAdmin
+        ? `Retrait de ${dto.montant} FCFA en attente de validation Admin (seuil: ${seuilAdmin} FCFA).`
+        : `Retrait de ${dto.montant} FCFA validé automatiquement et en cours d'exécution.`,
+      donnees: retrait,
+    };
+  }
+
+  private async verifierRetraitPossible(
+    utilisateurId: string,
+    tontine: { id: string; proprietaireId: string; soldeActuel: number; politique: PolitiqueRetrait; dateDeverrouillage: Date | null },
+    montant: number,
+  ) {
+    await this.verifierAucuneAlerteBloquante(tontine.id);
+
     if (tontine.proprietaireId !== utilisateurId) {
       throw new ForbiddenException({ message: 'Seul le propriétaire peut demander un retrait', code: 'ACCES_REFUSE' });
     }
-    if (tontine.soldeActuel < dto.montant) {
+    if (tontine.soldeActuel < montant) {
       throw new BadRequestException({
         message: `Solde insuffisant. Disponible: ${tontine.soldeActuel} FCFA`,
         code: 'SOLDE_INSUFFISANT',
@@ -44,30 +138,27 @@ export class RetraitsService {
         throw new BadRequestException({ message: 'Date de retrait programmée non atteinte', code: 'DATE_NON_ATTEINTE' });
       }
     }
+  }
 
-    const seuilAdmin = BUSINESS.SEUIL_RETRAIT_ADMIN;
-    const needsAdmin = dto.montant >= seuilAdmin;
-
-    const retrait = await this.prisma.retrait.create({
-      data: {
-        utilisateurId,
-        montant: dto.montant,
-        statut: needsAdmin ? StatutRetrait.EN_ATTENTE : StatutRetrait.VALIDE,
+  private async verifierAucuneAlerteBloquante(tontineId: string) {
+    const alerte = await this.prisma.alerteSysteme.findFirst({
+      where: {
+        type: 'COHERENCE_COMPTABLE',
+        severite: 'CRITIQUE',
+        statut: 'OUVERTE',
+        resourceType: 'TONTINE',
+        resourceId: tontineId,
       },
+      select: { id: true, titre: true },
     });
 
-    if (!needsAdmin) {
-      // Validation et exécution automatique
-      await this.executer(retrait.id, utilisateur!.telephone, tontine.id, dto.montant);
+    if (alerte) {
+      throw new ForbiddenException({
+        message: 'Retrait temporairement bloqué: anomalie comptable en cours de vérification.',
+        code: 'CIRCUIT_BREAKER_COMPTABLE',
+        alerteId: alerte.id,
+      });
     }
-
-    return {
-      succes: true,
-      message: needsAdmin
-        ? `Retrait de ${dto.montant} FCFA en attente de validation Admin (seuil: ${seuilAdmin} FCFA).`
-        : `Retrait de ${dto.montant} FCFA validé automatiquement et en cours d'exécution.`,
-      donnees: retrait,
-    };
   }
 
   private async executer(retraitId: string, telephone: string, tontineId: string, montant: number) {
@@ -88,12 +179,18 @@ export class RetraitsService {
         data: { soldeActuel: { decrement: montant } },
       }),
     ]);
+
+    await this.sms.envoyer(
+      telephone,
+      `TontineBénin: Retrait de ${montant} FCFA exécuté avec succès. Référence: ${transfert.refKKiaPay}.`,
+    );
   }
 
   // ─── GET /retraits/mes-retraits ────────────────────
   async mesRetraits(utilisateurId: string) {
     const retraits = await this.prisma.retrait.findMany({
       where: { utilisateurId },
+      include: { tontine: { select: { id: true, nom: true } } },
       orderBy: { creeLe: 'desc' },
     });
     return { succes: true, message: `${retraits.length} retrait(s).`, donnees: retraits };
@@ -103,7 +200,10 @@ export class RetraitsService {
   async enAttente() {
     const retraits = await this.prisma.retrait.findMany({
       where: { statut: StatutRetrait.EN_ATTENTE },
-      include: { utilisateur: { select: { id: true, nom: true, telephone: true } } },
+      include: {
+        utilisateur: { select: { id: true, nom: true, telephone: true } },
+        tontine: { select: { id: true, nom: true, soldeActuel: true } },
+      },
       orderBy: { creeLe: 'asc' },
     });
     const total = retraits.reduce((s, r) => s + r.montant, 0);
@@ -121,9 +221,7 @@ export class RetraitsService {
       throw new BadRequestException({ message: 'Ce retrait n\'est plus en attente', code: 'STATUT_INVALIDE' });
     }
 
-    const tontine = await this.prisma.tontine.findFirst({
-      where: { proprietaireId: retrait.utilisateurId },
-    });
+    const tontine = await this.prisma.tontine.findUnique({ where: { id: retrait.tontineId } });
     if (!tontine || tontine.soldeActuel < retrait.montant) {
       throw new BadRequestException({ message: 'Solde tontine insuffisant', code: 'SOLDE_INSUFFISANT' });
     }
@@ -149,5 +247,34 @@ export class RetraitsService {
       data: { statut: StatutRetrait.REJETE, validePar: adminId, motifRejet: dto.motif },
     });
     return { succes: true, message: 'Retrait rejeté.' };
+  }
+
+  private async creerOtpRetrait(utilisateurId: string, telephone: string, tontineId: string, montant: number) {
+    await this.prisma.codeOTP.updateMany({
+      where: { utilisateurId, type: { startsWith: OTP_TYPE_RETRAIT }, utilise: false },
+      data: { utilise: true },
+    });
+
+    const code = randomInt(100000, 1000000).toString();
+    const codeHash = await bcrypt.hash(code, 10);
+    const expireLe = new Date(Date.now() + DUREE_OTP_RETRAIT_MINUTES * 60 * 1000);
+
+    await this.prisma.codeOTP.create({
+      data: { utilisateurId, telephone, code: codeHash, type: this.typeOtpRetrait(tontineId, montant), expireLe },
+    });
+
+    return { code, expireLe };
+  }
+
+  private typeOtpRetrait(tontineId: string, montant: number) {
+    return `${OTP_TYPE_RETRAIT}:${tontineId}:${montant}`;
+  }
+
+  private async verifierCodeOtp(codeRecu: string, codeStocke: string) {
+    if (codeStocke.startsWith('$2')) {
+      return bcrypt.compare(codeRecu, codeStocke);
+    }
+
+    return codeRecu === codeStocke;
   }
 }
