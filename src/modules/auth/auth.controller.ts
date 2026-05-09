@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -11,8 +11,11 @@ import { DemanderResetPinDto } from './dto/demander-reset-pin.dto';
 import { VerifierOtpResetPinDto } from './dto/verifier-otp-reset-pin.dto';
 import { ReinitialiserPinDto } from './dto/reinitialiser-pin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -103,5 +106,41 @@ export class AuthController {
     @Param('id') sessionId: string,
   ) {
     return this.authService.revoquerSession(utilisateur.id, sessionId, utilisateur.sessionId);
+  }
+
+  // ─── Biométrie ────────────────────────────────────
+  @UseGuards(JwtAuthGuard)
+  @Post('biometrique/enregistrer')
+  enregistrerAppareil(@UtilisateurCourant() u: { id: string }, @Body() dto: any) {
+    return this.authService.enregistrerAppareilBiometrique(u.id, dto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('biometrique/connexion')
+  connexionBiometrique(@Body() dto: any, @Req() req: Request) {
+    return this.authService.connexionBiometrique(dto, req);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('biometrique/appareils')
+  mesAppareils(@UtilisateurCourant() u: { id: string }) {
+    return this.authService.mesAppareils(u.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('biometrique/appareils/:id')
+  revoquerAppareil(@UtilisateurCourant() u: { id: string }, @Param('id') appareilId: string) {
+    return this.authService.revoquerAppareil(u.id, appareilId);
+  }
+
+  // ─── Connexions suspectes (Admin) ─────────────────
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('connexions-suspectes')
+  connexionsSuspectes(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limite', new DefaultValuePipe(50), ParseIntPipe) limite: number,
+  ) {
+    return this.authService.connexionsSuspectes(page, limite);
   }
 }

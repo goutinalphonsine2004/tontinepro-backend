@@ -239,7 +239,72 @@ export class RapportsService {
     return done;
   }
 
+  // ─── GET /rapports/micro-credits.pdf ──────────────
+  async microCreditsPdf(dto: FiltrerRapportDto): Promise<{ buffer: Buffer; filename: string }> {
+    const periode = this.periode(dto);
+    const credits = await this.prisma.microCredit.findMany({
+      where: { creeLe: { gte: periode.debut, lte: periode.fin } },
+      include: { client: { select: { nom: true, telephone: true } } },
+      orderBy: [{ statut: 'asc' }, { creeLe: 'desc' }],
+    });
+
+    const actifs = credits.filter((c) => c.statut === 'ACTIF');
+    const termines = credits.filter((c) => c.statut === 'TERMINE');
+    const defaut = credits.filter((c) => c.statut === 'EN_DEFAUT');
+    const totalDecaisse = credits.reduce((s, c) => s + c.montantPrincipal, 0);
+    const totalInterets = credits.reduce((s, c) => s + (c.montantTotal - c.montantPrincipal), 0);
+    const totalRestant = credits.filter((c) => c.statut === 'ACTIF').reduce((s, c) => s + c.montantRestant, 0);
+
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const chunks: Buffer[] = [];
+      doc.on('data', (c: Buffer) => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      doc.fontSize(18).fillColor('#1a1a2e').text('Rapport Micro-Crédits', { align: 'center' });
+      doc.moveDown(0.5).fontSize(11).fillColor('#666').text(`Période: ${periode.label}`, { align: 'center' });
+      doc.moveDown(2);
+
+      this.section(doc, 'SYNTHÈSE');
+      this.ligne(doc, 'Total crédits émis', `${credits.length}`);
+      this.ligne(doc, 'En cours (ACTIF)', `${actifs.length}`);
+      this.ligne(doc, 'Terminés', `${termines.length}`);
+      this.ligne(doc, 'En défaut', `${defaut.length}`);
+      this.ligne(doc, 'Taux de remboursement', `${credits.length > 0 ? Math.round((termines.length / credits.length) * 100) : 0}%`);
+      this.ligne(doc, 'Taux de défaut', `${credits.length > 0 ? Math.round((defaut.length / credits.length) * 100) : 0}%`);
+      doc.moveDown(1);
+
+      this.section(doc, 'FINANCES');
+      this.ligne(doc, 'Total décaissé', this.fcfa(totalDecaisse));
+      this.ligne(doc, 'Intérêts générés', this.fcfa(totalInterets));
+      this.ligne(doc, 'Capital restant dû', this.fcfa(totalRestant));
+      doc.moveDown(1);
+
+      if (defaut.length > 0) {
+        this.section(doc, `CLIENTS EN DÉFAUT (${defaut.length})`);
+        defaut.forEach((c) => {
+          doc.fontSize(10).fillColor('#dc2626')
+            .text(`• ${c.client.nom} (${c.client.telephone}) — Restant: ${this.fcfa(c.montantRestant)}`);
+        });
+        doc.moveDown(1);
+      }
+
+      this.section(doc, `CRÉDITS ACTIFS (${actifs.length})`);
+      actifs.slice(0, 30).forEach((c) => {
+        doc.fontSize(9).fillColor('#555')
+          .text(`${c.client.nom} | ${this.fcfa(c.montantPrincipal)} | Score: ${c.scoreAuMoment} | Restant: ${this.fcfa(c.montantRestant)} | ${c.joursPayes}/${c.totalJours} j`);
+      });
+      if (actifs.length > 30) doc.text(`... et ${actifs.length - 30} autres crédits actifs`);
+
+      doc.end();
+    });
+
+    return { buffer, filename: `micro-credits-${periode.label.replace(/\s/g, '_')}.pdf` };
+  }
+
   // ─── GET /rapports/agents.pdf ─────────────────────
+
   async rapportAgentsPdf(dto: FiltrerRapportDto): Promise<{ buffer: Buffer; filename: string }> {
     const periode = this.periode(dto);
     const agents = await this.prisma.utilisateur.findMany({

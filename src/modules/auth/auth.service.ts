@@ -611,5 +611,83 @@ export class AuthService {
 
     return { succes: true, message: 'Appareil révoqué.' };
   }
+
+  // ─── GET /auth/connexions-suspectes (Admin) ────────
+  async connexionsSuspectes(page = 1, limite = 50) {
+    const skip = (page - 1) * limite;
+
+    // Sessions créées depuis des IPs différentes des sessions habituelles du même user
+    // On détecte : même utilisateur, plusieurs IPs distinctes dans les 24h
+    const dernierJour = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const derniereMois = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    // Sessions récentes groupées par utilisateur avec plusieurs IPs distinctes
+    const sessionsRecentes = await this.prisma.sessionUtilisateur.findMany({
+      where: { creeLe: { gte: derniereMois } },
+      select: {
+        id: true,
+        utilisateurId: true,
+        adresseIP: true,
+        deviceId: true,
+        creeLe: true,
+        actif: true,
+        utilisateur: { select: { id: true, nom: true, telephone: true, role: true } },
+      },
+      orderBy: { creeLe: 'desc' },
+    });
+
+    // Regrouper par utilisateurId pour trouver les multi-IP suspectes
+    const parUtilisateur = new Map<string, typeof sessionsRecentes>();
+    for (const s of sessionsRecentes) {
+      const existantes = parUtilisateur.get(s.utilisateurId) ?? [];
+      existantes.push(s);
+      parUtilisateur.set(s.utilisateurId, existantes);
+    }
+
+    const alertes: {
+      utilisateur: { id: string; nom: string; telephone: string; role: string };
+      nbrIPs: number;
+      ips: string[];
+      derniereSession: Date;
+      derniereIP: string;
+      suspicion: string;
+    }[] = [];
+
+    for (const [uid, sessions] of parUtilisateur.entries()) {
+      const ips = [...new Set(sessions.map((s) => s.adresseIP).filter(Boolean))] as string[];
+      const sessionsRecentes24h = sessions.filter((s) => s.creeLe >= dernierJour);
+      const ipsRecentes = [...new Set(sessionsRecentes24h.map((s) => s.adresseIP).filter(Boolean))];
+
+      // Suspect si : 3+ IPs distinctes en 24h OU 5+ IPs distinctes en 30j
+      if (ipsRecentes.length >= 3 || ips.length >= 5) {
+        const derniereSession = sessions[0];
+        alertes.push({
+          utilisateur: derniereSession.utilisateur as any,
+          nbrIPs: ips.length,
+          ips: ips.slice(0, 5),
+          derniereSession: derniereSession.creeLe,
+          derniereIP: derniereSession.adresseIP ?? 'inconnue',
+          suspicion: ipsRecentes.length >= 3
+            ? `${ipsRecentes.length} IPs différentes en 24h`
+            : `${ips.length} IPs différentes en 30 jours`,
+        });
+      }
+    }
+
+    const total = alertes.length;
+    const paginees = alertes.slice(skip, skip + limite);
+
+    return {
+      succes: true,
+      message: `${total} compte(s) avec activité suspecte.`,
+      donnees: {
+        alertes: paginees,
+        total,
+        page,
+        pages: Math.ceil(total / limite),
+      },
+    };
+  }
 }
+
 

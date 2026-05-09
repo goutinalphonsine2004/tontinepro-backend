@@ -204,4 +204,92 @@ export class ScoreService {
       },
     };
   }
+
+  // ─── GET /score/calendrier-regularite ─────────────
+  async calendrierRegularite(clientId: string) {
+    const maintenant = new Date();
+    const sixMoisDate = new Date(maintenant);
+    sixMoisDate.setMonth(sixMoisDate.getMonth() - 5);
+    sixMoisDate.setDate(1);
+    sixMoisDate.setHours(0, 0, 0, 0);
+
+    // Toutes les cotisations réussies sur 6 mois
+    const cotisations = await this.prisma.transaction.findMany({
+      where: {
+        utilisateurId: clientId,
+        type: 'COTISATION' as any,
+        statut: 'SUCCES' as any,
+        creeLe: { gte: sixMoisDate },
+      },
+      select: { creeLe: true, montant: true },
+      orderBy: { creeLe: 'asc' },
+    });
+
+    // Construire une map jour → montant
+    const parJour = new Map<string, number>();
+    for (const tx of cotisations) {
+      const clé = tx.creeLe.toISOString().split('T')[0]; // "2025-03-07"
+      parJour.set(clé, (parJour.get(clé) ?? 0) + tx.montant);
+    }
+
+    // Construire le calendrier mois par mois
+    const calendrier: {
+      mois: string;
+      label: string;
+      jours: { date: string; cotise: boolean; montant: number }[];
+      nbJoursCotises: number;
+      nbJoursOuvres: number;
+      tauxMois: number;
+    }[] = [];
+
+    for (let m = 5; m >= 0; m--) {
+      const d = new Date(maintenant);
+      d.setMonth(d.getMonth() - m);
+      const annee = d.getFullYear();
+      const mois = d.getMonth();
+      const label = d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+      const cleMois = `${annee}-${String(mois + 1).padStart(2, '0')}`;
+
+      const nbJoursDansMois = new Date(annee, mois + 1, 0).getDate();
+      const estMoisCourant = mois === maintenant.getMonth() && annee === maintenant.getFullYear();
+      const jourMax = estMoisCourant ? maintenant.getDate() : nbJoursDansMois;
+
+      const jours: { date: string; cotise: boolean; montant: number }[] = [];
+      let nbCotises = 0;
+
+      for (let j = 1; j <= jourMax; j++) {
+        const dateStr = `${annee}-${String(mois + 1).padStart(2, '0')}-${String(j).padStart(2, '0')}`;
+        const montant = parJour.get(dateStr) ?? 0;
+        const cotise = montant > 0;
+        if (cotise) nbCotises++;
+        jours.push({ date: dateStr, cotise, montant });
+      }
+
+      calendrier.push({
+        mois: cleMois,
+        label,
+        jours,
+        nbJoursCotises: nbCotises,
+        nbJoursOuvres: jourMax,
+        tauxMois: jourMax > 0 ? Math.round((nbCotises / jourMax) * 100) : 0,
+      });
+    }
+
+    const totalJours = calendrier.reduce((s, m) => s + m.nbJoursOuvres, 0);
+    const totalCotises = calendrier.reduce((s, m) => s + m.nbJoursCotises, 0);
+
+    return {
+      succes: true,
+      message: 'Calendrier de régularité sur 6 mois.',
+      donnees: {
+        calendrier,
+        resume: {
+          totalJours,
+          totalCotises,
+          tauxGlobal: totalJours > 0 ? Math.round((totalCotises / totalJours) * 100) : 0,
+        },
+      },
+    };
+  }
 }
+

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Role, StatutCompte } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -272,4 +273,108 @@ export class UtilisateursService {
     await this.prisma.utilisateur.delete({ where: { id: cibleId } });
     return { succes: true, message: 'Utilisateur supprimé définitivement.', donnees: { id: cibleId } };
   }
+
+  // ─── PUT /utilisateurs/:id/reassigner (Admin/Superviseur) ──
+  async reassignerClient(clientId: string, nouveauCollecteurId: string, adminId: string) {
+    const client = await this.prisma.utilisateur.findUnique({
+      where: { id: clientId },
+      select: { id: true, nom: true, telephone: true, collecteurId: true, role: true },
+    });
+    if (!client) throw new NotFoundException('Client introuvable');
+    if (client.role !== Role.CLIENT) {
+      throw new BadRequestException({ message: 'Seul un client peut être réassigné', code: 'ROLE_INVALIDE' });
+    }
+
+    const nouveauCollecteur = await this.prisma.utilisateur.findUnique({
+      where: { id: nouveauCollecteurId },
+      select: { id: true, nom: true, role: true, statut: true },
+    });
+    if (!nouveauCollecteur) throw new NotFoundException('Nouveau collecteur introuvable');
+    if (!([Role.AGENT, Role.INDEPENDANT] as any[]).includes(nouveauCollecteur.role)) {
+      throw new BadRequestException({ message: 'Le destinataire doit être un collecteur', code: 'ROLE_INVALIDE' });
+    }
+    if (nouveauCollecteur.statut !== StatutCompte.ACTIF) {
+      throw new BadRequestException({ message: 'Collecteur inactif', code: 'COLLECTEUR_INACTIF' });
+    }
+
+    const ancienCollecteurId = client.collecteurId;
+    await this.prisma.utilisateur.update({
+      where: { id: clientId },
+      data: { collecteurId: nouveauCollecteurId },
+    });
+
+    // Journaliser la réassignation
+    await this.prisma.journalAudit.create({
+      data: {
+        utilisateurId: adminId,
+        action: 'REASSIGNER_CLIENT',
+        details: JSON.stringify({
+          clientId,
+          clientNom: client.nom,
+          ancienCollecteurId,
+          nouveauCollecteurId,
+          nouveauCollecteurNom: nouveauCollecteur.nom,
+        }),
+      },
+    });
+
+    return {
+      succes: true,
+      message: `${client.nom} réassigné à ${nouveauCollecteur.nom}.`,
+      donnees: { clientId, ancienCollecteurId, nouveauCollecteurId },
+    };
+  }
+
+  // ─── DELETE /utilisateurs/mon-compte ──────────────
+  // Le client supprime lui-même son propre compte
+  async supprimerMonCompte(clientId: string, pin: string) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({
+      where: { id: clientId },
+      include: {
+        _count: { select: { microCredits: true } },
+        tontines: { select: { soldeActuel: true } },
+      },
+    });
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
+
+    // Vérifier le PIN avant suppression
+    const pinValide = await bcrypt.compare(pin, utilisateur.pinHash ?? '');
+    if (!pinValide) {
+      throw new UnauthorizedException({ message: 'Code PIN incorrect', code: 'PIN_INVALIDE' });
+    }
+
+    // Bloquer si solde non nul
+    const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+    if (soldeTotal > 0) {
+      throw new BadRequestException({
+        message: `Impossible de supprimer votre compte : vous avez ${soldeTotal} FCFA de solde. Faites d'abord un retrait.`,
+        code: 'SOLDE_NON_NUL',
+      });
+    }
+
+    // Bloquer si crédit actif
+    const creditActif = await this.prisma.microCredit.findFirst({
+      where: { clientId, statut: { in: ['ACTIF', 'EN_DEFAUT'] as any } },
+    });
+    if (creditActif) {
+      throw new BadRequestException({
+        message: 'Impossible de supprimer votre compte : vous avez un micro-crédit en cours.',
+        code: 'CREDIT_ACTIF',
+      });
+    }
+
+    // Soft-delete si historique financier (intégrité comptable)
+    const aHistorique = utilisateur._count.microCredits > 0;
+    if (aHistorique) {
+      await this.prisma.utilisateur.update({
+        where: { id: clientId },
+        data: { statut: StatutCompte.BANNI, nom: '[Compte supprimé]', telephone: `DELETED_${clientId}` },
+      });
+      return { succes: true, message: 'Compte supprimé. Vos données financières sont anonymisées.' };
+    }
+
+    await this.prisma.utilisateur.delete({ where: { id: clientId } });
+    return { succes: true, message: 'Compte supprimé définitivement.' };
+  }
 }
+

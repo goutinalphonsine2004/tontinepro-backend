@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { CollecteurTerrainService } from './collecteur-terrain.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -38,5 +38,17 @@ export class CollecteurTerrainController {
     @Query('limite') limite?: string,
   ) {
     return this.service.mesPresences(u.id, page ? parseInt(page) : 1, limite ? parseInt(limite) : 20);
+  }
+
+  @Get('dashboard-independant')
+  @Roles(Role.INDEPENDANT)
+  dashboardIndependant(@UtilisateurCourant() u: { id: string }) {
+    return this.service.dashboardIndependant(u.id);
+  }
+
+  @Get('contact-whatsapp/:clientId')
+  @Roles(Role.AGENT, Role.INDEPENDANT)
+  contactWhatsApp(@UtilisateurCourant() u: { id: string }, @Param('clientId') clientId: string) {
+    return this.service.contactWhatsApp(u.id, clientId);
   }
 }

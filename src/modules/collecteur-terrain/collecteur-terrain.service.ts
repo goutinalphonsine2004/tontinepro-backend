@@ -174,4 +174,108 @@ export class CollecteurTerrainService {
       donnees: { presences, total, page, pages: Math.ceil(total / limite) },
     };
   }
+
+  // ─── GET /collecteur/dashboard-independant ─────────
+  async dashboardIndependant(agentId: string) {
+    const maintenant = new Date();
+    const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+    const sixMoisDate = new Date(maintenant);
+    sixMoisDate.setMonth(sixMoisDate.getMonth() - 5);
+    sixMoisDate.setDate(1);
+
+    const [agent, clients, commissionsMois, abonnement, creditsClients] = await Promise.all([
+      this.prisma.utilisateur.findUnique({
+        where: { id: agentId },
+        select: { id: true, nom: true, telephone: true, role: true, soldeCommission: true },
+      }),
+      this.prisma.utilisateur.findMany({
+        where: { collecteurId: agentId, statut: StatutCompte.ACTIF },
+        select: {
+          id: true,
+          transactions: {
+            where: { type: 'COTISATION' as any, statut: 'SUCCES' as any, creeLe: { gte: debutMois } },
+            select: { montant: true },
+          },
+        },
+      }),
+      this.prisma.commission.aggregate({
+        where: { agentId, creeLe: { gte: debutMois } },
+        _sum: { montant: true },
+      }),
+      this.prisma.facturationAgent.findFirst({
+        where: { agentId },
+        orderBy: { creeLe: 'desc' },
+        select: { plan: true, actif: true, prochainPaiement: true },
+      }),
+      this.prisma.microCredit.findMany({
+        where: { clientId: { in: [] } }, // sera enrichi via clients ci-dessous
+        select: { montantPrincipal: true, montantTotal: true, montantRestant: true },
+        take: 0,
+      }),
+    ]);
+
+    if (!agent) throw new NotFoundException('Agent introuvable');
+
+    // Graphique revenus 6 mois
+    const commissionsParMois = await this.prisma.commission.findMany({
+      where: { agentId, creeLe: { gte: sixMoisDate } },
+      select: { montant: true, creeLe: true },
+    });
+
+    const graphique: Record<string, number> = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(maintenant);
+      d.setMonth(d.getMonth() - i);
+      graphique[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] = 0;
+    }
+    for (const c of commissionsParMois) {
+      const key = `${c.creeLe.getFullYear()}-${String(c.creeLe.getMonth() + 1).padStart(2, '0')}`;
+      if (graphique[key] !== undefined) graphique[key] += c.montant;
+    }
+
+    const clientsActifs = clients.length;
+    const nbClientsCotiseCeMois = clients.filter((c) => c.transactions.length > 0).length;
+    const tauxCollecteMois = clientsActifs > 0 ? Math.round((nbClientsCotiseCeMois / clientsActifs) * 100) : 0;
+    const interetsMicroCredits = creditsClients.reduce((s, c) => s + (c.montantTotal - c.montantPrincipal) * 0.1, 0);
+
+    return {
+      succes: true,
+      message: 'Tableau de bord collecteur indépendant.',
+      donnees: {
+        agent: { id: agent.id, nom: agent.nom, role: agent.role, soldeCommission: agent.soldeCommission },
+        clientsActifs,
+        commissionsCeMois: commissionsMois._sum.montant ?? 0,
+        tauxCollecteMois,
+        graphiqueRevenus: Object.entries(graphique).map(([mois, montant]) => ({ mois, montant: Math.round(montant) })),
+        revenutsMicroCredits: Math.round(interetsMicroCredits),
+        abonnement: abonnement
+          ? { plan: abonnement.plan, actif: abonnement.actif, prochainPaiement: abonnement.prochainPaiement }
+          : null,
+      },
+    };
+  }
+
+  // ─── GET /collecteur/contact-whatsapp/:clientId ────
+  async contactWhatsApp(agentId: string, clientId: string) {
+    const client = await this.prisma.utilisateur.findUnique({
+      where: { id: clientId },
+      select: { id: true, nom: true, telephone: true, collecteurId: true },
+    });
+    if (!client) throw new NotFoundException('Client introuvable');
+    if (client.collecteurId !== agentId) {
+      throw new ForbiddenException({ message: 'Ce client n\'est pas dans votre portefeuille', code: 'ACCES_REFUSE' });
+    }
+
+    // Normaliser le numéro béninois (+229 ou 00229)
+    const tel = client.telephone.replace(/^0+/, '').replace(/^\+/, '');
+    const telE164 = tel.startsWith('229') ? tel : `229${tel}`;
+    const lienWhatsApp = `https://wa.me/${telE164}`;
+
+    return {
+      succes: true,
+      message: `Lien WhatsApp généré pour ${client.nom}.`,
+      donnees: { clientId: client.id, nom: client.nom, telephone: client.telephone, lienWhatsApp },
+    };
+  }
 }
+

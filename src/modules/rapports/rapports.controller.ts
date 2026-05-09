@@ -41,6 +41,13 @@ export class RapportsController {
     return this.envoyerFichier(res, buffer, filename);
   }
 
+  @Get('micro-credits.pdf')
+  @Header('Content-Type', 'application/pdf')
+  async microCreditsPdf(@Query() dto: FiltrerRapportDto, @Res() res: Response) {
+    const { buffer, filename } = await this.service.microCreditsPdf(dto);
+    return this.envoyerFichier(res, buffer, filename);
+  }
+
   @Get('agents.pdf')
   @Header('Content-Type', 'application/pdf')
   async agentsPdf(@Query() dto: FiltrerRapportDto, @Res() res: Response) {

@@ -299,4 +299,55 @@ export class AnalyticsService {
       },
     };
   }
+
+  // ─── GET /analytics/leaderboard ───────────────────
+  async leaderboard(limite = 50) {
+    // Récupérer tous les clients avec leur score et épargne totale
+    const clients = await this.prisma.utilisateur.findMany({
+      where: { role: 'CLIENT' as any, statut: 'ACTIF' as any },
+      select: {
+        id: true,
+        nom: true,
+        scoreCredit: { select: { score: true, tauxRegularite: true, totalMois: true } },
+        tontines: { select: { soldeActuel: true } },
+        transactions: {
+          where: { type: 'COTISATION' as any, statut: 'SUCCES' as any },
+          select: { montantNet: true },
+        },
+        badges: { orderBy: { obtenuLe: 'desc' }, take: 1, select: { niveau: true } },
+      },
+    });
+
+    // Calculer le score de classement (50% épargne, 30% score crédit, 20% régularité)
+    const classes = clients
+      .map((c) => {
+        const solde = c.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+        const totalCotise = c.transactions.reduce((s, tx) => s + tx.montantNet, 0);
+        const score = c.scoreCredit?.score ?? 0;
+        const regularite = c.scoreCredit?.tauxRegularite ?? 0;
+        const scoreClassement = Math.round(score * 0.4 + regularite * 100 * 0.3 + Math.min(totalCotise / 10000, 30));
+
+        return {
+          id: c.id,
+          nom: c.nom,
+          score,
+          scoreClassement,
+          regularite: Math.round(regularite * 100),
+          solde: Math.round(solde),
+          totalCotise: Math.round(totalCotise),
+          anciennete: c.scoreCredit?.totalMois ?? 0,
+          badge: c.badges[0]?.niveau ?? null,
+        };
+      })
+      .sort((a, b) => b.scoreClassement - a.scoreClassement)
+      .slice(0, limite)
+      .map((c, i) => ({ rang: i + 1, ...c }));
+
+    return {
+      succes: true,
+      message: `Top ${classes.length} épargnants.`,
+      donnees: { classement: classes },
+    };
+  }
 }
+

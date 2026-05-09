@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, ParseIntPipe, DefaultValuePipe, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -31,4 +31,10 @@ export class AnalyticsController {
 
   @Get('padme')
   padme() { return this.service.padme(); }
+
+  @Get('leaderboard')
+  @Roles(Role.ADMIN, Role.SUPERVISEUR, Role.CLIENT)
+  leaderboard(@Query('limite', new DefaultValuePipe(50), ParseIntPipe) limite: number) {
+    return this.service.leaderboard(limite);
+  }
 }

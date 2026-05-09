@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, ParseIntPipe, DefaultValuePipe, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { ScoreService } from './score.service';
@@ -26,5 +26,10 @@ export class ScoreController {
   @Get('projection')
   projection(@UtilisateurCourant() u: { id: string }) {
     return this.service.projection(u.id);
+  }
+
+  @Get('calendrier-regularite')
+  calendrierRegularite(@UtilisateurCourant() u: { id: string }) {
+    return this.service.calendrierRegularite(u.id);
   }
 }

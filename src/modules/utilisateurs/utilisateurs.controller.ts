@@ -1,6 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -43,11 +42,27 @@ export class UtilisateursController {
     return this.service.configurerEmpreinte(u.id, dto);
   }
 
+  @Delete('mon-compte')
+  supprimerMonCompte(@UtilisateurCourant() u: { id: string }, @Body() body: { pin: string }) {
+    return this.service.supprimerMonCompte(u.id, body.pin);
+  }
+
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
   @Get()
   lister(@Query() dto: FiltrerUtilisateursDto) {
     return this.service.listerUtilisateurs(dto);
+  }
+
+  @Roles(Role.ADMIN, Role.SUPERVISEUR)
+  @UseGuards(RolesGuard)
+  @Put(':id/reassigner')
+  reassignerClient(
+    @Param('id') id: string,
+    @Body() body: { nouveauCollecteurId: string },
+    @UtilisateurCourant() u: { id: string },
+  ) {
+    return this.service.reassignerClient(id, body.nouveauCollecteurId, u.id);
   }
 
   @Roles(Role.ADMIN)
