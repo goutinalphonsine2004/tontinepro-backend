@@ -50,7 +50,11 @@ let CronService = CronService_1 = class CronService {
         this.logger.log('[CRON 7h] Prélèvement remboursements journaliers...');
         const credits = await this.prisma.microCredit.findMany({
             where: { statut: client_1.StatutCredit.ACTIF },
-            include: { client: { select: { id: true, nom: true, telephone: true, collecteurId: true } } },
+            include: {
+                client: {
+                    select: { id: true, nom: true, telephone: true, collecteurId: true },
+                },
+            },
         });
         this.logger.log(`[CRON 7h] ${credits.length} crédit(s) actif(s) à traiter`);
         for (const credit of credits) {
@@ -91,7 +95,11 @@ let CronService = CronService_1 = class CronService {
     }
     async gererEchecRemboursement(credit) {
         await this.prisma.remboursementCredit.create({
-            data: { microCreditId: credit.id, montant: credit.paiementJournalier, statut: 'ECHEC' },
+            data: {
+                microCreditId: credit.id,
+                montant: credit.paiementJournalier,
+                statut: 'ECHEC',
+            },
         });
         const remboursementsRecents = await this.prisma.remboursementCredit.findMany({
             where: { microCreditId: credit.id },
@@ -144,10 +152,21 @@ let CronService = CronService_1 = class CronService {
             where: { id: clientId },
             include: {
                 transactions: {
-                    where: { type: client_1.TypeTransaction.COTISATION, statut: client_1.StatutTransaction.SUCCES },
+                    where: {
+                        type: client_1.TypeTransaction.COTISATION,
+                        statut: client_1.StatutTransaction.SUCCES,
+                    },
                 },
                 microCredits: {
-                    where: { statut: { in: [client_1.StatutCredit.TERMINE, client_1.StatutCredit.ACTIF, client_1.StatutCredit.EN_DEFAUT] } },
+                    where: {
+                        statut: {
+                            in: [
+                                client_1.StatutCredit.TERMINE,
+                                client_1.StatutCredit.ACTIF,
+                                client_1.StatutCredit.EN_DEFAUT,
+                            ],
+                        },
+                    },
                 },
                 tontines: true,
             },
@@ -174,7 +193,10 @@ let CronService = CronService_1 = class CronService {
         const bonusObjectif = utilisateur.tontines.some((t) => t.objectifMontant && t.soldeActuel >= t.objectifMontant)
             ? 1
             : 0;
-        const score = Math.round(tauxRegularite * 40 + scoreAnciennete + scoreRemboursement * 30 + bonusObjectif * 10);
+        const score = Math.round(tauxRegularite * 40 +
+            scoreAnciennete +
+            scoreRemboursement * 30 +
+            bonusObjectif * 10);
         const scoreFinal = Math.min(Math.max(score, 0), 100);
         const eligible = scoreFinal >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT;
         const eligiblePADME = scoreFinal >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME;
@@ -202,7 +224,9 @@ let CronService = CronService_1 = class CronService {
                 dernierCalcul: new Date(),
             },
         });
-        const scoreCreditRecord = await this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } });
+        const scoreCreditRecord = await this.prisma.scoreCredit.findUnique({
+            where: { utilisateurId: clientId },
+        });
         if (scoreCreditRecord) {
             await this.prisma.historiqueScore.create({
                 data: {
@@ -224,19 +248,36 @@ let CronService = CronService_1 = class CronService {
             where: {
                 clientId,
                 creeLe: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-                statut: { in: [client_1.StatutDossierPADME.GENERE, client_1.StatutDossierPADME.VALIDE_ADMIN, client_1.StatutDossierPADME.SOUMIS_PADME] },
+                statut: {
+                    in: [
+                        client_1.StatutDossierPADME.GENERE,
+                        client_1.StatutDossierPADME.VALIDE_ADMIN,
+                        client_1.StatutDossierPADME.SOUMIS_PADME,
+                    ],
+                },
             },
         });
         if (dossierRecent)
             return;
         const [scoreCredit, client, totalEpargne, creditsRembourses] = await Promise.all([
-            this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
-            this.prisma.utilisateur.findUnique({ where: { id: clientId }, select: { telephone: true, nom: true } }),
+            this.prisma.scoreCredit.findUnique({
+                where: { utilisateurId: clientId },
+            }),
+            this.prisma.utilisateur.findUnique({
+                where: { id: clientId },
+                select: { telephone: true, nom: true },
+            }),
             this.prisma.transaction.aggregate({
-                where: { utilisateurId: clientId, type: client_1.TypeTransaction.COTISATION, statut: client_1.StatutTransaction.SUCCES },
+                where: {
+                    utilisateurId: clientId,
+                    type: client_1.TypeTransaction.COTISATION,
+                    statut: client_1.StatutTransaction.SUCCES,
+                },
                 _sum: { montantNet: true },
             }),
-            this.prisma.microCredit.count({ where: { clientId, statut: client_1.StatutCredit.TERMINE } }),
+            this.prisma.microCredit.count({
+                where: { clientId, statut: client_1.StatutCredit.TERMINE },
+            }),
         ]);
         if (!scoreCredit)
             return;
@@ -307,14 +348,21 @@ let CronService = CronService_1 = class CronService {
     async declencherScoringManuellement(clientId) {
         if (clientId) {
             const score = await this.calculerEtMettreAJourScore(clientId);
-            return { succes: true, message: `Score calculé: ${score}/100`, donnees: { score } };
+            return {
+                succes: true,
+                message: `Score calculé: ${score}/100`,
+                donnees: { score },
+            };
         }
         await this.scoringNocturne();
         return { succes: true, message: 'Scoring global déclenché.' };
     }
     async declencherRemboursementsManuellement() {
         await this.preleverRemboursementsJournaliers();
-        return { succes: true, message: 'Prélèvements remboursements déclenchés manuellement.' };
+        return {
+            succes: true,
+            message: 'Prélèvements remboursements déclenchés manuellement.',
+        };
     }
     async debloquerPINAutomatiquement() {
         this.logger.log('[CRON Horaire] Déblocage automatique PIN...');
@@ -368,7 +416,10 @@ let CronService = CronService_1 = class CronService {
     }
     async declencherAlertesSoldeFaibleManuellement() {
         await this.envoyerAlertesSoldeFaible();
-        return { succes: true, message: 'Alertes solde faible déclenchées manuellement.' };
+        return {
+            succes: true,
+            message: 'Alertes solde faible déclenchées manuellement.',
+        };
     }
     async envoyerRappelsCotisation() {
         this.logger.log('[CRON 8h] Rappels cotisation (dateProchaineCotisation)...');
@@ -383,7 +434,9 @@ let CronService = CronService_1 = class CronService {
                 proprietaire: { select: { id: true, telephone: true, nom: true } },
                 membres: {
                     where: { statut: client_1.StatutMembreGroupe.ACTIF },
-                    include: { utilisateur: { select: { id: true, telephone: true, nom: true } } },
+                    include: {
+                        utilisateur: { select: { id: true, telephone: true, nom: true } },
+                    },
                 },
             },
         });
@@ -405,8 +458,14 @@ let CronService = CronService_1 = class CronService {
                 message = `TontineBénin: Rappel — Ta cotisation ${suffixeFrequence} pour "${tontine.nom}" est dans ${joursRestants}j.`;
             }
             const destinataires = [
-                { id: tontine.proprietaire.id, telephone: tontine.proprietaire.telephone },
-                ...tontine.membres.map((m) => ({ id: m.utilisateur.id, telephone: m.utilisateur.telephone })),
+                {
+                    id: tontine.proprietaire.id,
+                    telephone: tontine.proprietaire.telephone,
+                },
+                ...tontine.membres.map((m) => ({
+                    id: m.utilisateur.id,
+                    telephone: m.utilisateur.telephone,
+                })),
             ];
             for (const dest of destinataires) {
                 await this.notifications.envoyerAUtilisateur(dest.id, 'Rappel cotisation', message, 'TOUS', client_1.TypeNotification.RAPPEL_COTISATION);
@@ -422,10 +481,19 @@ let CronService = CronService_1 = class CronService {
             where: { type: 'GROUPE' },
             include: {
                 membres: {
-                    where: { statut: { in: [client_1.StatutMembreGroupe.ACTIF, client_1.StatutMembreGroupe.DEFAILLANT] } },
+                    where: {
+                        statut: {
+                            in: [client_1.StatutMembreGroupe.ACTIF, client_1.StatutMembreGroupe.DEFAILLANT],
+                        },
+                    },
                     include: {
                         utilisateur: {
-                            select: { id: true, telephone: true, nom: true, soldeCommission: true },
+                            select: {
+                                id: true,
+                                telephone: true,
+                                nom: true,
+                                soldeCommission: true,
+                            },
                         },
                     },
                 },
@@ -444,7 +512,8 @@ let CronService = CronService_1 = class CronService {
             const membresAyantCotise = new Set(tontine.transactions.map((t) => t.utilisateurId));
             for (const membre of tontine.membres) {
                 if (membresAyantCotise.has(membre.utilisateurId)) {
-                    if (membre.statut === client_1.StatutMembreGroupe.DEFAILLANT || membre.nombreDefaillances > 0) {
+                    if (membre.statut === client_1.StatutMembreGroupe.DEFAILLANT ||
+                        membre.nombreDefaillances > 0) {
                         await this.prisma.membreTontineGroupe.update({
                             where: { id: membre.id },
                             data: {
@@ -456,7 +525,8 @@ let CronService = CronService_1 = class CronService {
                     }
                     continue;
                 }
-                if (!membresAyantCotise.has(membre.utilisateurId) && tontine.montantJournalier > 0) {
+                if (!membresAyantCotise.has(membre.utilisateurId) &&
+                    tontine.montantJournalier > 0) {
                     let cautionUtilisee = 0;
                     if (membre.montantCaution > 0) {
                         cautionUtilisee = Math.min(membre.montantCaution, tontine.montantJournalier);
@@ -477,8 +547,12 @@ let CronService = CronService_1 = class CronService {
                                 membreId: membre.id,
                                 montantManquant: Math.max(0, tontine.montantJournalier - cautionUtilisee),
                                 cautionUtilisee,
-                                statut: nouveauStatut === client_1.StatutMembreGroupe.EXCLU ? 'EXCLU' : 'EN_COURS',
-                                ...(nouveauStatut === client_1.StatutMembreGroupe.EXCLU && { resoluLe: new Date() }),
+                                statut: nouveauStatut === client_1.StatutMembreGroupe.EXCLU
+                                    ? 'EXCLU'
+                                    : 'EN_COURS',
+                                ...(nouveauStatut === client_1.StatutMembreGroupe.EXCLU && {
+                                    resoluLe: new Date(),
+                                }),
                             },
                         }),
                         this.prisma.membreTontineGroupe.update({
@@ -511,8 +585,8 @@ let CronService = CronService_1 = class CronService {
                         id: true,
                         telephone: true,
                         nom: true,
-                        _count: { select: { clients: { where: { statut: 'ACTIF' } } } }
-                    }
+                        _count: { select: { clients: { where: { statut: 'ACTIF' } } } },
+                    },
                 },
             },
         });
@@ -615,14 +689,21 @@ let CronService = CronService_1 = class CronService {
             where: { statut: client_1.StatutTransaction.SUCCES },
             orderBy: { creeLe: 'asc' },
             take: 500,
-            select: { id: true, utilisateurId: true, hashPrecedent: true, hashActuel: true, creeLe: true },
+            select: {
+                id: true,
+                utilisateurId: true,
+                hashPrecedent: true,
+                hashActuel: true,
+                creeLe: true,
+            },
         });
         let chaineBrisee = 0;
         for (let i = 1; i < txsRecentes.length; i++) {
             const txCourante = txsRecentes[i];
             const txPrecedente = txsRecentes[i - 1];
             if (txCourante.utilisateurId === txPrecedente.utilisateurId) {
-                if (txCourante.hashPrecedent !== null && txCourante.hashPrecedent !== txPrecedente.hashActuel) {
+                if (txCourante.hashPrecedent !== null &&
+                    txCourante.hashPrecedent !== txPrecedente.hashActuel) {
                     chaineBrisee++;
                     this.logger.error(`[CHAÎNE HASH] Rupture détectée — tx: ${txCourante.id} | attendu: ${txPrecedente.hashActuel} | reçu: ${txCourante.hashPrecedent}`);
                 }
@@ -639,7 +720,10 @@ let CronService = CronService_1 = class CronService {
                     message: `La vérification nocturne a détecté ${chaineBrisee} rupture(s) dans la chaîne de hachage des transactions. Une modification directe de la base de données est suspectée.`,
                     resourceType: 'SYSTEME',
                     resourceId: 'HASH_CHAIN',
-                    metadata: JSON.stringify({ chaineBrisee, txsVerifiees: txsRecentes.length }),
+                    metadata: JSON.stringify({
+                        chaineBrisee,
+                        txsVerifiees: txsRecentes.length,
+                    }),
                 },
             });
         }
@@ -701,11 +785,17 @@ let CronService = CronService_1 = class CronService {
     }
     async declencherFacturationManuellement() {
         await this.facturerAbonnementsCollecteurs();
-        return { succes: true, message: 'Facturation mensuelle déclenchée manuellement.' };
+        return {
+            succes: true,
+            message: 'Facturation mensuelle déclenchée manuellement.',
+        };
     }
     async declencherRappelsManuellement() {
         await this.envoyerRappelsCotisation();
-        return { succes: true, message: 'Rappels cotisation déclenchés manuellement.' };
+        return {
+            succes: true,
+            message: 'Rappels cotisation déclenchés manuellement.',
+        };
     }
     async dissoudreProjetsEchus() {
         this.logger.log('[CRON 6h] Vérification tontines PROJET échées...');
@@ -744,7 +834,10 @@ let CronService = CronService_1 = class CronService {
     }
     async declencherDissolutionProjetsManuellement() {
         await this.dissoudreProjetsEchus();
-        return { succes: true, message: 'Dissolution projets échés déclenchée manuellement.' };
+        return {
+            succes: true,
+            message: 'Dissolution projets échés déclenchée manuellement.',
+        };
     }
     async rapportJournalierSuperviseurs() {
         this.logger.log('[CRON 8h05] Génération des rapports superviseurs...');
@@ -789,11 +882,15 @@ let CronService = CronService_1 = class CronService {
     libelleMontantFrequence(frequence, montant) {
         const fmt = `${montant.toLocaleString('fr-FR')} F`;
         switch (frequence) {
-            case client_1.FrequenceTontine.JOURNALIER: return `journalière de ${fmt}`;
-            case client_1.FrequenceTontine.HEBDOMADAIRE: return `hebdo de ${fmt}`;
+            case client_1.FrequenceTontine.JOURNALIER:
+                return `journalière de ${fmt}`;
+            case client_1.FrequenceTontine.HEBDOMADAIRE:
+                return `hebdo de ${fmt}`;
             case client_1.FrequenceTontine.DATE_FIXE:
-            case client_1.FrequenceTontine.MENSUEL: return `mensuelle de ${fmt}`;
-            default: return `de ${fmt}`;
+            case client_1.FrequenceTontine.MENSUEL:
+                return `mensuelle de ${fmt}`;
+            default:
+                return `de ${fmt}`;
         }
     }
     async revoquerSessionsExpirees() {
@@ -816,7 +913,10 @@ let CronService = CronService_1 = class CronService {
     }
     async declencherRevocationManuellement() {
         await this.revoquerSessionsExpirees();
-        return { succes: true, message: 'Révocation sessions expirées déclenchée manuellement.' };
+        return {
+            succes: true,
+            message: 'Révocation sessions expirées déclenchée manuellement.',
+        };
     }
 };
 exports.CronService = CronService;

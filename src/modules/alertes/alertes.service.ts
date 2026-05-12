@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FiltrerAlertesDto } from './dto/filtrer-alertes.dto';
 import { ResoudreAlerteDto } from './dto/resoudre-alerte.dto';
@@ -38,23 +42,30 @@ export class AlertesService {
     return {
       succes: true,
       message: `${total} alerte(s) système.`,
-      donnees: { alertes, total, page, limite, pages: Math.ceil(total / limite) },
+      donnees: {
+        alertes,
+        total,
+        page,
+        limite,
+        pages: Math.ceil(total / limite),
+      },
     };
   }
 
   async statistiques() {
-    const [parStatut, parSeverite, critiquesOuvertes, dernieres] = await Promise.all([
-      this.prisma.alerteSysteme.groupBy({ by: ['statut'], _count: true }),
-      this.prisma.alerteSysteme.groupBy({ by: ['severite'], _count: true }),
-      this.prisma.alerteSysteme.count({
-        where: { statut: 'OUVERTE', severite: 'CRITIQUE' },
-      }),
-      this.prisma.alerteSysteme.findMany({
-        where: { statut: 'OUVERTE' },
-        orderBy: { detecteeLe: 'desc' },
-        take: 5,
-      }),
-    ]);
+    const [parStatut, parSeverite, critiquesOuvertes, dernieres] =
+      await Promise.all([
+        this.prisma.alerteSysteme.groupBy({ by: ['statut'], _count: true }),
+        this.prisma.alerteSysteme.groupBy({ by: ['severite'], _count: true }),
+        this.prisma.alerteSysteme.count({
+          where: { statut: 'OUVERTE', severite: 'CRITIQUE' },
+        }),
+        this.prisma.alerteSysteme.findMany({
+          where: { statut: 'OUVERTE' },
+          orderBy: { detecteeLe: 'desc' },
+          take: 5,
+        }),
+      ]);
 
     return {
       succes: true,
@@ -64,19 +75,30 @@ export class AlertesService {
   }
 
   async detail(id: string) {
-    const alerte = await this.prisma.alerteSysteme.findUnique({ where: { id } });
+    const alerte = await this.prisma.alerteSysteme.findUnique({
+      where: { id },
+    });
     if (!alerte) throw new NotFoundException('Alerte introuvable');
     return { succes: true, message: 'Alerte récupérée.', donnees: alerte };
   }
 
   async resoudre(id: string, adminId: string, dto: ResoudreAlerteDto) {
-    const alerte = await this.prisma.alerteSysteme.findUnique({ where: { id } });
+    const alerte = await this.prisma.alerteSysteme.findUnique({
+      where: { id },
+    });
     if (!alerte) throw new NotFoundException('Alerte introuvable');
     if (alerte.statut === 'RESOLUE') {
-      throw new BadRequestException({ message: 'Cette alerte est déjà résolue', code: 'ALERTE_DEJA_RESOLUE' });
+      throw new BadRequestException({
+        message: 'Cette alerte est déjà résolue',
+        code: 'ALERTE_DEJA_RESOLUE',
+      });
     }
 
-    const metadata = this.ajouterResolutionMetadata(alerte.metadata, adminId, dto.commentaire);
+    const metadata = this.ajouterResolutionMetadata(
+      alerte.metadata,
+      adminId,
+      dto.commentaire,
+    );
     const maj = await this.prisma.alerteSysteme.update({
       where: { id },
       data: {
@@ -90,7 +112,11 @@ export class AlertesService {
       data: {
         utilisateurId: adminId,
         action: 'ALERTE_RESOLUE',
-        details: JSON.stringify({ alerteId: id, type: alerte.type, commentaire: dto.commentaire ?? null }),
+        details: JSON.stringify({
+          alerteId: id,
+          type: alerte.type,
+          commentaire: dto.commentaire ?? null,
+        }),
       },
     });
 
@@ -98,13 +124,22 @@ export class AlertesService {
   }
 
   async rouvrir(id: string, adminId: string, dto: ResoudreAlerteDto) {
-    const alerte = await this.prisma.alerteSysteme.findUnique({ where: { id } });
+    const alerte = await this.prisma.alerteSysteme.findUnique({
+      where: { id },
+    });
     if (!alerte) throw new NotFoundException('Alerte introuvable');
     if (alerte.statut === 'OUVERTE') {
-      throw new BadRequestException({ message: 'Cette alerte est déjà ouverte', code: 'ALERTE_DEJA_OUVERTE' });
+      throw new BadRequestException({
+        message: 'Cette alerte est déjà ouverte',
+        code: 'ALERTE_DEJA_OUVERTE',
+      });
     }
 
-    const metadata = this.ajouterReouvertureMetadata(alerte.metadata, adminId, dto.commentaire);
+    const metadata = this.ajouterReouvertureMetadata(
+      alerte.metadata,
+      adminId,
+      dto.commentaire,
+    );
     const maj = await this.prisma.alerteSysteme.update({
       where: { id },
       data: {
@@ -118,24 +153,44 @@ export class AlertesService {
       data: {
         utilisateurId: adminId,
         action: 'ALERTE_ROUVERTE',
-        details: JSON.stringify({ alerteId: id, type: alerte.type, commentaire: dto.commentaire ?? null }),
+        details: JSON.stringify({
+          alerteId: id,
+          type: alerte.type,
+          commentaire: dto.commentaire ?? null,
+        }),
       },
     });
 
     return { succes: true, message: 'Alerte rouverte.', donnees: maj };
   }
 
-  private ajouterResolutionMetadata(metadata: string | null, adminId: string, commentaire?: string) {
+  private ajouterResolutionMetadata(
+    metadata: string | null,
+    adminId: string,
+    commentaire?: string,
+  ) {
     return JSON.stringify({
       ...this.parseMetadata(metadata),
-      resolution: { adminId, commentaire: commentaire ?? null, date: new Date().toISOString() },
+      resolution: {
+        adminId,
+        commentaire: commentaire ?? null,
+        date: new Date().toISOString(),
+      },
     });
   }
 
-  private ajouterReouvertureMetadata(metadata: string | null, adminId: string, commentaire?: string) {
+  private ajouterReouvertureMetadata(
+    metadata: string | null,
+    adminId: string,
+    commentaire?: string,
+  ) {
     return JSON.stringify({
       ...this.parseMetadata(metadata),
-      reouverture: { adminId, commentaire: commentaire ?? null, date: new Date().toISOString() },
+      reouverture: {
+        adminId,
+        commentaire: commentaire ?? null,
+        date: new Date().toISOString(),
+      },
     });
   }
 

@@ -15,10 +15,25 @@ const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const sms_service_1 = require("../notifications/sms.service");
 const REGLES_BADGES = [
-    { mois: 12, regulariteMin: 0.8, niveau: client_1.NiveauBadge.DIAMANT, label: 'DIAMANT 💎' },
+    {
+        mois: 12,
+        regulariteMin: 0.8,
+        niveau: client_1.NiveauBadge.DIAMANT,
+        label: 'DIAMANT 💎',
+    },
     { mois: 6, regulariteMin: 0.7, niveau: client_1.NiveauBadge.OR, label: 'OR 🥇' },
-    { mois: 3, regulariteMin: 0.6, niveau: client_1.NiveauBadge.ARGENT, label: 'ARGENT 🥈' },
-    { mois: 1, regulariteMin: 0.5, niveau: client_1.NiveauBadge.BRONZE, label: 'BRONZE 🥉' },
+    {
+        mois: 3,
+        regulariteMin: 0.6,
+        niveau: client_1.NiveauBadge.ARGENT,
+        label: 'ARGENT 🥈',
+    },
+    {
+        mois: 1,
+        regulariteMin: 0.5,
+        niveau: client_1.NiveauBadge.BRONZE,
+        label: 'BRONZE 🥉',
+    },
 ];
 let BadgesService = class BadgesService {
     prisma;
@@ -79,7 +94,12 @@ let BadgesService = class BadgesService {
         });
         const niveauActuel = badges.length > 0
             ? badges.reduce((best, b) => {
-                const ordre = { BRONZE: 1, ARGENT: 2, OR: 3, DIAMANT: 4 };
+                const ordre = {
+                    BRONZE: 1,
+                    ARGENT: 2,
+                    OR: 3,
+                    DIAMANT: 4,
+                };
                 return ordre[b.niveau] > ordre[best.niveau] ? b : best;
             })
             : null;
@@ -113,7 +133,11 @@ let BadgesService = class BadgesService {
             zone: s.utilisateur.zone?.nom ?? 'N/A',
             ville: s.utilisateur.zone?.ville ?? 'N/A',
         }));
-        return { succes: true, message: 'Classement top 10 épargnants.', donnees: classement };
+        return {
+            succes: true,
+            message: 'Classement top 10 épargnants.',
+            donnees: classement,
+        };
     }
 };
 exports.BadgesService = BadgesService;

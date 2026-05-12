@@ -20,6 +20,7 @@ const tontines_service_1 = require("./tontines.service");
 const creer_tontine_dto_1 = require("./dto/creer-tontine.dto");
 const modifier_tontine_dto_1 = require("./dto/modifier-tontine.dto");
 const rejoindre_tontine_dto_1 = require("./dto/rejoindre-tontine.dto");
+const ordre_tirage_dto_1 = require("./dto/ordre-tirage.dto");
 let TontinesController = class TontinesController {
     service;
     constructor(service) {
@@ -64,8 +65,17 @@ let TontinesController = class TontinesController {
     membres(id) {
         return this.service.membres(id);
     }
+    invitation(id, u) {
+        return this.service.invitation(id, u.id);
+    }
     ordreTirage(id) {
         return this.service.ordreTirage(id);
+    }
+    definirOrdreTirage(id, u, dto) {
+        return this.service.definirOrdreTirage(id, u.id, dto.utilisateurIds);
+    }
+    randomiserOrdreTirage(id, u) {
+        return this.service.randomiserOrdreTirage(id, u.id);
     }
     distribuer(id, u) {
         return this.service.distribuer(id, u.id);
@@ -177,12 +187,37 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TontinesController.prototype, "membres", null);
 __decorate([
+    (0, common_1.Get)(':id/invitation'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "invitation", null);
+__decorate([
     (0, common_1.Get)(':id/ordre-tirage'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], TontinesController.prototype, "ordreTirage", null);
+__decorate([
+    (0, common_1.Post)(':id/ordre-tirage/manuel'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, ordre_tirage_dto_1.OrdreTirageDto]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "definirOrdreTirage", null);
+__decorate([
+    (0, common_1.Post)(':id/ordre-tirage/aleatoire'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "randomiserOrdreTirage", null);
 __decorate([
     (0, common_1.Post)(':id/distribuer'),
     __param(0, (0, common_1.Param)('id')),

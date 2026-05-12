@@ -11,7 +11,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function boostScore() {
   const clientId = '9fb1ab19-c84d-4192-b144-054d52f09a51';
-  
+
   await prisma.scoreCredit.upsert({
     where: { utilisateurId: clientId },
     create: {
@@ -22,15 +22,15 @@ async function boostScore() {
       totalDepots: 20,
       totalMois: 1,
       scoreRemboursement: 1,
-      dernierCalcul: new Date()
+      dernierCalcul: new Date(),
     },
     update: {
       score: 65,
       eligibleMicroCredit: true,
       tauxRegularite: 0.8,
       totalDepots: 20,
-      dernierCalcul: new Date()
-    }
+      dernierCalcul: new Date(),
+    },
   });
 
   console.log('Score de Paul boosté à 65 pour le test.');
@@ -38,7 +38,7 @@ async function boostScore() {
   process.exit(0);
 }
 
-boostScore().catch(e => {
+boostScore().catch((e) => {
   console.error(e);
   process.exit(1);
 });

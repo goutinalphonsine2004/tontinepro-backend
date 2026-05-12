@@ -23,8 +23,10 @@ function secretJwt(config: ConfigService) {
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         secret: secretJwt(config),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '24h') as any },
+
+        signOptions: {
+          expiresIn: config.get<string>('JWT_EXPIRES_IN', '24h') as any,
+        },
       }),
       inject: [ConfigService],
     }),

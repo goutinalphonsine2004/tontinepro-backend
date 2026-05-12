@@ -1,4 +1,11 @@
-import { Controller, Get, UseGuards, ParseIntPipe, DefaultValuePipe, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  ParseIntPipe,
+  DefaultValuePipe,
+  Query,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { ScoreService } from './score.service';

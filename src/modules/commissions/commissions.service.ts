@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
@@ -14,8 +18,15 @@ export class CommissionsService {
 
   // ─── GET /commissions/mon-solde ────────────────────
   async monSolde(utilisateurId: string, role: Role) {
-    if (!([Role.AGENT, Role.INDEPENDANT, Role.SUPERVISEUR] as Role[]).includes(role)) {
-      throw new ForbiddenException({ message: 'Seuls les collecteurs ont des commissions', code: 'ROLE_INSUFFISANT' });
+    if (
+      !([Role.AGENT, Role.INDEPENDANT, Role.SUPERVISEUR] as Role[]).includes(
+        role,
+      )
+    ) {
+      throw new ForbiddenException({
+        message: 'Seuls les collecteurs ont des commissions',
+        code: 'ROLE_INSUFFISANT',
+      });
     }
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
@@ -45,13 +56,23 @@ export class CommissionsService {
       where: { agentId: utilisateurId },
       include: {
         transaction: {
-          select: { reference: true, montant: true, type: true, creeLe: true, utilisateur: { select: { nom: true } } },
+          select: {
+            reference: true,
+            montant: true,
+            type: true,
+            creeLe: true,
+            utilisateur: { select: { nom: true } },
+          },
         },
       },
       orderBy: { creeLe: 'desc' },
       take: 50,
     });
-    return { succes: true, message: `${commissions.length} commission(s).`, donnees: commissions };
+    return {
+      succes: true,
+      message: `${commissions.length} commission(s).`,
+      donnees: commissions,
+    };
   }
 
   // ─── POST /commissions/retirer ─────────────────────
@@ -77,7 +98,10 @@ export class CommissionsService {
     });
 
     if (!transfert.succes) {
-      throw new BadRequestException({ message: 'Échec du transfert', code: 'TRANSFERT_ECHOUE' });
+      throw new BadRequestException({
+        message: 'Échec du transfert',
+        code: 'TRANSFERT_ECHOUE',
+      });
     }
 
     await this.prisma.utilisateur.update({

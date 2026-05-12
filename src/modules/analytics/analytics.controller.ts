@@ -1,4 +1,11 @@
-import { Controller, Get, Query, ParseIntPipe, DefaultValuePipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -12,29 +19,45 @@ export class AnalyticsController {
   constructor(private service: AnalyticsService) {}
 
   @Get('kpis')
-  kpis() { return this.service.kpis(); }
+  kpis() {
+    return this.service.kpis();
+  }
 
   @Get('scores-par-zone')
-  scoreParZone() { return this.service.scoreParZone(); }
+  scoreParZone() {
+    return this.service.scoreParZone();
+  }
 
   @Get('performance-collecteurs')
-  performanceCollecteurs() { return this.service.performanceCollecteurs(); }
+  performanceCollecteurs() {
+    return this.service.performanceCollecteurs();
+  }
 
   @Get('taux-remboursement')
-  tauxRemboursement() { return this.service.tauxRemboursement(); }
+  tauxRemboursement() {
+    return this.service.tauxRemboursement();
+  }
 
   @Get('evolution-revenus')
-  evolutionRevenus() { return this.service.evolutionRevenus(); }
+  evolutionRevenus() {
+    return this.service.evolutionRevenus();
+  }
 
   @Get('clients-eligibles')
-  clientsEligibles() { return this.service.clientsEligibles(); }
+  clientsEligibles() {
+    return this.service.clientsEligibles();
+  }
 
   @Get('padme')
-  padme() { return this.service.padme(); }
+  padme() {
+    return this.service.padme();
+  }
 
   @Get('leaderboard')
   @Roles(Role.ADMIN, Role.SUPERVISEUR, Role.CLIENT)
-  leaderboard(@Query('limite', new DefaultValuePipe(50), ParseIntPipe) limite: number) {
+  leaderboard(
+    @Query('limite', new DefaultValuePipe(50), ParseIntPipe) limite: number,
+  ) {
     return this.service.leaderboard(limite);
   }
 }

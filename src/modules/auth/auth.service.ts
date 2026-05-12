@@ -51,22 +51,36 @@ export class AuthService {
     }
 
     const roleAutorise: Role[] = [Role.CLIENT, Role.INDEPENDANT, Role.AGENT];
-    const role = dto.role && roleAutorise.includes(dto.role) ? dto.role : Role.CLIENT;
+    const role =
+      dto.role && roleAutorise.includes(dto.role) ? dto.role : Role.CLIENT;
 
     const utilisateur = await this.prisma.utilisateur.create({
-      data: { telephone: dto.telephone, nom: dto.nom, role, statut: StatutCompte.EN_ATTENTE },
+      data: {
+        telephone: dto.telephone,
+        nom: dto.nom,
+        role,
+        statut: StatutCompte.EN_ATTENTE,
+      },
     });
 
-    const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, OTP_TYPE_INSCRIPTION);
+    const { id: otpId, code } = await this.creerOTP(
+      utilisateur.id,
+      dto.telephone,
+      OTP_TYPE_INSCRIPTION,
+    );
     await this.sms.envoyer(
       dto.telephone,
       `TontineBénin: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`,
     );
 
-    const donnees: Record<string, unknown> = { otpId, telephone: dto.telephone };
+    const donnees: Record<string, unknown> = {
+      otpId,
+      telephone: dto.telephone,
+    };
     if (this.config.get('NODE_ENV') === 'development') {
       donnees.otpTest = code;
-      donnees.messageTest = '⚠️ Mode test - En production ce code ne sera pas visible';
+      donnees.messageTest =
+        '⚠️ Mode test - En production ce code ne sera pas visible';
     }
 
     return { succes: true, message: 'Code OTP envoyé par SMS', donnees };
@@ -89,14 +103,21 @@ export class AuthService {
 
     // OTP introuvable ou déjà épuisé en tentatives
     if (!otp) {
-      throw new BadRequestException({ message: 'Code OTP invalide ou expiré', code: 'OTP_INVALIDE' });
+      throw new BadRequestException({
+        message: 'Code OTP invalide ou expiré',
+        code: 'OTP_INVALIDE',
+      });
     }
 
     // Vérifier si déjà bloqué par trop de tentatives
     if (otp.tentatives >= MAX_TENTATIVES_OTP) {
-      await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+      await this.prisma.codeOTP.update({
+        where: { id: otp.id },
+        data: { utilise: true },
+      });
       throw new BadRequestException({
-        message: 'Code OTP invalide après 3 tentatives. Demandez un nouveau code.',
+        message:
+          'Code OTP invalide après 3 tentatives. Demandez un nouveau code.',
         code: 'OTP_TROP_DE_TENTATIVES',
       });
     }
@@ -108,14 +129,21 @@ export class AuthService {
 
       if (restantes <= 0) {
         // Invalider l'OTP définitivement
-        await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true, tentatives } });
+        await this.prisma.codeOTP.update({
+          where: { id: otp.id },
+          data: { utilise: true, tentatives },
+        });
         throw new BadRequestException({
-          message: 'Code OTP invalide. Code bloqué après 3 tentatives. Demandez un nouveau code.',
+          message:
+            'Code OTP invalide. Code bloqué après 3 tentatives. Demandez un nouveau code.',
           code: 'OTP_TROP_DE_TENTATIVES',
         });
       }
 
-      await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { tentatives } });
+      await this.prisma.codeOTP.update({
+        where: { id: otp.id },
+        data: { tentatives },
+      });
       throw new BadRequestException({
         message: `Code OTP incorrect. ${restantes} tentative(s) restante(s).`,
         code: 'OTP_INVALIDE',
@@ -124,11 +152,19 @@ export class AuthService {
     }
 
     // Code correct → invalider l'OTP
-    await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+    await this.prisma.codeOTP.update({
+      where: { id: otp.id },
+      data: { utilise: true },
+    });
 
     // Token temporaire (1h) pour la création du PIN
     const tokenTemporaire = this.jwt.sign(
-      { sub: otp.utilisateurId, telephone: dto.telephone, role: otp.utilisateur.role, scope: 'ONBOARDING' },
+      {
+        sub: otp.utilisateurId,
+        telephone: dto.telephone,
+        role: otp.utilisateur.role,
+        scope: 'ONBOARDING',
+      },
       { expiresIn: '1h' },
     );
 
@@ -160,7 +196,12 @@ export class AuthService {
     });
 
     const session = await this.creerSession(utilisateurId, undefined, req);
-    const tokens = await this.genererTokens(utilisateurId, utilisateur.telephone, utilisateur.role, session.id);
+    const tokens = await this.genererTokens(
+      utilisateurId,
+      utilisateur.telephone,
+      utilisateur.role,
+      session.id,
+    );
     return {
       succes: true,
       message: 'PIN créé avec succès. Compte activé.',
@@ -195,15 +236,20 @@ export class AuthService {
       }
       if (utilisateur.statut !== StatutCompte.ACTIF) {
         throw new ForbiddenException({
-          message: 'Compte non activé. Veuillez vérifier votre OTP et créer votre PIN.',
+          message:
+            'Compte non activé. Veuillez vérifier votre OTP et créer votre PIN.',
           code: 'COMPTE_INACTIF',
         });
       }
 
       // Vérifier si bloqué après trop de tentatives
-      const maxTentatives = parseInt(this.config.get('MAX_TENTATIVES_PIN', '3'));
+      const maxTentatives = parseInt(
+        this.config.get('MAX_TENTATIVES_PIN', '3'),
+      );
       if (utilisateur.bloqueLe && utilisateur.bloqueLe > new Date()) {
-        const minutesRestantes = Math.ceil((utilisateur.bloqueLe.getTime() - Date.now()) / 60000);
+        const minutesRestantes = Math.ceil(
+          (utilisateur.bloqueLe.getTime() - Date.now()) / 60000,
+        );
         throw new ForbiddenException({
           message: `Compte temporairement bloqué. Réessayez dans ${minutesRestantes} minute(s).`,
           code: 'COMPTE_BLOQUE',
@@ -211,17 +257,25 @@ export class AuthService {
       }
 
       if (!utilisateur.pinHash) {
-        throw new BadRequestException({ message: 'PIN non défini', code: 'PIN_NON_DEFINI' });
+        throw new BadRequestException({
+          message: 'PIN non défini',
+          code: 'PIN_NON_DEFINI',
+        });
       }
 
       const pinValide = await bcrypt.compare(dto.pin, utilisateur.pinHash);
       if (!pinValide) {
         const tentatives = utilisateur.tentativesEchouees + 1;
-        const data: Record<string, unknown> = { tentativesEchouees: tentatives };
+        const data: Record<string, unknown> = {
+          tentativesEchouees: tentatives,
+        };
         if (tentatives >= maxTentatives) {
           data.bloqueLe = new Date(Date.now() + 30 * 60 * 1000); // bloqué 30 min
         }
-        await this.prisma.utilisateur.update({ where: { id: utilisateur.id }, data });
+        await this.prisma.utilisateur.update({
+          where: { id: utilisateur.id },
+          data,
+        });
 
         const restantes = maxTentatives - tentatives;
         throw new UnauthorizedException({
@@ -236,17 +290,37 @@ export class AuthService {
       // Réinitialiser les tentatives et mettre à jour le deviceId
       await this.prisma.utilisateur.update({
         where: { id: utilisateur.id },
-        data: { tentativesEchouees: 0, bloqueLe: null, deviceId: dto.deviceId ?? utilisateur.deviceId },
+        data: {
+          tentativesEchouees: 0,
+          bloqueLe: null,
+          deviceId: dto.deviceId ?? utilisateur.deviceId,
+        },
       });
 
-      this.logger.log(`[AUTH] Connexion utilisateur ${utilisateur.nom} (+${utilisateur.telephone})`);
-      const session = await this.creerSession(utilisateur.id, dto.deviceId, req);
-      const tokens = await this.genererTokens(utilisateur.id, utilisateur.telephone, utilisateur.role, session.id);
-      
+      this.logger.log(
+        `[AUTH] Connexion utilisateur ${utilisateur.nom} (+${utilisateur.telephone})`,
+      );
+      const session = await this.creerSession(
+        utilisateur.id,
+        dto.deviceId,
+        req,
+      );
+      const tokens = await this.genererTokens(
+        utilisateur.id,
+        utilisateur.telephone,
+        utilisateur.role,
+        session.id,
+      );
+
       return {
         succes: true,
         message: 'Connexion réussie.',
-        donnees: { ...tokens, sessionId: session.id, role: utilisateur.role, nom: utilisateur.nom },
+        donnees: {
+          ...tokens,
+          sessionId: session.id,
+          role: utilisateur.role,
+          nom: utilisateur.nom,
+        },
       };
     } catch (error) {
       this.logger.error(`Erreur connexion: ${error.message}`, error.stack);
@@ -274,19 +348,31 @@ export class AuthService {
       });
     }
 
-    const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, OTP_TYPE_RESET_PIN);
+    const { id: otpId, code } = await this.creerOTP(
+      utilisateur.id,
+      dto.telephone,
+      OTP_TYPE_RESET_PIN,
+    );
     await this.sms.envoyer(
       dto.telephone,
       `TontineBénin: Code de réinitialisation PIN ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`,
     );
 
-    const donnees: Record<string, unknown> = { otpId, telephone: dto.telephone };
+    const donnees: Record<string, unknown> = {
+      otpId,
+      telephone: dto.telephone,
+    };
     if (this.config.get('NODE_ENV') === 'development') {
       donnees.otpTest = code;
-      donnees.messageTest = 'Mode test - En production ce code ne sera pas visible';
+      donnees.messageTest =
+        'Mode test - En production ce code ne sera pas visible';
     }
 
-    return { succes: true, message: 'Code de réinitialisation envoyé par SMS.', donnees };
+    return {
+      succes: true,
+      message: 'Code de réinitialisation envoyé par SMS.',
+      donnees,
+    };
   }
 
   // ─── Vérifier OTP reset PIN ───────────────────────
@@ -305,14 +391,21 @@ export class AuthService {
     });
 
     if (!otp) {
-      throw new BadRequestException({ message: 'Code OTP invalide ou expiré', code: 'OTP_RESET_INVALIDE' });
+      throw new BadRequestException({
+        message: 'Code OTP invalide ou expiré',
+        code: 'OTP_RESET_INVALIDE',
+      });
     }
 
     // Vérifier si déjà bloqué
     if (otp.tentatives >= MAX_TENTATIVES_OTP) {
-      await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+      await this.prisma.codeOTP.update({
+        where: { id: otp.id },
+        data: { utilise: true },
+      });
       throw new BadRequestException({
-        message: 'Code OTP invalide après 3 tentatives. Demandez un nouveau code de réinitialisation.',
+        message:
+          'Code OTP invalide après 3 tentatives. Demandez un nouveau code de réinitialisation.',
         code: 'OTP_TROP_DE_TENTATIVES',
       });
     }
@@ -323,14 +416,21 @@ export class AuthService {
       const restantes = MAX_TENTATIVES_OTP - tentatives;
 
       if (restantes <= 0) {
-        await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true, tentatives } });
+        await this.prisma.codeOTP.update({
+          where: { id: otp.id },
+          data: { utilise: true, tentatives },
+        });
         throw new BadRequestException({
-          message: 'Code OTP bloqué après 3 tentatives. Demandez un nouveau code de réinitialisation.',
+          message:
+            'Code OTP bloqué après 3 tentatives. Demandez un nouveau code de réinitialisation.',
           code: 'OTP_TROP_DE_TENTATIVES',
         });
       }
 
-      await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { tentatives } });
+      await this.prisma.codeOTP.update({
+        where: { id: otp.id },
+        data: { tentatives },
+      });
       throw new BadRequestException({
         message: `Code OTP incorrect. ${restantes} tentative(s) restante(s).`,
         code: 'OTP_RESET_INVALIDE',
@@ -339,10 +439,16 @@ export class AuthService {
     }
 
     if (otp.utilisateur.statut !== StatutCompte.ACTIF) {
-      throw new ForbiddenException({ message: 'Ce compte ne peut pas réinitialiser son PIN', code: 'COMPTE_INACTIF' });
+      throw new ForbiddenException({
+        message: 'Ce compte ne peut pas réinitialiser son PIN',
+        code: 'COMPTE_INACTIF',
+      });
     }
 
-    await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+    await this.prisma.codeOTP.update({
+      where: { id: otp.id },
+      data: { utilise: true },
+    });
 
     const tokenReset = this.jwt.sign(
       {
@@ -409,13 +515,25 @@ export class AuthService {
       }),
     ]);
 
-    return { succes: true, message: 'PIN réinitialisé avec succès. Veuillez vous reconnecter.' };
+    return {
+      succes: true,
+      message: 'PIN réinitialisé avec succès. Veuillez vous reconnecter.',
+    };
   }
 
   // ─── Rafraîchir token ─────────────────────────────────
-  async rafraichirToken(utilisateurId: string, telephone: string, role: Role, sessionId: string, refreshTokenRecu?: string) {
+  async rafraichirToken(
+    utilisateurId: string,
+    telephone: string,
+    role: Role,
+    sessionId: string,
+    refreshTokenRecu?: string,
+  ) {
     const [utilisateur, session] = await Promise.all([
-      this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { statut: true } }),
+      this.prisma.utilisateur.findUnique({
+        where: { id: utilisateurId },
+        select: { statut: true },
+      }),
       this.prisma.sessionUtilisateur.findUnique({ where: { id: sessionId } }),
     ]);
 
@@ -428,7 +546,10 @@ export class AuthService {
 
     // ✅ Blacklist : vérifier que le refresh token correspond au hash stocké en BD
     if (session.refreshTokenHash && refreshTokenRecu) {
-      const tokenValide = await bcrypt.compare(refreshTokenRecu, session.refreshTokenHash);
+      const tokenValide = await bcrypt.compare(
+        refreshTokenRecu,
+        session.refreshTokenHash,
+      );
       if (!tokenValide) {
         // Probable rejeu de token volé → révoquer toutes les sessions
         await this.prisma.sessionUtilisateur.updateMany({
@@ -436,7 +557,8 @@ export class AuthService {
           data: { actif: false, revoqueLe: new Date(), refreshTokenHash: null },
         });
         throw new UnauthorizedException({
-          message: 'Token de rafraîchissement invalide. Toutes vos sessions ont été révoquées.',
+          message:
+            'Token de rafraîchissement invalide. Toutes vos sessions ont été révoquées.',
           code: 'TOKEN_REJEU_DETECTE',
         });
       }
@@ -447,8 +569,17 @@ export class AuthService {
       data: { derniereUtilisation: new Date() },
     });
 
-    const tokens = await this.genererTokens(utilisateurId, telephone, role, sessionId);
-    return { succes: true, message: 'Token rafraîchi.', donnees: { ...tokens, sessionId } };
+    const tokens = await this.genererTokens(
+      utilisateurId,
+      telephone,
+      role,
+      sessionId,
+    );
+    return {
+      succes: true,
+      message: 'Token rafraîchi.',
+      donnees: { ...tokens, sessionId },
+    };
   }
 
   // ─── Déconnexion ──────────────────────────────────────
@@ -474,7 +605,10 @@ export class AuthService {
       where: { utilisateurId, actif: true },
       data: { actif: false, revoqueLe: new Date() },
     });
-    await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { deviceId: null } });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateurId },
+      data: { deviceId: null },
+    });
     return {
       succes: true,
       message: `${result.count} session(s) révoquée(s).`,
@@ -509,7 +643,11 @@ export class AuthService {
     };
   }
 
-  async revoquerSession(utilisateurId: string, sessionId: string, sessionCouranteId?: string) {
+  async revoquerSession(
+    utilisateurId: string,
+    sessionId: string,
+    sessionCouranteId?: string,
+  ) {
     const result = await this.prisma.sessionUtilisateur.updateMany({
       where: { id: sessionId, utilisateurId, actif: true },
       data: { actif: false, revoqueLe: new Date() },
@@ -530,7 +668,12 @@ export class AuthService {
   }
 
   // ─── Helpers ──────────────────────────────────────────
-  private async genererTokens(id: string, telephone: string, role: Role, sessionId: string) {
+  private async genererTokens(
+    id: string,
+    telephone: string,
+    role: Role,
+    sessionId: string,
+  ) {
     const refreshSecret = this.secretRefreshJwt();
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
@@ -564,7 +707,11 @@ export class AuthService {
     return secret ?? 'dev-refresh-secret-change-me';
   }
 
-  private async creerSession(utilisateurId: string, deviceId?: string, req?: Request) {
+  private async creerSession(
+    utilisateurId: string,
+    deviceId?: string,
+    req?: Request,
+  ) {
     const expireLe = new Date(Date.now() + this.dureeRefreshMs());
     return this.prisma.sessionUtilisateur.create({
       data: {
@@ -596,7 +743,11 @@ export class AuthService {
     return req?.ip;
   }
 
-  private async creerOTP(utilisateurId: string, telephone: string, type: string) {
+  private async creerOTP(
+    utilisateurId: string,
+    telephone: string,
+    type: string,
+  ) {
     // Invalider les OTP précédents du même type
     await this.prisma.codeOTP.updateMany({
       where: { utilisateurId, type, utilise: false },
@@ -606,7 +757,8 @@ export class AuthService {
     const code = randomInt(100000, 1000000).toString();
     const codeHash = await bcrypt.hash(code, 10);
     const expireLe = new Date(
-      Date.now() + parseInt(this.config.get('DUREE_OTP_MINUTES', '10')) * 60 * 1000,
+      Date.now() +
+        parseInt(this.config.get('DUREE_OTP_MINUTES', '10')) * 60 * 1000,
     );
 
     const otp = await this.prisma.codeOTP.create({
@@ -625,7 +777,13 @@ export class AuthService {
   // ─── POST /auth/biometrique/enregistrer ───────────
   async enregistrerAppareilBiometrique(
     utilisateurId: string,
-    dto: { deviceId: string; empreinteToken: string; nomAppareil?: string; modeleAppareil?: string; systemeExploitation?: string },
+    dto: {
+      deviceId: string;
+      empreinteToken: string;
+      nomAppareil?: string;
+      modeleAppareil?: string;
+      systemeExploitation?: string;
+    },
   ) {
     const utilisateur = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
@@ -633,58 +791,143 @@ export class AuthService {
     });
     if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
     if (utilisateur.statut !== StatutCompte.ACTIF) {
-      throw new ForbiddenException({ message: 'Compte non actif', code: 'COMPTE_INACTIF' });
+      throw new ForbiddenException({
+        message: 'Compte non actif',
+        code: 'COMPTE_INACTIF',
+      });
     }
 
     const empreinteHash = await bcrypt.hash(dto.empreinteToken, 10);
 
     const appareil = await this.prisma.appareilBiometrique.upsert({
-      where: { utilisateurId_deviceId: { utilisateurId, deviceId: dto.deviceId } },
-      create: { utilisateurId, deviceId: dto.deviceId, empreinteHash, nomAppareil: dto.nomAppareil, modeleAppareil: dto.modeleAppareil, systemeExploitation: dto.systemeExploitation, actif: true },
-      update: { empreinteHash, nomAppareil: dto.nomAppareil, modeleAppareil: dto.modeleAppareil, actif: true },
+      where: {
+        utilisateurId_deviceId: { utilisateurId, deviceId: dto.deviceId },
+      },
+      create: {
+        utilisateurId,
+        deviceId: dto.deviceId,
+        empreinteHash,
+        nomAppareil: dto.nomAppareil,
+        modeleAppareil: dto.modeleAppareil,
+        systemeExploitation: dto.systemeExploitation,
+        actif: true,
+      },
+      update: {
+        empreinteHash,
+        nomAppareil: dto.nomAppareil,
+        modeleAppareil: dto.modeleAppareil,
+        actif: true,
+      },
     });
 
-    await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { empreinteActive: true } });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateurId },
+      data: { empreinteActive: true },
+    });
 
     return {
       succes: true,
-      message: 'Appareil biométrique enregistré. Connexion par empreinte activée.',
-      donnees: { appareilId: appareil.id, deviceId: appareil.deviceId, nomAppareil: appareil.nomAppareil },
+      message:
+        'Appareil biométrique enregistré. Connexion par empreinte activée.',
+      donnees: {
+        appareilId: appareil.id,
+        deviceId: appareil.deviceId,
+        nomAppareil: appareil.nomAppareil,
+      },
     };
   }
 
   // ─── POST /auth/biometrique/connexion ─────────────
-  async connexionBiometrique(dto: { telephone: string; deviceId: string; empreinteToken: string }, req: Request) {
+  async connexionBiometrique(
+    dto: { telephone: string; deviceId: string; empreinteToken: string },
+    req: Request,
+  ) {
     const utilisateur = await this.prisma.utilisateur.findUnique({
       where: { telephone: dto.telephone },
-      select: { id: true, telephone: true, nom: true, role: true, statut: true, empreinteActive: true },
+      select: {
+        id: true,
+        telephone: true,
+        nom: true,
+        role: true,
+        statut: true,
+        empreinteActive: true,
+      },
     });
-    if (!utilisateur) throw new UnauthorizedException({ message: 'Identifiants invalides', code: 'UTILISATEUR_INTROUVABLE' });
-    if (utilisateur.statut === StatutCompte.BANNI) throw new ForbiddenException({ message: 'Compte banni', code: 'COMPTE_BANNI' });
-    if (!utilisateur.empreinteActive) throw new ForbiddenException({ message: 'Biométrie non activée', code: 'BIOMETRIE_INACTIVE' });
+    if (!utilisateur)
+      throw new UnauthorizedException({
+        message: 'Identifiants invalides',
+        code: 'UTILISATEUR_INTROUVABLE',
+      });
+    if (utilisateur.statut === StatutCompte.BANNI)
+      throw new ForbiddenException({
+        message: 'Compte banni',
+        code: 'COMPTE_BANNI',
+      });
+    if (!utilisateur.empreinteActive)
+      throw new ForbiddenException({
+        message: 'Biométrie non activée',
+        code: 'BIOMETRIE_INACTIVE',
+      });
 
     const appareil = await this.prisma.appareilBiometrique.findUnique({
-      where: { utilisateurId_deviceId: { utilisateurId: utilisateur.id, deviceId: dto.deviceId } },
+      where: {
+        utilisateurId_deviceId: {
+          utilisateurId: utilisateur.id,
+          deviceId: dto.deviceId,
+        },
+      },
     });
-    if (!appareil || !appareil.actif) throw new UnauthorizedException({ message: 'Appareil non reconnu', code: 'APPAREIL_INCONNU' });
+    if (!appareil || !appareil.actif)
+      throw new UnauthorizedException({
+        message: 'Appareil non reconnu',
+        code: 'APPAREIL_INCONNU',
+      });
 
-    const valide = await bcrypt.compare(dto.empreinteToken, appareil.empreinteHash);
-    if (!valide) throw new UnauthorizedException({ message: 'Empreinte invalide', code: 'EMPREINTE_INVALIDE' });
+    const valide = await bcrypt.compare(
+      dto.empreinteToken,
+      appareil.empreinteHash,
+    );
+    if (!valide)
+      throw new UnauthorizedException({
+        message: 'Empreinte invalide',
+        code: 'EMPREINTE_INVALIDE',
+      });
 
-    await this.prisma.appareilBiometrique.update({ where: { id: appareil.id }, data: { derniereAuthentification: new Date() } });
+    await this.prisma.appareilBiometrique.update({
+      where: { id: appareil.id },
+      data: { derniereAuthentification: new Date() },
+    });
 
     const expireLe = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const session = await this.prisma.sessionUtilisateur.create({
-      data: { utilisateurId: utilisateur.id, deviceId: dto.deviceId, adresseIP: (req as any).ip, expireLe, actif: true },
+      data: {
+        utilisateurId: utilisateur.id,
+        deviceId: dto.deviceId,
+        adresseIP: (req as any).ip,
+        expireLe,
+        actif: true,
+      },
     });
 
-    const payload = { sub: utilisateur.id, telephone: utilisateur.telephone, role: utilisateur.role, sessionId: session.id };
+    const payload = {
+      sub: utilisateur.id,
+      telephone: utilisateur.telephone,
+      role: utilisateur.role,
+      sessionId: session.id,
+    };
     const accessToken = this.jwt.sign(payload, { expiresIn: '24h' });
 
     return {
       succes: true,
       message: `Connexion biométrique réussie. Bienvenue ${utilisateur.nom}.`,
-      donnees: { accessToken, utilisateur: { id: utilisateur.id, nom: utilisateur.nom, role: utilisateur.role } },
+      donnees: {
+        accessToken,
+        utilisateur: {
+          id: utilisateur.id,
+          nom: utilisateur.nom,
+          role: utilisateur.role,
+        },
+      },
     };
   }
 
@@ -692,19 +935,43 @@ export class AuthService {
   async mesAppareils(utilisateurId: string) {
     const appareils = await this.prisma.appareilBiometrique.findMany({
       where: { utilisateurId, actif: true },
-      select: { id: true, deviceId: true, nomAppareil: true, modeleAppareil: true, systemeExploitation: true, derniereAuthentification: true, creeLe: true },
+      select: {
+        id: true,
+        deviceId: true,
+        nomAppareil: true,
+        modeleAppareil: true,
+        systemeExploitation: true,
+        derniereAuthentification: true,
+        creeLe: true,
+      },
     });
-    return { succes: true, message: `${appareils.length} appareil(s).`, donnees: appareils };
+    return {
+      succes: true,
+      message: `${appareils.length} appareil(s).`,
+      donnees: appareils,
+    };
   }
 
   // ─── DELETE /auth/biometrique/appareils/:id ───────
   async revoquerAppareil(utilisateurId: string, appareilId: string) {
-    const appareil = await this.prisma.appareilBiometrique.findUnique({ where: { id: appareilId } });
-    if (!appareil || appareil.utilisateurId !== utilisateurId) throw new NotFoundException('Appareil introuvable');
-    await this.prisma.appareilBiometrique.update({ where: { id: appareilId }, data: { actif: false } });
+    const appareil = await this.prisma.appareilBiometrique.findUnique({
+      where: { id: appareilId },
+    });
+    if (!appareil || appareil.utilisateurId !== utilisateurId)
+      throw new NotFoundException('Appareil introuvable');
+    await this.prisma.appareilBiometrique.update({
+      where: { id: appareilId },
+      data: { actif: false },
+    });
 
-    const restants = await this.prisma.appareilBiometrique.count({ where: { utilisateurId, actif: true } });
-    if (restants === 0) await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { empreinteActive: false } });
+    const restants = await this.prisma.appareilBiometrique.count({
+      where: { utilisateurId, actif: true },
+    });
+    if (restants === 0)
+      await this.prisma.utilisateur.update({
+        where: { id: utilisateurId },
+        data: { empreinteActive: false },
+      });
 
     return { succes: true, message: 'Appareil révoqué.' };
   }
@@ -728,7 +995,9 @@ export class AuthService {
         deviceId: true,
         creeLe: true,
         actif: true,
-        utilisateur: { select: { id: true, nom: true, telephone: true, role: true } },
+        utilisateur: {
+          select: { id: true, nom: true, telephone: true, role: true },
+        },
       },
       orderBy: { creeLe: 'desc' },
     });
@@ -751,22 +1020,29 @@ export class AuthService {
     }[] = [];
 
     for (const [uid, sessions] of parUtilisateur.entries()) {
-      const ips = [...new Set(sessions.map((s) => s.adresseIP).filter(Boolean))] as string[];
-      const sessionsRecentes24h = sessions.filter((s) => s.creeLe >= dernierJour);
-      const ipsRecentes = [...new Set(sessionsRecentes24h.map((s) => s.adresseIP).filter(Boolean))];
+      const ips = [
+        ...new Set(sessions.map((s) => s.adresseIP).filter(Boolean)),
+      ] as string[];
+      const sessionsRecentes24h = sessions.filter(
+        (s) => s.creeLe >= dernierJour,
+      );
+      const ipsRecentes = [
+        ...new Set(sessionsRecentes24h.map((s) => s.adresseIP).filter(Boolean)),
+      ];
 
       // Suspect si : 3+ IPs distinctes en 24h OU 5+ IPs distinctes en 30j
       if (ipsRecentes.length >= 3 || ips.length >= 5) {
         const derniereSession = sessions[0];
         alertes.push({
-          utilisateur: derniereSession.utilisateur as any,
+          utilisateur: derniereSession.utilisateur,
           nbrIPs: ips.length,
           ips: ips.slice(0, 5),
           derniereSession: derniereSession.creeLe,
           derniereIP: derniereSession.adresseIP ?? 'inconnue',
-          suspicion: ipsRecentes.length >= 3
-            ? `${ipsRecentes.length} IPs différentes en 24h`
-            : `${ips.length} IPs différentes en 30 jours`,
+          suspicion:
+            ipsRecentes.length >= 3
+              ? `${ipsRecentes.length} IPs différentes en 24h`
+              : `${ips.length} IPs différentes en 30 jours`,
         });
       }
     }
@@ -786,5 +1062,3 @@ export class AuthService {
     };
   }
 }
-
-

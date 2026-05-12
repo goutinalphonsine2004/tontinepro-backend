@@ -21,10 +21,15 @@ let ScoreService = class ScoreService {
     }
     async monScore(clientId) {
         const [scoreCredit, utilisateur] = await Promise.all([
-            this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+            this.prisma.scoreCredit.findUnique({
+                where: { utilisateurId: clientId },
+            }),
             this.prisma.utilisateur.findUnique({
                 where: { id: clientId },
-                select: { creeLe: true, tontines: { select: { soldeActuel: true, objectifMontant: true } } },
+                select: {
+                    creeLe: true,
+                    tontines: { select: { soldeActuel: true, objectifMontant: true } },
+                },
             }),
         ]);
         const score = scoreCredit?.score ?? 0;
@@ -121,11 +126,11 @@ let ScoreService = class ScoreService {
             titre = 'Éligible micro-crédit — En route vers PADME !';
             conseils.push(`Plus que ${business_constants_1.BUSINESS.SEUIL_SCORE_PADME - score} points pour le dossier PADME.`);
             conseils.push('Remboursez votre micro-crédit à temps pour booster votre score de remboursement.');
-            conseils.push('Atteignez votre objectif d\'épargne pour gagner 10 points bonus.');
+            conseils.push("Atteignez votre objectif d'épargne pour gagner 10 points bonus.");
         }
         else {
             titre = 'Excellent score — Vous êtes éligible PADME ! 🎉';
-            conseils.push('Votre dossier PADME est en cours de traitement par l\'administration.');
+            conseils.push("Votre dossier PADME est en cours de traitement par l'administration.");
             conseils.push('Maintenez votre régularité pour rester éligible.');
             if (score < 90)
                 conseils.push(`${90 - score} points supplémentaires pour atteindre le plafond maximum (100 000 FCFA).`);
@@ -138,10 +143,22 @@ let ScoreService = class ScoreService {
                 titre,
                 conseils,
                 prochainSeuil: score < business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT
-                    ? { seuil: business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT, label: 'Micro-crédit', pointsRestants: business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score }
+                    ? {
+                        seuil: business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT,
+                        label: 'Micro-crédit',
+                        pointsRestants: business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score,
+                    }
                     : score < business_constants_1.BUSINESS.SEUIL_SCORE_PADME
-                        ? { seuil: business_constants_1.BUSINESS.SEUIL_SCORE_PADME, label: 'PADME', pointsRestants: business_constants_1.BUSINESS.SEUIL_SCORE_PADME - score }
-                        : { seuil: 90, label: 'Plafond maximum', pointsRestants: Math.max(0, 90 - score) },
+                        ? {
+                            seuil: business_constants_1.BUSINESS.SEUIL_SCORE_PADME,
+                            label: 'PADME',
+                            pointsRestants: business_constants_1.BUSINESS.SEUIL_SCORE_PADME - score,
+                        }
+                        : {
+                            seuil: 90,
+                            label: 'Plafond maximum',
+                            pointsRestants: Math.max(0, 90 - score),
+                        },
             },
         };
     }
@@ -161,13 +178,14 @@ let ScoreService = class ScoreService {
         }
         const moisPour60 = score >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT
             ? 0
-            : projections.find((p) => p.scoreEstime >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT)?.mois ?? -1;
+            : (projections.find((p) => p.scoreEstime >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT)?.mois ?? -1);
         const moisPour70 = score >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME
             ? 0
-            : projections.find((p) => p.scoreEstime >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME)?.mois ?? -1;
+            : (projections.find((p) => p.scoreEstime >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME)
+                ?.mois ?? -1);
         const moisPour90 = score >= 90
             ? 0
-            : projections.find((p) => p.scoreEstime >= 90)?.mois ?? -1;
+            : (projections.find((p) => p.scoreEstime >= 90)?.mois ?? -1);
         return {
             succes: true,
             message: 'Projection de score.',
@@ -179,17 +197,29 @@ let ScoreService = class ScoreService {
                     microCredit: {
                         seuil: business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT,
                         moisEstimes: moisPour60,
-                        label: moisPour60 === 0 ? 'Déjà atteint ✅' : moisPour60 === -1 ? 'Augmentez votre activité' : `Dans ~${moisPour60} mois`,
+                        label: moisPour60 === 0
+                            ? 'Déjà atteint ✅'
+                            : moisPour60 === -1
+                                ? 'Augmentez votre activité'
+                                : `Dans ~${moisPour60} mois`,
                     },
                     padme: {
                         seuil: business_constants_1.BUSINESS.SEUIL_SCORE_PADME,
                         moisEstimes: moisPour70,
-                        label: moisPour70 === 0 ? 'Déjà atteint ✅' : moisPour70 === -1 ? 'Augmentez votre activité' : `Dans ~${moisPour70} mois`,
+                        label: moisPour70 === 0
+                            ? 'Déjà atteint ✅'
+                            : moisPour70 === -1
+                                ? 'Augmentez votre activité'
+                                : `Dans ~${moisPour70} mois`,
                     },
                     plafondMax: {
                         seuil: 90,
                         moisEstimes: moisPour90,
-                        label: moisPour90 === 0 ? 'Déjà atteint ✅' : moisPour90 === -1 ? 'Augmentez votre activité' : `Dans ~${moisPour90} mois`,
+                        label: moisPour90 === 0
+                            ? 'Déjà atteint ✅'
+                            : moisPour90 === -1
+                                ? 'Augmentez votre activité'
+                                : `Dans ~${moisPour90} mois`,
                     },
                 },
             },
@@ -222,7 +252,10 @@ let ScoreService = class ScoreService {
             d.setMonth(d.getMonth() - m);
             const annee = d.getFullYear();
             const mois = d.getMonth();
-            const label = d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+            const label = d.toLocaleString('fr-FR', {
+                month: 'long',
+                year: 'numeric',
+            });
             const cleMois = `${annee}-${String(mois + 1).padStart(2, '0')}`;
             const nbJoursDansMois = new Date(annee, mois + 1, 0).getDate();
             const estMoisCourant = mois === maintenant.getMonth() && annee === maintenant.getFullYear();

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -22,7 +30,10 @@ export class MicroCreditsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('demander')
-  demander(@UtilisateurCourant() u: { id: string }, @Body() dto: DemanderCreditDto) {
+  demander(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: DemanderCreditDto,
+  ) {
     return this.service.demander(u.id, dto);
   }
 
@@ -75,7 +86,10 @@ export class MicroCreditsController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/remboursements')
-  remboursements(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+  remboursements(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+  ) {
     return this.service.remboursements(id, u.id);
   }
 }

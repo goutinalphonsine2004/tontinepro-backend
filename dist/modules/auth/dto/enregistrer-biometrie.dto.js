@@ -27,7 +27,7 @@ __decorate([
 ], EnregistrerBiometrieDto.prototype, "deviceId", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)({ message: 'L\'empreinte digitale est obligatoire' }),
+    (0, class_validator_1.IsNotEmpty)({ message: "L'empreinte digitale est obligatoire" }),
     __metadata("design:type", String)
 ], EnregistrerBiometrieDto.prototype, "empreinteHash", void 0);
 __decorate([
@@ -47,7 +47,9 @@ __decorate([
 ], EnregistrerBiometrieDto.prototype, "systemeExploitation", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)({ message: 'Le PIN est obligatoire pour l\'enregistrement biométrique' }),
+    (0, class_validator_1.IsNotEmpty)({
+        message: "Le PIN est obligatoire pour l'enregistrement biométrique",
+    }),
     __metadata("design:type", String)
 ], EnregistrerBiometrieDto.prototype, "pin", void 0);
 //# sourceMappingURL=enregistrer-biometrie.dto.js.map

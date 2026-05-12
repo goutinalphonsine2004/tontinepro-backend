@@ -33,31 +33,56 @@ let KycService = class KycService {
             });
         }
         const doc = await this.prisma.documentKYC.create({
-            data: { utilisateurId, typeDocument: dto.typeDocument, urlDocument: dto.urlDocument },
+            data: {
+                utilisateurId,
+                typeDocument: dto.typeDocument,
+                urlDocument: dto.urlDocument,
+            },
         });
-        return { succes: true, message: 'Document soumis. En attente de validation Admin.', donnees: doc };
+        return {
+            succes: true,
+            message: 'Document soumis. En attente de validation Admin.',
+            donnees: doc,
+        };
     }
     async mesDocuments(utilisateurId) {
         const docs = await this.prisma.documentKYC.findMany({
             where: { utilisateurId },
             orderBy: { creeLe: 'desc' },
         });
-        return { succes: true, message: `${docs.length} document(s).`, donnees: docs };
+        return {
+            succes: true,
+            message: `${docs.length} document(s).`,
+            donnees: docs,
+        };
     }
     async enAttente() {
         const docs = await this.prisma.documentKYC.findMany({
             where: { statut: client_1.StatutKYC.EN_ATTENTE },
-            include: { utilisateur: { select: { id: true, nom: true, telephone: true, role: true } } },
+            include: {
+                utilisateur: {
+                    select: { id: true, nom: true, telephone: true, role: true },
+                },
+            },
             orderBy: { creeLe: 'asc' },
         });
-        return { succes: true, message: `${docs.length} document(s) en attente.`, donnees: docs };
+        return {
+            succes: true,
+            message: `${docs.length} document(s) en attente.`,
+            donnees: docs,
+        };
     }
     async valider(docId, adminId) {
-        const doc = await this.prisma.documentKYC.findUnique({ where: { id: docId } });
+        const doc = await this.prisma.documentKYC.findUnique({
+            where: { id: docId },
+        });
         if (!doc)
             throw new common_1.NotFoundException('Document introuvable');
         if (doc.statut !== client_1.StatutKYC.EN_ATTENTE) {
-            throw new common_1.BadRequestException({ message: 'Ce document n\'est plus en attente', code: 'STATUT_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: "Ce document n'est plus en attente",
+                code: 'STATUT_INVALIDE',
+            });
         }
         const [docMaj] = await this.prisma.$transaction([
             this.prisma.documentKYC.update({
@@ -69,18 +94,31 @@ let KycService = class KycService {
                 data: { kycVerifie: true },
             }),
         ]);
-        return { succes: true, message: 'Document KYC validé. Compte marqué vérifié.', donnees: docMaj };
+        return {
+            succes: true,
+            message: 'Document KYC validé. Compte marqué vérifié.',
+            donnees: docMaj,
+        };
     }
     async rejeter(docId, adminId, dto) {
-        const doc = await this.prisma.documentKYC.findUnique({ where: { id: docId } });
+        const doc = await this.prisma.documentKYC.findUnique({
+            where: { id: docId },
+        });
         if (!doc)
             throw new common_1.NotFoundException('Document introuvable');
         if (doc.statut !== client_1.StatutKYC.EN_ATTENTE) {
-            throw new common_1.BadRequestException({ message: 'Ce document n\'est plus en attente', code: 'STATUT_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: "Ce document n'est plus en attente",
+                code: 'STATUT_INVALIDE',
+            });
         }
         const docMaj = await this.prisma.documentKYC.update({
             where: { id: docId },
-            data: { statut: client_1.StatutKYC.REJETE, verifiePar: adminId, motifRejet: dto.motifRejet },
+            data: {
+                statut: client_1.StatutKYC.REJETE,
+                verifiePar: adminId,
+                motifRejet: dto.motifRejet,
+            },
         });
         return { succes: true, message: 'Document rejeté.', donnees: docMaj };
     }

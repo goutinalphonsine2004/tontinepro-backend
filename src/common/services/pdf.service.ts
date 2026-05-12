@@ -61,15 +61,29 @@ export class PdfService {
 
     doc.moveDown(0.8);
     this.ligne(doc, 'Montant', `${recu.montant.toLocaleString('fr-FR')} FCFA`);
-    this.ligne(doc, 'Frais plateforme', `${recu.fraisPlateforme.toLocaleString('fr-FR')} FCFA`);
-    this.ligne(doc, 'Montant net', `${recu.montantNet.toLocaleString('fr-FR')} FCFA`);
+    this.ligne(
+      doc,
+      'Frais plateforme',
+      `${recu.fraisPlateforme.toLocaleString('fr-FR')} FCFA`,
+    );
+    this.ligne(
+      doc,
+      'Montant net',
+      `${recu.montantNet.toLocaleString('fr-FR')} FCFA`,
+    );
 
     doc.moveDown(1);
-    doc.fontSize(9).fillColor('#555').text('Hash integrite', { continued: false });
+    doc
+      .fontSize(9)
+      .fillColor('#555')
+      .text('Hash integrite', { continued: false });
     doc.fontSize(8).fillColor('#111').text(recu.hashIntegrite, { width: 500 });
 
     doc.moveDown(2);
-    doc.fontSize(9).fillColor('#555').text('Document genere automatiquement par TontineBenin.');
+    doc
+      .fontSize(9)
+      .fillColor('#555')
+      .text('Document genere automatiquement par TontineBenin.');
     doc.end();
 
     return done;
@@ -94,17 +108,31 @@ export class PdfService {
       .moveDown(1.5);
 
     this.ligne(doc, 'Dossier', dossier.dossierId);
-    this.ligne(doc, 'Client', `${dossier.clientNom} (${dossier.clientTelephone})`);
+    this.ligne(
+      doc,
+      'Client',
+      `${dossier.clientNom} (${dossier.clientTelephone})`,
+    );
     this.ligne(doc, 'Score', `${dossier.score}/100`);
-    this.ligne(doc, 'Total epargne', `${dossier.totalEpargne.toLocaleString('fr-FR')} FCFA`);
-    this.ligne(doc, 'Taux regularite', `${Math.round(dossier.tauxRegularite * 100)}%`);
+    this.ligne(
+      doc,
+      'Total epargne',
+      `${dossier.totalEpargne.toLocaleString('fr-FR')} FCFA`,
+    );
+    this.ligne(
+      doc,
+      'Taux regularite',
+      `${Math.round(dossier.tauxRegularite * 100)}%`,
+    );
     this.ligne(doc, 'Credits rembourses', `${dossier.creditsRembourses}`);
     this.ligne(doc, 'Genere le', dossier.genereLe.toLocaleString('fr-FR'));
 
     doc.moveDown(1.5);
     doc
       .fontSize(10)
-      .text('Ce document synthetise les donnees internes TontineBenin utilisees pour la prequalification PADME.');
+      .text(
+        'Ce document synthetise les donnees internes TontineBenin utilisees pour la prequalification PADME.',
+      );
 
     doc.end();
 
@@ -119,7 +147,10 @@ export class PdfService {
   }
 
   private ligne(doc: PDFKit.PDFDocument, label: string, valeur: string) {
-    doc.fontSize(10).fillColor('#555').text(label, { continued: true, width: 170 });
+    doc
+      .fontSize(10)
+      .fillColor('#555')
+      .text(label, { continued: true, width: 170 });
     doc.fillColor('#111').text(` : ${valeur}`);
   }
 }

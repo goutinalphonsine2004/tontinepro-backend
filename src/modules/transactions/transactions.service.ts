@@ -1,9 +1,26 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException, forwardRef } from '@nestjs/common';
-import { Role, StatutCredit, StatutTransaction, TypeTransaction } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+  forwardRef,
+} from '@nestjs/common';
+import {
+  Role,
+  StatutCredit,
+  StatutTransaction,
+  TypeTransaction,
+} from '@prisma/client';
 import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
-import { PdfService, RecuTransactionPdf } from '../../common/services/pdf.service';
+import {
+  PdfService,
+  RecuTransactionPdf,
+} from '../../common/services/pdf.service';
 import { SmsService } from '../notifications/sms.service';
 import { WhatsappService } from '../notifications/whatsapp.service';
 import { BUSINESS } from '../../common/constants/business.constants';
@@ -30,7 +47,9 @@ export class TransactionsService {
 
   // ─── POST /transactions/cotiser ───────────────────
   async cotiser(requesterId: string, dto: CotiserDto) {
-    const requester = await this.prisma.utilisateur.findUnique({ where: { id: requesterId } });
+    const requester = await this.prisma.utilisateur.findUnique({
+      where: { id: requesterId },
+    });
     if (!requester) throw new NotFoundException('Requérant introuvable');
 
     let targetUserId = requesterId;
@@ -40,34 +59,47 @@ export class TransactionsService {
     if (dto.clientId && dto.clientId !== requesterId) {
       const rolesAutorises: Role[] = [Role.AGENT, Role.INDEPENDANT];
       if (!rolesAutorises.includes(requester.role)) {
-        throw new ForbiddenException("Seuls les collecteurs peuvent initier une cotisation pour un tiers.");
+        throw new ForbiddenException(
+          'Seuls les collecteurs peuvent initier une cotisation pour un tiers.',
+        );
       }
-      
-      const client = await this.prisma.utilisateur.findUnique({ where: { id: dto.clientId } });
+
+      const client = await this.prisma.utilisateur.findUnique({
+        where: { id: dto.clientId },
+      });
       if (!client) throw new NotFoundException('Client introuvable');
       if (client.collecteurId !== requesterId) {
-        throw new ForbiddenException("Ce client n'est pas dans votre portefeuille.");
+        throw new ForbiddenException(
+          "Ce client n'est pas dans votre portefeuille.",
+        );
       }
       targetUserId = dto.clientId;
       targetUser = client;
     }
 
-    const tontine = await this.prisma.tontine.findUnique({ where: { id: dto.tontineId } });
+    const tontine = await this.prisma.tontine.findUnique({
+      where: { id: dto.tontineId },
+    });
     if (!tontine) throw new NotFoundException('Tontine introuvable');
     if (tontine.proprietaireId !== targetUserId) {
-      throw new ForbiddenException("La tontine spécifiée n'appartient pas au client.");
+      throw new ForbiddenException(
+        "La tontine spécifiée n'appartient pas au client.",
+      );
     }
 
     const telephone = dto.telephone ?? targetUser.telephone;
-    
+
     // Vérifier si l'utilisateur a le badge DIAMANT pour la réduction de frais
     const badgeDiamant = await this.prisma.badgeClient.findFirst({
       where: { clientId: targetUserId, niveau: 'DIAMANT' },
     });
 
-    const fraisPlateforme = BUSINESS.calculerFraisPlateforme(dto.montant, !!badgeDiamant);
+    const fraisPlateforme = BUSINESS.calculerFraisPlateforme(
+      dto.montant,
+      !!badgeDiamant,
+    );
     const montantNet = dto.montant - fraisPlateforme;
-    
+
     // Commission agent (seulement si indépendant)
     let estIndependant = false;
     if (targetUser.collecteurId) {
@@ -78,7 +110,10 @@ export class TransactionsService {
       estIndependant = collecteur?.role === 'INDEPENDANT';
     }
 
-    const fraisAgent = BUSINESS.calculerCommissionAgent(dto.montant, estIndependant);
+    const fraisAgent = BUSINESS.calculerCommissionAgent(
+      dto.montant,
+      estIndependant,
+    );
 
     // ─── VÉRIFICATION PLAFOND CAUTION (INDEPENDANT uniquement) ───
     if (targetUser.collecteurId) {
@@ -118,7 +153,11 @@ export class TransactionsService {
             throw new ForbiddenException({
               message: `Plafond de caution atteint pour ce collecteur (${caution.toLocaleString()} FCFA/mois). Le client doit payer directement via Mobile Money.`,
               code: 'PLAFOND_CAUTION_ATTEINT',
-              donnees: { caution, collecteMois: collecteMois - dto.montant, pourcentage: Math.round(pourcentage) },
+              donnees: {
+                caution,
+                collecteMois: collecteMois - dto.montant,
+                pourcentage: Math.round(pourcentage),
+              },
             });
           }
 
@@ -146,7 +185,11 @@ export class TransactionsService {
                   message: `Le collecteur ${collecteur.id} a atteint ${Math.round(pourcentage)}% de sa caution mensuelle (${collecteMois.toLocaleString()} / ${caution.toLocaleString()} FCFA). Blocage automatique à 100%.`,
                   resourceType: 'UTILISATEUR',
                   resourceId: collecteur.id,
-                  metadata: JSON.stringify({ caution, collecteMois, pourcentage: Math.round(pourcentage) }),
+                  metadata: JSON.stringify({
+                    caution,
+                    collecteMois,
+                    pourcentage: Math.round(pourcentage),
+                  }),
                 },
               });
             }
@@ -208,12 +251,23 @@ export class TransactionsService {
   }
 
   // ─── POST /transactions/webhook-kkiapay ───────────
-  async traiterWebhook(body: WebhookKkiapayDto, rawBody: Buffer, signatureRecue: string) {
+  async traiterWebhook(
+    body: WebhookKkiapayDto,
+    rawBody: Buffer,
+    signatureRecue: string,
+  ) {
     // 1. Vérifier signature HMAC-SHA256
-    const signatureValide = signatureRecue === 'DEBUG_TP' || this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
+    const signatureValide =
+      signatureRecue === 'DEBUG_TP' ||
+      this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
     if (!signatureValide) {
-      this.logger.warn(`Webhook rejeté — signature invalide: ${signatureRecue}`);
-      throw new UnauthorizedException({ message: 'Signature webhook invalide', code: 'SIGNATURE_INVALIDE' });
+      this.logger.warn(
+        `Webhook rejeté — signature invalide: ${signatureRecue}`,
+      );
+      throw new UnauthorizedException({
+        message: 'Signature webhook invalide',
+        code: 'SIGNATURE_INVALIDE',
+      });
     }
 
     this.logger.log(`Webhook KKiaPay: ${body.transactionId} — ${body.status}`);
@@ -223,11 +277,11 @@ export class TransactionsService {
       where: { refKKiaPay: body.transactionId },
       include: {
         tontine: true,
-        utilisateur: { 
-          include: { 
+        utilisateur: {
+          include: {
             badges: { where: { niveau: 'DIAMANT' }, take: 1 },
-            collecteur: { select: { role: true } }
-          }
+            collecteur: { select: { role: true } },
+          },
         },
       },
     });
@@ -239,13 +293,17 @@ export class TransactionsService {
         return { succes: true, message: 'Webhook remboursement traité' };
       }
 
-      this.logger.warn(`Transaction inconnue pour refKKiaPay: ${body.transactionId}`);
+      this.logger.warn(
+        `Transaction inconnue pour refKKiaPay: ${body.transactionId}`,
+      );
       return { succes: true, message: 'Webhook reçu' };
     }
 
     // Déjà traitée → idempotence
     if (transaction.statut !== StatutTransaction.EN_ATTENTE) {
-      this.logger.log(`Transaction déjà traitée: ${body.transactionId} (${transaction.statut})`);
+      this.logger.log(
+        `Transaction déjà traitée: ${body.transactionId} (${transaction.statut})`,
+      );
       return { succes: true, message: 'Transaction déjà traitée' };
     }
 
@@ -254,7 +312,10 @@ export class TransactionsService {
     } else {
       await this.prisma.transaction.update({
         where: { id: transaction.id },
-        data: { statut: StatutTransaction.ECHOUE, motifEchec: body.reason ?? 'Paiement refusé' },
+        data: {
+          statut: StatutTransaction.ECHOUE,
+          motifEchec: body.reason ?? 'Paiement refusé',
+        },
       });
 
       // ─── CIRCUIT BREAKER ───────────────────────────
@@ -309,39 +370,65 @@ export class TransactionsService {
 
   private async traiterSucces(transaction: any) {
     const estDiamant = transaction.utilisateur.badges.length > 0;
-    const fraisPlateforme = BUSINESS.calculerFraisPlateforme(transaction.montant, estDiamant);
+    const fraisPlateforme = BUSINESS.calculerFraisPlateforme(
+      transaction.montant,
+      estDiamant,
+    );
     const montantNet = transaction.montant - fraisPlateforme;
-    
-    const estIndependant = transaction.utilisateur.collecteur?.role === 'INDEPENDANT';
-    const fraisAgent = BUSINESS.calculerCommissionAgent(transaction.montant, estIndependant);
+
+    const estIndependant =
+      transaction.utilisateur.collecteur?.role === 'INDEPENDANT';
+    const fraisAgent = BUSINESS.calculerCommissionAgent(
+      transaction.montant,
+      estIndependant,
+    );
     const collecteurId = transaction.utilisateur.collecteurId;
 
     // Chaîne de hachage
     const derniereTx = await this.prisma.transaction.findFirst({
-      where: { utilisateurId: transaction.utilisateur.id, statut: StatutTransaction.SUCCES },
+      where: {
+        utilisateurId: transaction.utilisateur.id,
+        statut: StatutTransaction.SUCCES,
+      },
       orderBy: { creeLe: 'desc' },
       select: { hashActuel: true },
     });
     const hashPrecedent = derniereTx?.hashActuel ?? null;
     const hashActuel = createHash('sha256')
-      .update(`${transaction.id}|${transaction.montant}|${transaction.type}|${Date.now()}|${hashPrecedent}`)
+      .update(
+        `${transaction.id}|${transaction.montant}|${transaction.type}|${Date.now()}|${hashPrecedent}`,
+      )
       .digest('hex');
 
     await this.prisma.$transaction([
       this.prisma.transaction.update({
         where: { id: transaction.id },
-        data: { statut: StatutTransaction.SUCCES, montantNet, fraisPlateforme, fraisAgent, hashPrecedent, hashActuel },
+        data: {
+          statut: StatutTransaction.SUCCES,
+          montantNet,
+          fraisPlateforme,
+          fraisAgent,
+          hashPrecedent,
+          hashActuel,
+        },
       }),
       ...(transaction.tontineId
-        ? [this.prisma.tontine.update({
-            where: { id: transaction.tontineId },
-            data: { soldeActuel: { increment: montantNet } },
-          })]
+        ? [
+            this.prisma.tontine.update({
+              where: { id: transaction.tontineId },
+              data: { soldeActuel: { increment: montantNet } },
+            }),
+          ]
         : []),
       ...(collecteurId && fraisAgent > 0
         ? [
             this.prisma.commission.create({
-              data: { agentId: collecteurId, transactionId: transaction.id, montant: fraisAgent, type: 'COTISATION' },
+              data: {
+                agentId: collecteurId,
+                transactionId: transaction.id,
+                montant: fraisAgent,
+                type: 'COTISATION',
+              },
             }),
             this.prisma.utilisateur.update({
               where: { id: collecteurId },
@@ -365,7 +452,9 @@ export class TransactionsService {
       );
     }
 
-    this.logger.log(`Cotisation traitée: ${transaction.montant} FCFA pour ${transaction.utilisateur.nom}`);
+    this.logger.log(
+      `Cotisation traitée: ${transaction.montant} FCFA pour ${transaction.utilisateur.nom}`,
+    );
   }
 
   private async traiterWebhookRemboursement(body: WebhookKkiapayDto) {
@@ -374,7 +463,14 @@ export class TransactionsService {
       include: {
         microCredit: {
           include: {
-            client: { select: { id: true, nom: true, telephone: true, collecteurId: true } },
+            client: {
+              select: {
+                id: true,
+                nom: true,
+                telephone: true,
+                collecteurId: true,
+              },
+            },
           },
         },
       },
@@ -383,7 +479,9 @@ export class TransactionsService {
     if (!remboursement) return false;
 
     if (remboursement.statut !== 'EN_ATTENTE') {
-      this.logger.log(`Remboursement déjà traité: ${body.transactionId} (${remboursement.statut})`);
+      this.logger.log(
+        `Remboursement déjà traité: ${body.transactionId} (${remboursement.statut})`,
+      );
       return true;
     }
 
@@ -392,13 +490,19 @@ export class TransactionsService {
       return true;
     }
 
-    await this.confirmerRemboursementEchec(remboursement as any, body.reason ?? 'Paiement refusé');
+    await this.confirmerRemboursementEchec(
+      remboursement as any,
+      body.reason ?? 'Paiement refusé',
+    );
     return true;
   }
 
   private async confirmerRemboursementSucces(remboursement: any) {
     const credit = remboursement.microCredit;
-    const montantRestant = Math.max(0, credit.montantRestant - remboursement.montant);
+    const montantRestant = Math.max(
+      0,
+      credit.montantRestant - remboursement.montant,
+    );
     const joursPayes = credit.joursPayes + 1;
     const termine = montantRestant <= 0;
 
@@ -423,7 +527,9 @@ export class TransactionsService {
         credit.client.telephone,
         `TontineBénin: Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipal} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`,
       );
-      this.logger.log(`[Webhook remboursement] Crédit terminé: ${credit.id} — ${credit.client.nom}`);
+      this.logger.log(
+        `[Webhook remboursement] Crédit terminé: ${credit.id} — ${credit.client.nom}`,
+      );
       return;
     }
 
@@ -452,7 +558,9 @@ export class TransactionsService {
         where: { id: credit.id },
         data: { statut: StatutCredit.EN_DEFAUT },
       });
-      this.logger.warn(`[Webhook remboursement] Crédit en défaut: ${credit.id} — ${credit.client.nom}`);
+      this.logger.warn(
+        `[Webhook remboursement] Crédit en défaut: ${credit.id} — ${credit.client.nom}`,
+      );
     }
 
     await this.sms.envoyer(
@@ -505,7 +613,13 @@ export class TransactionsService {
     return {
       succes: true,
       message: `${total} transaction(s).`,
-      donnees: { transactions, total, page, limite, pages: Math.ceil(total / limite) },
+      donnees: {
+        transactions,
+        total,
+        page,
+        limite,
+        pages: Math.ceil(total / limite),
+      },
     };
   }
 
@@ -525,7 +639,11 @@ export class TransactionsService {
     return { buffer, filename: `recu-${recu.reference}.pdf` };
   }
 
-  async partagerRecuWhatsapp(transactionId: string, utilisateurId: string, telephone?: string) {
+  async partagerRecuWhatsapp(
+    transactionId: string,
+    utilisateurId: string,
+    telephone?: string,
+  ) {
     const recu = await this.donneesRecu(transactionId, utilisateurId);
     const destinataire = telephone ?? recu.telephone;
     const message = [
@@ -545,12 +663,17 @@ export class TransactionsService {
     const resultat = await this.whatsapp.envoyerMessage(destinataire, message);
     return {
       succes: resultat.success,
-      message: resultat.success ? 'Reçu partagé via WhatsApp.' : 'Échec du partage WhatsApp.',
+      message: resultat.success
+        ? 'Reçu partagé via WhatsApp.'
+        : 'Échec du partage WhatsApp.',
       donnees: { destinataire, resultat },
     };
   }
 
-  private async donneesRecu(transactionId: string, utilisateurId: string): Promise<RecuTransactionPdf> {
+  private async donneesRecu(
+    transactionId: string,
+    utilisateurId: string,
+  ): Promise<RecuTransactionPdf> {
     const tx = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
       include: {
@@ -559,7 +682,8 @@ export class TransactionsService {
       },
     });
     if (!tx) throw new NotFoundException('Transaction introuvable');
-    if (tx.utilisateurId !== utilisateurId) throw new UnauthorizedException('Accès refusé');
+    if (tx.utilisateurId !== utilisateurId)
+      throw new UnauthorizedException('Accès refusé');
 
     return {
       reference: tx.reference,

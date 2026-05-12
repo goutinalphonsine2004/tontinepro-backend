@@ -1,17 +1,36 @@
 export const BUSINESS = {
-  // ─── Commissions ──────────────────────────────────────
-  TAUX_COMMISSION_BASE: 0.03,         // 3% standard sur cotisation
-  TAUX_COMMISSION_DIAMANT: 0.02,      // 2% pour les clients fidèles (Badge Diamant)
-  TAUX_COMMISSION_RETRAIT: 0.02,      // 2% sur les retraits (couvre frais MoMo + marge)
-  TAUX_COMMISSION_COTISATION: 0.03,   // Alias pour compatibilité
-  
-  TAUX_INTERET_MICRO_CREDIT: 0.10,    // 10% d'intérêt sur micro-crédit
-  TAUX_COMMISSION_PADME: 0.03,        // 3% commission sur crédit PADME accordé
+  // ═══════════════════════════════════════════════════════
+  // MODÈLE ÉCONOMIQUE TONTINEBÉNIN
+  // ═══════════════════════════════════════════════════════
+  //
+  // COTISATION (entrée de fonds) :
+  //   Client standard  → 3% prélevés   → 1.5% plateforme + 1.5% agent INDÉPENDANT
+  //   Client DIAMANT   → 2% prélevés   → 1%   plateforme + 1%   agent INDÉPENDANT
+  //   Agent SALARIÉ    → 3% plateforme entier (pas de commission agent)
+  //
+  // RETRAIT / DISTRIBUTION GROUPE (sortie de fonds) :
+  //   Taux fixe 2%     → 100% plateforme (couvre frais MoMo + marge)
+  //
+  // MICRO-CRÉDIT : 10% d'intérêt sur 30 jours → 100% plateforme
+  //
+  // PADME : 3% sur crédit accordé → 100% plateforme (aucun partage avec collecteurs)
+  //
+  // FACTURATION AGENTS : abonnement mensuel + 100 FCFA × nb clients actifs
+  // ═══════════════════════════════════════════════════════
+
+  // ─── Taux commissions ────────────────────────────────
+  TAUX_COMMISSION_BASE: 0.03,      // 3% standard sur cotisation
+  TAUX_COMMISSION_DIAMANT: 0.02,   // 2% pour les clients fidèles (Badge Diamant)
+  TAUX_COMMISSION_RETRAIT: 0.02,   // 2% sur retraits ET distributions GROUPE
+  TAUX_COMMISSION_COTISATION: 0.03, // Alias pour compatibilité
+
+  TAUX_INTERET_MICRO_CREDIT: 0.1,  // 10% d'intérêt sur micro-crédit (100% plateforme)
+  TAUX_COMMISSION_PADME: 0.03,     // 3% sur crédit PADME accordé (100% plateforme)
 
   // ─── Abonnements collecteurs (FCFA) ───────────────────
   ABONNEMENT_STANDARD: 2500,
   ABONNEMENT_PRO: 5000,
-  FRAIS_PAR_CLIENT_MENSUEL: 100,      // 100 F par client actif / mois pour les indépendants
+  FRAIS_PAR_CLIENT_MENSUEL: 100, // 100 F par client actif / mois (prélevé en cron 1er/mois)
 
   // ─── Plafonds micro-crédit par score (FCFA) ───────────
   PLAFONDS_MICRO_CREDIT: {
@@ -32,7 +51,9 @@ export const BUSINESS = {
 
   /** Calcule les frais plateforme selon le niveau du client */
   calculerFraisPlateforme(montant: number, estDiamant = false): number {
-    const taux = estDiamant ? this.TAUX_COMMISSION_DIAMANT : this.TAUX_COMMISSION_BASE;
+    const taux = estDiamant
+      ? this.TAUX_COMMISSION_DIAMANT
+      : this.TAUX_COMMISSION_BASE;
     return montant * taux;
   },
 
@@ -61,17 +82,24 @@ export const BUSINESS = {
     return 0;
   },
 
-  /** 
-   * Calcule la commission de l'agent.
-   * L'agent reçoit 50% de la commission SI il est indépendant.
-   * Si c'est un membre de l'équipe (AGENT salairé), la plateforme garde tout (3%).
+  /**
+   * Commission de l'agent sur une cotisation.
+   * INDÉPENDANT : reçoit 50% des frais plateforme (1.5% sur 3%, ou 1% sur 2% DIAMANT).
+   * SALARIÉ (AGENT) : 0% — la plateforme garde tout (sert à financer le salaire fixe).
    */
-  calculerCommissionAgent(montantCotisation: number, estIndependant: boolean): number {
+  calculerCommissionAgent(
+    montantCotisation: number,
+    estIndependant: boolean,
+  ): number {
     if (!estIndependant) return 0;
-    return (montantCotisation * this.TAUX_COMMISSION_BASE) * 0.5;
+    return montantCotisation * this.TAUX_COMMISSION_BASE * 0.5; // 1.5%
   },
 
+  /**
+   * Commission PADME sur un crédit accordé.
+   * 100% plateforme — aucun partage avec les collecteurs (indépendants ou salariés).
+   */
   calculerCommissionPADME(montantCreditAccorde: number): number {
-    return montantCreditAccorde * this.TAUX_COMMISSION_PADME;
+    return montantCreditAccorde * this.TAUX_COMMISSION_PADME; // 3%
   },
 };

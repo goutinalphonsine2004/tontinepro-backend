@@ -41,7 +41,9 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         this.notifications = notifications;
     }
     async cotiser(requesterId, dto) {
-        const requester = await this.prisma.utilisateur.findUnique({ where: { id: requesterId } });
+        const requester = await this.prisma.utilisateur.findUnique({
+            where: { id: requesterId },
+        });
         if (!requester)
             throw new common_1.NotFoundException('Requérant introuvable');
         let targetUserId = requesterId;
@@ -49,9 +51,11 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         if (dto.clientId && dto.clientId !== requesterId) {
             const rolesAutorises = [client_1.Role.AGENT, client_1.Role.INDEPENDANT];
             if (!rolesAutorises.includes(requester.role)) {
-                throw new common_1.ForbiddenException("Seuls les collecteurs peuvent initier une cotisation pour un tiers.");
+                throw new common_1.ForbiddenException('Seuls les collecteurs peuvent initier une cotisation pour un tiers.');
             }
-            const client = await this.prisma.utilisateur.findUnique({ where: { id: dto.clientId } });
+            const client = await this.prisma.utilisateur.findUnique({
+                where: { id: dto.clientId },
+            });
             if (!client)
                 throw new common_1.NotFoundException('Client introuvable');
             if (client.collecteurId !== requesterId) {
@@ -60,7 +64,9 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             targetUserId = dto.clientId;
             targetUser = client;
         }
-        const tontine = await this.prisma.tontine.findUnique({ where: { id: dto.tontineId } });
+        const tontine = await this.prisma.tontine.findUnique({
+            where: { id: dto.tontineId },
+        });
         if (!tontine)
             throw new common_1.NotFoundException('Tontine introuvable');
         if (tontine.proprietaireId !== targetUserId) {
@@ -110,7 +116,11 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                         throw new common_1.ForbiddenException({
                             message: `Plafond de caution atteint pour ce collecteur (${caution.toLocaleString()} FCFA/mois). Le client doit payer directement via Mobile Money.`,
                             code: 'PLAFOND_CAUTION_ATTEINT',
-                            donnees: { caution, collecteMois: collecteMois - dto.montant, pourcentage: Math.round(pourcentage) },
+                            donnees: {
+                                caution,
+                                collecteMois: collecteMois - dto.montant,
+                                pourcentage: Math.round(pourcentage),
+                            },
                         });
                     }
                     if (pourcentage >= 80) {
@@ -133,7 +143,11 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                                     message: `Le collecteur ${collecteur.id} a atteint ${Math.round(pourcentage)}% de sa caution mensuelle (${collecteMois.toLocaleString()} / ${caution.toLocaleString()} FCFA). Blocage automatique à 100%.`,
                                     resourceType: 'UTILISATEUR',
                                     resourceId: collecteur.id,
-                                    metadata: JSON.stringify({ caution, collecteMois, pourcentage: Math.round(pourcentage) }),
+                                    metadata: JSON.stringify({
+                                        caution,
+                                        collecteMois,
+                                        pourcentage: Math.round(pourcentage),
+                                    }),
                                 },
                             });
                         }
@@ -185,10 +199,14 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         };
     }
     async traiterWebhook(body, rawBody, signatureRecue) {
-        const signatureValide = signatureRecue === 'DEBUG_TP' || this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
+        const signatureValide = signatureRecue === 'DEBUG_TP' ||
+            this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
         if (!signatureValide) {
             this.logger.warn(`Webhook rejeté — signature invalide: ${signatureRecue}`);
-            throw new common_1.UnauthorizedException({ message: 'Signature webhook invalide', code: 'SIGNATURE_INVALIDE' });
+            throw new common_1.UnauthorizedException({
+                message: 'Signature webhook invalide',
+                code: 'SIGNATURE_INVALIDE',
+            });
         }
         this.logger.log(`Webhook KKiaPay: ${body.transactionId} — ${body.status}`);
         const transaction = await this.prisma.transaction.findFirst({
@@ -198,8 +216,8 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                 utilisateur: {
                     include: {
                         badges: { where: { niveau: 'DIAMANT' }, take: 1 },
-                        collecteur: { select: { role: true } }
-                    }
+                        collecteur: { select: { role: true } },
+                    },
                 },
             },
         });
@@ -221,7 +239,10 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         else {
             await this.prisma.transaction.update({
                 where: { id: transaction.id },
-                data: { statut: client_1.StatutTransaction.ECHOUE, motifEchec: body.reason ?? 'Paiement refusé' },
+                data: {
+                    statut: client_1.StatutTransaction.ECHOUE,
+                    motifEchec: body.reason ?? 'Paiement refusé',
+                },
             });
             const FENETRE_MS = 60_000;
             const SEUIL_ECHECS = 10;
@@ -269,7 +290,10 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         const fraisAgent = business_constants_1.BUSINESS.calculerCommissionAgent(transaction.montant, estIndependant);
         const collecteurId = transaction.utilisateur.collecteurId;
         const derniereTx = await this.prisma.transaction.findFirst({
-            where: { utilisateurId: transaction.utilisateur.id, statut: client_1.StatutTransaction.SUCCES },
+            where: {
+                utilisateurId: transaction.utilisateur.id,
+                statut: client_1.StatutTransaction.SUCCES,
+            },
             orderBy: { creeLe: 'desc' },
             select: { hashActuel: true },
         });
@@ -280,18 +304,32 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         await this.prisma.$transaction([
             this.prisma.transaction.update({
                 where: { id: transaction.id },
-                data: { statut: client_1.StatutTransaction.SUCCES, montantNet, fraisPlateforme, fraisAgent, hashPrecedent, hashActuel },
+                data: {
+                    statut: client_1.StatutTransaction.SUCCES,
+                    montantNet,
+                    fraisPlateforme,
+                    fraisAgent,
+                    hashPrecedent,
+                    hashActuel,
+                },
             }),
             ...(transaction.tontineId
-                ? [this.prisma.tontine.update({
+                ? [
+                    this.prisma.tontine.update({
                         where: { id: transaction.tontineId },
                         data: { soldeActuel: { increment: montantNet } },
-                    })]
+                    }),
+                ]
                 : []),
             ...(collecteurId && fraisAgent > 0
                 ? [
                     this.prisma.commission.create({
-                        data: { agentId: collecteurId, transactionId: transaction.id, montant: fraisAgent, type: 'COTISATION' },
+                        data: {
+                            agentId: collecteurId,
+                            transactionId: transaction.id,
+                            montant: fraisAgent,
+                            type: 'COTISATION',
+                        },
                     }),
                     this.prisma.utilisateur.update({
                         where: { id: collecteurId },
@@ -312,7 +350,14 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             include: {
                 microCredit: {
                     include: {
-                        client: { select: { id: true, nom: true, telephone: true, collecteurId: true } },
+                        client: {
+                            select: {
+                                id: true,
+                                nom: true,
+                                telephone: true,
+                                collecteurId: true,
+                            },
+                        },
                     },
                 },
             },
@@ -416,7 +461,13 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         return {
             succes: true,
             message: `${total} transaction(s).`,
-            donnees: { transactions, total, page, limite, pages: Math.ceil(total / limite) },
+            donnees: {
+                transactions,
+                total,
+                page,
+                limite,
+                pages: Math.ceil(total / limite),
+            },
         };
     }
     async recu(transactionId, utilisateurId) {
@@ -451,7 +502,9 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         const resultat = await this.whatsapp.envoyerMessage(destinataire, message);
         return {
             succes: resultat.success,
-            message: resultat.success ? 'Reçu partagé via WhatsApp.' : 'Échec du partage WhatsApp.',
+            message: resultat.success
+                ? 'Reçu partagé via WhatsApp.'
+                : 'Échec du partage WhatsApp.',
             donnees: { destinataire, resultat },
         };
     }

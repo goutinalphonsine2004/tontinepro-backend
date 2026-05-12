@@ -11,7 +11,12 @@ import { NotificationsController } from './notifications.controller';
 import { SmsWebhookController } from './sms-webhook.controller';
 
 @Module({
-  imports: [HttpModule, PrismaModule, forwardRef(() => RetraitsModule), forwardRef(() => TontinesModule)],
+  imports: [
+    HttpModule,
+    PrismaModule,
+    forwardRef(() => RetraitsModule),
+    forwardRef(() => TontinesModule),
+  ],
   controllers: [NotificationsController, SmsWebhookController],
   providers: [SmsService, PushService, WhatsappService, NotificationsService],
   exports: [SmsService, PushService, WhatsappService, NotificationsService],

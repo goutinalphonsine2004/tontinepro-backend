@@ -30,10 +30,16 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         if (!agent)
             throw new common_1.NotFoundException('Agent introuvable');
         if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT].includes(agent.role)) {
-            throw new common_1.ForbiddenException({ message: 'Seuls les collecteurs peuvent faire un check-in', code: 'ROLE_INSUFFISANT' });
+            throw new common_1.ForbiddenException({
+                message: 'Seuls les collecteurs peuvent faire un check-in',
+                code: 'ROLE_INSUFFISANT',
+            });
         }
         if (agent.statut !== client_1.StatutCompte.ACTIF) {
-            throw new common_1.ForbiddenException({ message: 'Compte non actif', code: 'COMPTE_INACTIF' });
+            throw new common_1.ForbiddenException({
+                message: 'Compte non actif',
+                code: 'COMPTE_INACTIF',
+            });
         }
         const client = await this.prisma.utilisateur.findUnique({
             where: { id: dto.clientId },
@@ -42,7 +48,10 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         if (!client)
             throw new common_1.NotFoundException('Client introuvable');
         if (client.collecteurId !== agentId) {
-            throw new common_1.ForbiddenException({ message: 'Ce client n\'appartient pas à votre portefeuille', code: 'ACCES_REFUSE' });
+            throw new common_1.ForbiddenException({
+                message: "Ce client n'appartient pas à votre portefeuille",
+                code: 'ACCES_REFUSE',
+            });
         }
         const distance = 0;
         const estValide = true;
@@ -61,7 +70,11 @@ let CollecteurTerrainService = class CollecteurTerrainService {
             message: estValide
                 ? `Check-in validé pour ${client.nom} ✅`
                 : `Check-in refusé : vous êtes trop loin du client (${Math.round(distance)}m > ${DISTANCE_MAX_METRES}m)`,
-            donnees: { presenceId: presence.id, distance: Math.round(distance), estValide },
+            donnees: {
+                presenceId: presence.id,
+                distance: Math.round(distance),
+                estValide,
+            },
         };
     }
     async clientsDuJour(agentId) {
@@ -72,7 +85,14 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                 nom: true,
                 telephone: true,
                 kycVerifie: true,
-                tontines: { select: { soldeActuel: true, objectifMontant: true, montantJournalier: true }, take: 1 },
+                tontines: {
+                    select: {
+                        soldeActuel: true,
+                        objectifMontant: true,
+                        montantJournalier: true,
+                    },
+                    take: 1,
+                },
                 scoreCredit: { select: { score: true, tauxRegularite: true } },
             },
             orderBy: { nom: 'asc' },
@@ -105,7 +125,11 @@ let CollecteurTerrainService = class CollecteurTerrainService {
             message: `${clients.length} client(s) — ${nbVisites} visité(s), ${nbRestantes} restant(s)`,
             donnees: {
                 clients: donnees,
-                stats: { total: clients.length, visites: nbVisites, restantes: nbRestantes },
+                stats: {
+                    total: clients.length,
+                    visites: nbVisites,
+                    restantes: nbRestantes,
+                },
             },
         };
     }
@@ -127,7 +151,13 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                 id: c.id,
                 nom: c.nom,
                 telephone: c.telephone,
-                position: pos ? { latitude: pos.latitude, longitude: pos.longitude, dernierCheckIn: pos.creeLe } : null,
+                position: pos
+                    ? {
+                        latitude: pos.latitude,
+                        longitude: pos.longitude,
+                        dernierCheckIn: pos.creeLe,
+                    }
+                    : null,
             };
         });
         return {
@@ -163,14 +193,24 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         const [agent, clients, commissionsMois, abonnement, creditsClients] = await Promise.all([
             this.prisma.utilisateur.findUnique({
                 where: { id: agentId },
-                select: { id: true, nom: true, telephone: true, role: true, soldeCommission: true },
+                select: {
+                    id: true,
+                    nom: true,
+                    telephone: true,
+                    role: true,
+                    soldeCommission: true,
+                },
             }),
             this.prisma.utilisateur.findMany({
                 where: { collecteurId: agentId, statut: client_1.StatutCompte.ACTIF },
                 select: {
                     id: true,
                     transactions: {
-                        where: { type: 'COTISATION', statut: 'SUCCES', creeLe: { gte: debutMois } },
+                        where: {
+                            type: 'COTISATION',
+                            statut: 'SUCCES',
+                            creeLe: { gte: debutMois },
+                        },
                         select: { montant: true },
                     },
                 },
@@ -186,7 +226,11 @@ let CollecteurTerrainService = class CollecteurTerrainService {
             }),
             this.prisma.microCredit.findMany({
                 where: { clientId: { in: [] } },
-                select: { montantPrincipal: true, montantTotal: true, montantRestant: true },
+                select: {
+                    montantPrincipal: true,
+                    montantTotal: true,
+                    montantRestant: true,
+                },
                 take: 0,
             }),
         ]);
@@ -209,20 +253,34 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         }
         const clientsActifs = clients.length;
         const nbClientsCotiseCeMois = clients.filter((c) => c.transactions.length > 0).length;
-        const tauxCollecteMois = clientsActifs > 0 ? Math.round((nbClientsCotiseCeMois / clientsActifs) * 100) : 0;
+        const tauxCollecteMois = clientsActifs > 0
+            ? Math.round((nbClientsCotiseCeMois / clientsActifs) * 100)
+            : 0;
         const interetsMicroCredits = creditsClients.reduce((s, c) => s + (c.montantTotal - c.montantPrincipal) * 0.1, 0);
         return {
             succes: true,
             message: 'Tableau de bord collecteur indépendant.',
             donnees: {
-                agent: { id: agent.id, nom: agent.nom, role: agent.role, soldeCommission: agent.soldeCommission },
+                agent: {
+                    id: agent.id,
+                    nom: agent.nom,
+                    role: agent.role,
+                    soldeCommission: agent.soldeCommission,
+                },
                 clientsActifs,
                 commissionsCeMois: commissionsMois._sum.montant ?? 0,
                 tauxCollecteMois,
-                graphiqueRevenus: Object.entries(graphique).map(([mois, montant]) => ({ mois, montant: Math.round(montant) })),
+                graphiqueRevenus: Object.entries(graphique).map(([mois, montant]) => ({
+                    mois,
+                    montant: Math.round(montant),
+                })),
                 revenutsMicroCredits: Math.round(interetsMicroCredits),
                 abonnement: abonnement
-                    ? { plan: abonnement.plan, actif: abonnement.actif, prochainPaiement: abonnement.prochainPaiement }
+                    ? {
+                        plan: abonnement.plan,
+                        actif: abonnement.actif,
+                        prochainPaiement: abonnement.prochainPaiement,
+                    }
                     : null,
             },
         };
@@ -235,7 +293,10 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         if (!client)
             throw new common_1.NotFoundException('Client introuvable');
         if (client.collecteurId !== agentId) {
-            throw new common_1.ForbiddenException({ message: 'Ce client n\'est pas dans votre portefeuille', code: 'ACCES_REFUSE' });
+            throw new common_1.ForbiddenException({
+                message: "Ce client n'est pas dans votre portefeuille",
+                code: 'ACCES_REFUSE',
+            });
         }
         const tel = client.telephone.replace(/^0+/, '').replace(/^\+/, '');
         const telE164 = tel.startsWith('229') ? tel : `229${tel}`;
@@ -243,7 +304,12 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         return {
             succes: true,
             message: `Lien WhatsApp généré pour ${client.nom}.`,
-            donnees: { clientId: client.id, nom: client.nom, telephone: client.telephone, lienWhatsApp },
+            donnees: {
+                clientId: client.id,
+                nom: client.nom,
+                telephone: client.telephone,
+                lienWhatsApp,
+            },
         };
     }
 };

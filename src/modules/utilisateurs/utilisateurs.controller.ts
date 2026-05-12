@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -28,22 +38,34 @@ export class UtilisateursController {
   }
 
   @Put('profil')
-  modifierProfil(@UtilisateurCourant() u: { id: string }, @Body() dto: ModifierProfilDto) {
+  modifierProfil(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: ModifierProfilDto,
+  ) {
     return this.service.modifierProfil(u.id, dto);
   }
 
   @Put('pin')
-  changerPin(@UtilisateurCourant() u: { id: string }, @Body() dto: ChangerPinDto) {
+  changerPin(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: ChangerPinDto,
+  ) {
     return this.service.changerPin(u.id, dto);
   }
 
   @Put('empreinte')
-  configurerEmpreinte(@UtilisateurCourant() u: { id: string }, @Body() dto: ConfigurerEmpreinteDto) {
+  configurerEmpreinte(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: ConfigurerEmpreinteDto,
+  ) {
     return this.service.configurerEmpreinte(u.id, dto);
   }
 
   @Delete('mon-compte')
-  supprimerMonCompte(@UtilisateurCourant() u: { id: string }, @Body() body: { pin: string }) {
+  supprimerMonCompte(
+    @UtilisateurCourant() u: { id: string },
+    @Body() body: { pin: string },
+  ) {
     return this.service.supprimerMonCompte(u.id, body.pin);
   }
 

@@ -177,6 +177,15 @@ model Tontine {
   jourFixe                Int?
   statut                  StatutTontine         @default(CREATION)
   codeInvitation          String?               @unique
+  qrInvitation            String?
+  nbMembresMax            Int?
+  montantParMembre        Float?
+  cautionObligatoire      Boolean               @default(false)
+  montantCautionObligatoire Float               @default(0)
+  penaliteRetardActive    Boolean               @default(false)
+  montantPenaliteRetard   Float                 @default(0)
+  modeTirage              ModeTirageGroupe      @default(MANUEL)
+  tourActuel              Int                   @default(1)
   defaillances            DefaillanceGroupe[]
   membres                 MembreTontineGroupe[]
   ordresTirage            OrdreTirage[]
@@ -550,6 +559,11 @@ enum FrequenceTontine {
   HEBDOMADAIRE
   MENSUEL
   DATE_FIXE
+}
+
+enum ModeTirageGroupe {
+  MANUEL
+  ALEATOIRE
 }
 
 enum StatutTransaction {

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { StatutKYC } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SoumettreKycDto } from './dto/soumettre-kyc.dto';
@@ -26,9 +30,17 @@ export class KycService {
     }
 
     const doc = await this.prisma.documentKYC.create({
-      data: { utilisateurId, typeDocument: dto.typeDocument, urlDocument: dto.urlDocument },
+      data: {
+        utilisateurId,
+        typeDocument: dto.typeDocument,
+        urlDocument: dto.urlDocument,
+      },
     });
-    return { succes: true, message: 'Document soumis. En attente de validation Admin.', donnees: doc };
+    return {
+      succes: true,
+      message: 'Document soumis. En attente de validation Admin.',
+      donnees: doc,
+    };
   }
 
   // ─── GET /kyc/mes-documents ────────────────────────
@@ -37,25 +49,42 @@ export class KycService {
       where: { utilisateurId },
       orderBy: { creeLe: 'desc' },
     });
-    return { succes: true, message: `${docs.length} document(s).`, donnees: docs };
+    return {
+      succes: true,
+      message: `${docs.length} document(s).`,
+      donnees: docs,
+    };
   }
 
   // ─── GET /kyc/en-attente (Admin) ──────────────────
   async enAttente() {
     const docs = await this.prisma.documentKYC.findMany({
       where: { statut: StatutKYC.EN_ATTENTE },
-      include: { utilisateur: { select: { id: true, nom: true, telephone: true, role: true } } },
+      include: {
+        utilisateur: {
+          select: { id: true, nom: true, telephone: true, role: true },
+        },
+      },
       orderBy: { creeLe: 'asc' },
     });
-    return { succes: true, message: `${docs.length} document(s) en attente.`, donnees: docs };
+    return {
+      succes: true,
+      message: `${docs.length} document(s) en attente.`,
+      donnees: docs,
+    };
   }
 
   // ─── PUT /kyc/:id/valider (Admin) ─────────────────
   async valider(docId: string, adminId: string) {
-    const doc = await this.prisma.documentKYC.findUnique({ where: { id: docId } });
+    const doc = await this.prisma.documentKYC.findUnique({
+      where: { id: docId },
+    });
     if (!doc) throw new NotFoundException('Document introuvable');
     if (doc.statut !== StatutKYC.EN_ATTENTE) {
-      throw new BadRequestException({ message: 'Ce document n\'est plus en attente', code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: "Ce document n'est plus en attente",
+        code: 'STATUT_INVALIDE',
+      });
     }
 
     const [docMaj] = await this.prisma.$transaction([
@@ -69,20 +98,33 @@ export class KycService {
       }),
     ]);
 
-    return { succes: true, message: 'Document KYC validé. Compte marqué vérifié.', donnees: docMaj };
+    return {
+      succes: true,
+      message: 'Document KYC validé. Compte marqué vérifié.',
+      donnees: docMaj,
+    };
   }
 
   // ─── PUT /kyc/:id/rejeter (Admin) ─────────────────
   async rejeter(docId: string, adminId: string, dto: RejeterKycDto) {
-    const doc = await this.prisma.documentKYC.findUnique({ where: { id: docId } });
+    const doc = await this.prisma.documentKYC.findUnique({
+      where: { id: docId },
+    });
     if (!doc) throw new NotFoundException('Document introuvable');
     if (doc.statut !== StatutKYC.EN_ATTENTE) {
-      throw new BadRequestException({ message: 'Ce document n\'est plus en attente', code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: "Ce document n'est plus en attente",
+        code: 'STATUT_INVALIDE',
+      });
     }
 
     const docMaj = await this.prisma.documentKYC.update({
       where: { id: docId },
-      data: { statut: StatutKYC.REJETE, verifiePar: adminId, motifRejet: dto.motifRejet },
+      data: {
+        statut: StatutKYC.REJETE,
+        verifiePar: adminId,
+        motifRejet: dto.motifRejet,
+      },
     });
     return { succes: true, message: 'Document rejeté.', donnees: docMaj };
   }

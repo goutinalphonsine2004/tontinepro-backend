@@ -19,11 +19,13 @@ class SoumettreKycDto {
 exports.SoumettreKycDto = SoumettreKycDto;
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(TYPES_DOCUMENTS, { message: `Type de document invalide. Valeurs: ${TYPES_DOCUMENTS.join(', ')}` }),
+    (0, class_validator_1.IsIn)(TYPES_DOCUMENTS, {
+        message: `Type de document invalide. Valeurs: ${TYPES_DOCUMENTS.join(', ')}`,
+    }),
     __metadata("design:type", String)
 ], SoumettreKycDto.prototype, "typeDocument", void 0);
 __decorate([
-    (0, class_validator_1.IsUrl)({}, { message: "URL du document invalide" }),
+    (0, class_validator_1.IsUrl)({}, { message: 'URL du document invalide' }),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], SoumettreKycDto.prototype, "urlDocument", void 0);

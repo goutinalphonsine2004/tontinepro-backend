@@ -54,7 +54,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       },
       select: { id: true },
     });
-    if (!session) throw new UnauthorizedException('Session expirée ou révoquée');
+    if (!session)
+      throw new UnauthorizedException('Session expirée ou révoquée');
 
     return {
       id: payload.sub,

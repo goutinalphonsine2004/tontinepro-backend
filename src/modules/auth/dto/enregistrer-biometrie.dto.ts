@@ -6,7 +6,7 @@ export class EnregistrerBiometrieDto {
   deviceId: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'L\'empreinte digitale est obligatoire' })
+  @IsNotEmpty({ message: "L'empreinte digitale est obligatoire" })
   empreinteHash: string;
 
   @IsString()
@@ -22,6 +22,8 @@ export class EnregistrerBiometrieDto {
   systemeExploitation?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Le PIN est obligatoire pour l\'enregistrement biométrique' })
+  @IsNotEmpty({
+    message: "Le PIN est obligatoire pour l'enregistrement biométrique",
+  })
   pin: string;
 }

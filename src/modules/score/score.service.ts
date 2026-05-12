@@ -10,10 +10,15 @@ export class ScoreService {
   // ─── GET /score/mon-score ─────────────────────────
   async monScore(clientId: string) {
     const [scoreCredit, utilisateur] = await Promise.all([
-      this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+      this.prisma.scoreCredit.findUnique({
+        where: { utilisateurId: clientId },
+      }),
       this.prisma.utilisateur.findUnique({
         where: { id: clientId },
-        select: { creeLe: true, tontines: { select: { soldeActuel: true, objectifMontant: true } } },
+        select: {
+          creeLe: true,
+          tontines: { select: { soldeActuel: true, objectifMontant: true } },
+        },
       }),
     ]);
 
@@ -37,7 +42,9 @@ export class ScoreService {
           ancienneteEnMois,
           pointsAnciennete: Math.min(ancienneteEnMois * 2, 20),
           scoreRemboursement: scoreCredit?.scoreRemboursement ?? 1,
-          pointsRemboursement: Math.round((scoreCredit?.scoreRemboursement ?? 1) * 30),
+          pointsRemboursement: Math.round(
+            (scoreCredit?.scoreRemboursement ?? 1) * 30,
+          ),
           bonusObjectif,
           pointsBonus: bonusObjectif * 10,
         },
@@ -112,23 +119,45 @@ export class ScoreService {
     if (score < 40) {
       titre = 'Score faible — Commencez à épargner régulièrement';
       conseils.push('Faites au moins 1 cotisation par jour pendant 30 jours.');
-      conseils.push('Même un petit montant (500 FCFA) compte pour votre régularité.');
-      conseils.push(`Il vous faut encore ${BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score} points pour accéder au micro-crédit.`);
+      conseils.push(
+        'Même un petit montant (500 FCFA) compte pour votre régularité.',
+      );
+      conseils.push(
+        `Il vous faut encore ${BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score} points pour accéder au micro-crédit.`,
+      );
     } else if (score < BUSINESS.SEUIL_SCORE_MICRO_CREDIT) {
       titre = 'Bon début — Continuez vos efforts !';
-      conseils.push(`Plus que ${BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score} points pour débloquer le micro-crédit.`);
-      conseils.push('Cotisez chaque jour sans interruption pour booster votre taux de régularité.');
-      if (tauxRegularite < 0.7) conseils.push('Votre régularité est le critère le plus important (40% du score).');
+      conseils.push(
+        `Plus que ${BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score} points pour débloquer le micro-crédit.`,
+      );
+      conseils.push(
+        'Cotisez chaque jour sans interruption pour booster votre taux de régularité.',
+      );
+      if (tauxRegularite < 0.7)
+        conseils.push(
+          'Votre régularité est le critère le plus important (40% du score).',
+        );
     } else if (score < BUSINESS.SEUIL_SCORE_PADME) {
       titre = 'Éligible micro-crédit — En route vers PADME !';
-      conseils.push(`Plus que ${BUSINESS.SEUIL_SCORE_PADME - score} points pour le dossier PADME.`);
-      conseils.push('Remboursez votre micro-crédit à temps pour booster votre score de remboursement.');
-      conseils.push('Atteignez votre objectif d\'épargne pour gagner 10 points bonus.');
+      conseils.push(
+        `Plus que ${BUSINESS.SEUIL_SCORE_PADME - score} points pour le dossier PADME.`,
+      );
+      conseils.push(
+        'Remboursez votre micro-crédit à temps pour booster votre score de remboursement.',
+      );
+      conseils.push(
+        "Atteignez votre objectif d'épargne pour gagner 10 points bonus.",
+      );
     } else {
       titre = 'Excellent score — Vous êtes éligible PADME ! 🎉';
-      conseils.push('Votre dossier PADME est en cours de traitement par l\'administration.');
+      conseils.push(
+        "Votre dossier PADME est en cours de traitement par l'administration.",
+      );
       conseils.push('Maintenez votre régularité pour rester éligible.');
-      if (score < 90) conseils.push(`${90 - score} points supplémentaires pour atteindre le plafond maximum (100 000 FCFA).`);
+      if (score < 90)
+        conseils.push(
+          `${90 - score} points supplémentaires pour atteindre le plafond maximum (100 000 FCFA).`,
+        );
     }
 
     return {
@@ -138,11 +167,24 @@ export class ScoreService {
         score,
         titre,
         conseils,
-        prochainSeuil: score < BUSINESS.SEUIL_SCORE_MICRO_CREDIT
-          ? { seuil: BUSINESS.SEUIL_SCORE_MICRO_CREDIT, label: 'Micro-crédit', pointsRestants: BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score }
-          : score < BUSINESS.SEUIL_SCORE_PADME
-          ? { seuil: BUSINESS.SEUIL_SCORE_PADME, label: 'PADME', pointsRestants: BUSINESS.SEUIL_SCORE_PADME - score }
-          : { seuil: 90, label: 'Plafond maximum', pointsRestants: Math.max(0, 90 - score) },
+        prochainSeuil:
+          score < BUSINESS.SEUIL_SCORE_MICRO_CREDIT
+            ? {
+                seuil: BUSINESS.SEUIL_SCORE_MICRO_CREDIT,
+                label: 'Micro-crédit',
+                pointsRestants: BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score,
+              }
+            : score < BUSINESS.SEUIL_SCORE_PADME
+              ? {
+                  seuil: BUSINESS.SEUIL_SCORE_PADME,
+                  label: 'PADME',
+                  pointsRestants: BUSINESS.SEUIL_SCORE_PADME - score,
+                }
+              : {
+                  seuil: 90,
+                  label: 'Plafond maximum',
+                  pointsRestants: Math.max(0, 90 - score),
+                },
       },
     };
   }
@@ -159,7 +201,8 @@ export class ScoreService {
     const gainMensuelBase = ancienneteMois < 10 ? 2 : 0; // ancienneté capped à 10 mois
     const gainMensuelTotal = gainMensuelBase + 1; // +1 pt/mois d'amélioration potentielle
 
-    const projections: { mois: number; scoreEstime: number; etape: string }[] = [];
+    const projections: { mois: number; scoreEstime: number; etape: string }[] =
+      [];
     let scoreProjecte = score;
 
     for (let i = 1; i <= 24; i++) {
@@ -167,15 +210,21 @@ export class ScoreService {
       projections.push({ mois: i, scoreEstime: scoreProjecte, etape: '' });
     }
 
-    const moisPour60 = score >= BUSINESS.SEUIL_SCORE_MICRO_CREDIT
-      ? 0
-      : projections.find((p) => p.scoreEstime >= BUSINESS.SEUIL_SCORE_MICRO_CREDIT)?.mois ?? -1;
-    const moisPour70 = score >= BUSINESS.SEUIL_SCORE_PADME
-      ? 0
-      : projections.find((p) => p.scoreEstime >= BUSINESS.SEUIL_SCORE_PADME)?.mois ?? -1;
-    const moisPour90 = score >= 90
-      ? 0
-      : projections.find((p) => p.scoreEstime >= 90)?.mois ?? -1;
+    const moisPour60 =
+      score >= BUSINESS.SEUIL_SCORE_MICRO_CREDIT
+        ? 0
+        : (projections.find(
+            (p) => p.scoreEstime >= BUSINESS.SEUIL_SCORE_MICRO_CREDIT,
+          )?.mois ?? -1);
+    const moisPour70 =
+      score >= BUSINESS.SEUIL_SCORE_PADME
+        ? 0
+        : (projections.find((p) => p.scoreEstime >= BUSINESS.SEUIL_SCORE_PADME)
+            ?.mois ?? -1);
+    const moisPour90 =
+      score >= 90
+        ? 0
+        : (projections.find((p) => p.scoreEstime >= 90)?.mois ?? -1);
 
     return {
       succes: true,
@@ -188,17 +237,32 @@ export class ScoreService {
           microCredit: {
             seuil: BUSINESS.SEUIL_SCORE_MICRO_CREDIT,
             moisEstimes: moisPour60,
-            label: moisPour60 === 0 ? 'Déjà atteint ✅' : moisPour60 === -1 ? 'Augmentez votre activité' : `Dans ~${moisPour60} mois`,
+            label:
+              moisPour60 === 0
+                ? 'Déjà atteint ✅'
+                : moisPour60 === -1
+                  ? 'Augmentez votre activité'
+                  : `Dans ~${moisPour60} mois`,
           },
           padme: {
             seuil: BUSINESS.SEUIL_SCORE_PADME,
             moisEstimes: moisPour70,
-            label: moisPour70 === 0 ? 'Déjà atteint ✅' : moisPour70 === -1 ? 'Augmentez votre activité' : `Dans ~${moisPour70} mois`,
+            label:
+              moisPour70 === 0
+                ? 'Déjà atteint ✅'
+                : moisPour70 === -1
+                  ? 'Augmentez votre activité'
+                  : `Dans ~${moisPour70} mois`,
           },
           plafondMax: {
             seuil: 90,
             moisEstimes: moisPour90,
-            label: moisPour90 === 0 ? 'Déjà atteint ✅' : moisPour90 === -1 ? 'Augmentez votre activité' : `Dans ~${moisPour90} mois`,
+            label:
+              moisPour90 === 0
+                ? 'Déjà atteint ✅'
+                : moisPour90 === -1
+                  ? 'Augmentez votre activité'
+                  : `Dans ~${moisPour90} mois`,
           },
         },
       },
@@ -247,11 +311,15 @@ export class ScoreService {
       d.setMonth(d.getMonth() - m);
       const annee = d.getFullYear();
       const mois = d.getMonth();
-      const label = d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+      const label = d.toLocaleString('fr-FR', {
+        month: 'long',
+        year: 'numeric',
+      });
       const cleMois = `${annee}-${String(mois + 1).padStart(2, '0')}`;
 
       const nbJoursDansMois = new Date(annee, mois + 1, 0).getDate();
-      const estMoisCourant = mois === maintenant.getMonth() && annee === maintenant.getFullYear();
+      const estMoisCourant =
+        mois === maintenant.getMonth() && annee === maintenant.getFullYear();
       const jourMax = estMoisCourant ? maintenant.getDate() : nbJoursDansMois;
 
       const jours: { date: string; cotise: boolean; montant: number }[] = [];
@@ -286,10 +354,10 @@ export class ScoreService {
         resume: {
           totalJours,
           totalCotises,
-          tauxGlobal: totalJours > 0 ? Math.round((totalCotises / totalJours) * 100) : 0,
+          tauxGlobal:
+            totalJours > 0 ? Math.round((totalCotises / totalJours) * 100) : 0,
         },
       },
     };
   }
 }
-

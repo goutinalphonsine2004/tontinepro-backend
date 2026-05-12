@@ -1,4 +1,12 @@
-import { Controller, Get, Put, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { ParametresService } from './parametres.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -26,13 +34,20 @@ export class ParametresController {
 
   @Put(':cle')
   @Roles(Role.ADMIN)
-  set(@Param('cle') cle: string, @Body() dto: SetParametreDto, @UtilisateurCourant() u: { id: string }) {
+  set(
+    @Param('cle') cle: string,
+    @Body() dto: SetParametreDto,
+    @UtilisateurCourant() u: { id: string },
+  ) {
     return this.service.set(cle, dto, u.id);
   }
 
   @Post('maintenance')
   @Roles(Role.ADMIN)
-  maintenance(@Body() dto: MaintenanceDto, @UtilisateurCourant() u: { id: string }) {
+  maintenance(
+    @Body() dto: MaintenanceDto,
+    @UtilisateurCourant() u: { id: string },
+  ) {
     return this.service.maintenance(dto, u.id);
   }
 }

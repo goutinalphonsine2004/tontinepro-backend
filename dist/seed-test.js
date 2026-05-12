@@ -11,7 +11,7 @@ async function main() {
         create: {
             id: 'test-zone-id',
             nom: 'Abomey-Calavi',
-            ville: 'Abomey-Calavi'
+            ville: 'Abomey-Calavi',
         },
     });
     console.log('Zone Abomey-Calavi prête');

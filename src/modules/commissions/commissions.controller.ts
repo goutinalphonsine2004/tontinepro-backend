@@ -21,7 +21,10 @@ export class CommissionsController {
   }
 
   @Post('retirer')
-  retirer(@UtilisateurCourant() u: { id: string }, @Body() dto: RetirerCommissionDto) {
+  retirer(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: RetirerCommissionDto,
+  ) {
     return this.service.retirer(u.id, dto);
   }
 }

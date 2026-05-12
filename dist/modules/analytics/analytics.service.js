@@ -22,16 +22,35 @@ let AnalyticsService = class AnalyticsService {
     async kpis() {
         const [volumeTotal, totalClients, totalCollecteurs, revenusCommissions, microCredits, abonnements, creditsTermines, creditsTotal, eligiblesPADME, eligiblesMicroCredit,] = await Promise.all([
             this.prisma.transaction.aggregate({
-                where: { type: client_1.TypeTransaction.COTISATION, statut: client_1.StatutTransaction.SUCCES },
+                where: {
+                    type: client_1.TypeTransaction.COTISATION,
+                    statut: client_1.StatutTransaction.SUCCES,
+                },
                 _sum: { montant: true },
             }),
-            this.prisma.utilisateur.count({ where: { role: client_1.Role.CLIENT, statut: client_1.StatutCompte.ACTIF } }),
-            this.prisma.utilisateur.count({ where: { role: { in: [client_1.Role.AGENT, client_1.Role.INDEPENDANT] }, statut: client_1.StatutCompte.ACTIF } }),
+            this.prisma.utilisateur.count({
+                where: { role: client_1.Role.CLIENT, statut: client_1.StatutCompte.ACTIF },
+            }),
+            this.prisma.utilisateur.count({
+                where: {
+                    role: { in: [client_1.Role.AGENT, client_1.Role.INDEPENDANT] },
+                    statut: client_1.StatutCompte.ACTIF,
+                },
+            }),
             this.prisma.commission.aggregate({ _sum: { montant: true } }),
-            this.prisma.microCredit.findMany({ select: { montantTotal: true, montantPrincipal: true } }),
-            this.prisma.facturationAgent.aggregate({ where: { actif: true }, _sum: { fraisMensuels: true } }),
-            this.prisma.microCredit.count({ where: { statut: client_1.StatutCredit.TERMINE } }),
-            this.prisma.microCredit.count({ where: { statut: { not: client_1.StatutCredit.EN_ATTENTE } } }),
+            this.prisma.microCredit.findMany({
+                select: { montantTotal: true, montantPrincipal: true },
+            }),
+            this.prisma.facturationAgent.aggregate({
+                where: { actif: true },
+                _sum: { fraisMensuels: true },
+            }),
+            this.prisma.microCredit.count({
+                where: { statut: client_1.StatutCredit.TERMINE },
+            }),
+            this.prisma.microCredit.count({
+                where: { statut: { not: client_1.StatutCredit.EN_ATTENTE } },
+            }),
             this.prisma.scoreCredit.count({ where: { eligiblePADME: true } }),
             this.prisma.scoreCredit.count({ where: { eligibleMicroCredit: true } }),
         ]);
@@ -50,7 +69,9 @@ let AnalyticsService = class AnalyticsService {
                 revenusMicroCredits,
                 revenusAbonnements: abonnements._sum.fraisMensuels ?? 0,
                 revenusTotal,
-                tauxRemboursement: creditsTotal > 0 ? Math.round((creditsTermines / creditsTotal) * 100) : 100,
+                tauxRemboursement: creditsTotal > 0
+                    ? Math.round((creditsTermines / creditsTotal) * 100)
+                    : 100,
                 clientsEligiblesPADME: eligiblesPADME,
                 clientsEligiblesMicroCredit: eligiblesMicroCredit,
                 tauxCommission: `${business_constants_1.BUSINESS.TAUX_COMMISSION_COTISATION * 100}%`,
@@ -70,25 +91,34 @@ let AnalyticsService = class AnalyticsService {
         });
         const stats = zones.map((zone) => {
             const scores = zone.agents.flatMap((a) => a.clients.filter((c) => c.scoreCredit).map((c) => c.scoreCredit.score));
-            const scoreMoyen = scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 0;
+            const scoreMoyen = scores.length > 0
+                ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length)
+                : 0;
             return {
                 zone: zone.nom,
                 ville: zone.ville,
                 nbClients: scores.length,
                 scoreMoyen,
-                eligiblesPADME: scores.filter((s) => s >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME).length,
+                eligiblesPADME: scores.filter((s) => s >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME)
+                    .length,
             };
         });
         return { succes: true, message: 'Scores par zone.', donnees: stats };
     }
     async performanceCollecteurs() {
         const collecteurs = await this.prisma.utilisateur.findMany({
-            where: { role: { in: [client_1.Role.AGENT, client_1.Role.INDEPENDANT] }, statut: client_1.StatutCompte.ACTIF },
+            where: {
+                role: { in: [client_1.Role.AGENT, client_1.Role.INDEPENDANT] },
+                statut: client_1.StatutCompte.ACTIF,
+            },
             include: {
                 clients: {
                     include: {
                         transactions: {
-                            where: { type: client_1.TypeTransaction.COTISATION, statut: client_1.StatutTransaction.SUCCES },
+                            where: {
+                                type: client_1.TypeTransaction.COTISATION,
+                                statut: client_1.StatutTransaction.SUCCES,
+                            },
                             select: { montant: true },
                         },
                         scoreCredit: { select: { tauxRegularite: true } },
@@ -97,11 +127,16 @@ let AnalyticsService = class AnalyticsService {
                 commissions: { select: { montant: true } },
             },
         });
-        const perf = collecteurs.map((c) => {
-            const totalCotisations = c.clients.flatMap((cl) => cl.transactions).reduce((s, t) => s + t.montant, 0);
+        const perf = collecteurs
+            .map((c) => {
+            const totalCotisations = c.clients
+                .flatMap((cl) => cl.transactions)
+                .reduce((s, t) => s + t.montant, 0);
             const totalCommissions = c.commissions.reduce((s, com) => s + com.montant, 0);
             const tauxMoyenClients = c.clients.length > 0
-                ? c.clients.filter(cl => cl.scoreCredit).reduce((s, cl) => s + (cl.scoreCredit?.tauxRegularite ?? 0), 0) / c.clients.length
+                ? c.clients
+                    .filter((cl) => cl.scoreCredit)
+                    .reduce((s, cl) => s + (cl.scoreCredit?.tauxRegularite ?? 0), 0) / c.clients.length
                 : 0;
             return {
                 id: c.id,
@@ -113,8 +148,13 @@ let AnalyticsService = class AnalyticsService {
                 totalCommissions: Math.round(totalCommissions),
                 tauxRegulariteClients: Math.round(tauxMoyenClients * 100),
             };
-        }).sort((a, b) => b.totalCotisations - a.totalCotisations);
-        return { succes: true, message: `${perf.length} collecteur(s).`, donnees: perf };
+        })
+            .sort((a, b) => b.totalCotisations - a.totalCotisations);
+        return {
+            succes: true,
+            message: `${perf.length} collecteur(s).`,
+            donnees: perf,
+        };
     }
     async tauxRemboursement() {
         const [global, parCollecteur] = await Promise.all([
@@ -125,28 +165,41 @@ let AnalyticsService = class AnalyticsService {
             this.prisma.utilisateur.findMany({
                 where: { role: { in: [client_1.Role.AGENT, client_1.Role.INDEPENDANT] } },
                 select: {
-                    id: true, nom: true,
+                    id: true,
+                    nom: true,
                     clients: { select: { microCredits: { select: { statut: true } } } },
                 },
             }),
         ]);
         const totGlobal = global.reduce((s, g) => s + g._count, 0);
         const terminesGlobal = global.find((g) => g.statut === client_1.StatutCredit.TERMINE)?._count ?? 0;
-        const parColl = parCollecteur.map((col) => {
-            const credits = col.clients.flatMap((c) => c.microCredits).filter((cr) => cr.statut !== client_1.StatutCredit.EN_ATTENTE);
+        const parColl = parCollecteur
+            .map((col) => {
+            const credits = col.clients
+                .flatMap((c) => c.microCredits)
+                .filter((cr) => cr.statut !== client_1.StatutCredit.EN_ATTENTE);
             const termines = credits.filter((cr) => cr.statut === client_1.StatutCredit.TERMINE).length;
             return {
                 collecteur: col.nom,
                 total: credits.length,
                 termines,
-                taux: credits.length > 0 ? Math.round((termines / credits.length) * 100) : 100,
+                taux: credits.length > 0
+                    ? Math.round((termines / credits.length) * 100)
+                    : 100,
             };
-        }).filter((c) => c.total > 0);
+        })
+            .filter((c) => c.total > 0);
         return {
             succes: true,
             message: 'Taux de remboursement.',
             donnees: {
-                global: { total: totGlobal, termines: terminesGlobal, taux: totGlobal > 0 ? Math.round((terminesGlobal / totGlobal) * 100) : 100 },
+                global: {
+                    total: totGlobal,
+                    termines: terminesGlobal,
+                    taux: totGlobal > 0
+                        ? Math.round((terminesGlobal / totGlobal) * 100)
+                        : 100,
+                },
                 parCollecteur: parColl,
             },
         };
@@ -184,7 +237,11 @@ let AnalyticsService = class AnalyticsService {
             abonnements: Math.round(v.abonnements),
             total: Math.round(v.commissions + v.padme + v.abonnements),
         }));
-        return { succes: true, message: 'Évolution des revenus sur 6 mois.', donnees };
+        return {
+            succes: true,
+            message: 'Évolution des revenus sur 6 mois.',
+            donnees,
+        };
     }
     async clientsEligibles() {
         const [eligiblesPADME, eligiblesMicroCredit] = await Promise.all([
@@ -193,7 +250,9 @@ let AnalyticsService = class AnalyticsService {
                 include: {
                     utilisateur: { select: { id: true, nom: true, telephone: true } },
                     dossiersPADME: {
-                        where: { statut: { in: ['GENERE', 'VALIDE_ADMIN', 'SOUMIS_PADME'] } },
+                        where: {
+                            statut: { in: ['GENERE', 'VALIDE_ADMIN', 'SOUMIS_PADME'] },
+                        },
                         orderBy: { creeLe: 'desc' },
                         take: 1,
                     },
@@ -203,8 +262,12 @@ let AnalyticsService = class AnalyticsService {
                 where: { eligibleMicroCredit: true },
                 include: {
                     utilisateur: {
-                        select: { id: true, nom: true, telephone: true,
-                            microCredits: { where: { statut: client_1.StatutCredit.ACTIF }, take: 1 } },
+                        select: {
+                            id: true,
+                            nom: true,
+                            telephone: true,
+                            microCredits: { where: { statut: client_1.StatutCredit.ACTIF }, take: 1 },
+                        },
                     },
                 },
             }),
@@ -215,20 +278,26 @@ let AnalyticsService = class AnalyticsService {
             donnees: {
                 eligiblesPADME: {
                     total: eligiblesPADME.length,
-                    sansDossierEnCours: eligiblesPADME.filter((e) => e.dossiersPADME.length === 0)
+                    sansDossierEnCours: eligiblesPADME
+                        .filter((e) => e.dossiersPADME.length === 0)
                         .map((e) => ({ ...e.utilisateur, score: e.score })),
                 },
                 eligiblesMicroCredit: {
                     total: eligiblesMicroCredit.length,
                     sansCredit: eligiblesMicroCredit
                         .filter((e) => e.utilisateur.microCredits.length === 0)
-                        .map((e) => ({ id: e.utilisateur.id, nom: e.utilisateur.nom, telephone: e.utilisateur.telephone, score: e.score })),
+                        .map((e) => ({
+                        id: e.utilisateur.id,
+                        nom: e.utilisateur.nom,
+                        telephone: e.utilisateur.telephone,
+                        score: e.score,
+                    })),
                 },
             },
         };
     }
     async padme() {
-        const [parStatut, commissionsPADME, dossiersAcceptes, derniersDossiers,] = await Promise.all([
+        const [parStatut, commissionsPADME, dossiersAcceptes, derniersDossiers] = await Promise.all([
             this.prisma.dossierPADME.groupBy({
                 by: ['statut'],
                 _count: true,
@@ -238,18 +307,22 @@ let AnalyticsService = class AnalyticsService {
                 _sum: { montant: true },
                 _count: true,
             }),
-            this.prisma.dossierPADME.count({ where: { statut: client_1.StatutDossierPADME.ACCEPTE } }),
+            this.prisma.dossierPADME.count({
+                where: { statut: client_1.StatutDossierPADME.ACCEPTE },
+            }),
             this.prisma.dossierPADME.findMany({
                 take: 10,
                 orderBy: { creeLe: 'desc' },
-                include: { client: { select: { id: true, nom: true, telephone: true } } },
+                include: {
+                    client: { select: { id: true, nom: true, telephone: true } },
+                },
             }),
         ]);
         const total = parStatut.reduce((s, row) => s + row._count, 0);
         const statsParStatut = Object.fromEntries(parStatut.map((row) => [row.statut, row._count]));
-        const soumis = (statsParStatut[client_1.StatutDossierPADME.SOUMIS_PADME] ?? 0)
-            + (statsParStatut[client_1.StatutDossierPADME.ACCEPTE] ?? 0)
-            + (statsParStatut[client_1.StatutDossierPADME.REJETE] ?? 0);
+        const soumis = (statsParStatut[client_1.StatutDossierPADME.SOUMIS_PADME] ?? 0) +
+            (statsParStatut[client_1.StatutDossierPADME.ACCEPTE] ?? 0) +
+            (statsParStatut[client_1.StatutDossierPADME.REJETE] ?? 0);
         return {
             succes: true,
             message: 'Statistiques PADME.',
@@ -273,13 +346,19 @@ let AnalyticsService = class AnalyticsService {
             select: {
                 id: true,
                 nom: true,
-                scoreCredit: { select: { score: true, tauxRegularite: true, totalMois: true } },
+                scoreCredit: {
+                    select: { score: true, tauxRegularite: true, totalMois: true },
+                },
                 tontines: { select: { soldeActuel: true } },
                 transactions: {
                     where: { type: 'COTISATION', statut: 'SUCCES' },
                     select: { montantNet: true },
                 },
-                badges: { orderBy: { obtenuLe: 'desc' }, take: 1, select: { niveau: true } },
+                badges: {
+                    orderBy: { obtenuLe: 'desc' },
+                    take: 1,
+                    select: { niveau: true },
+                },
             },
         });
         const classes = clients
@@ -288,7 +367,9 @@ let AnalyticsService = class AnalyticsService {
             const totalCotise = c.transactions.reduce((s, tx) => s + tx.montantNet, 0);
             const score = c.scoreCredit?.score ?? 0;
             const regularite = c.scoreCredit?.tauxRegularite ?? 0;
-            const scoreClassement = Math.round(score * 0.4 + regularite * 100 * 0.3 + Math.min(totalCotise / 10000, 30));
+            const scoreClassement = Math.round(score * 0.4 +
+                regularite * 100 * 0.3 +
+                Math.min(totalCotise / 10000, 30));
             return {
                 id: c.id,
                 nom: c.nom,

@@ -47,7 +47,9 @@ export class MicroCreditsService {
 
     return {
       succes: true,
-      message: eligible ? 'Vous êtes éligible au micro-crédit.' : 'Score insuffisant pour un micro-crédit.',
+      message: eligible
+        ? 'Vous êtes éligible au micro-crédit.'
+        : 'Score insuffisant pour un micro-crédit.',
       donnees: {
         score,
         eligible,
@@ -72,7 +74,9 @@ export class MicroCreditsService {
   async demander(clientId: string, dto: DemanderCreditDto) {
     const [client, scoreCredit] = await Promise.all([
       this.prisma.utilisateur.findUnique({ where: { id: clientId } }),
-      this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+      this.prisma.scoreCredit.findUnique({
+        where: { utilisateurId: clientId },
+      }),
     ]);
     if (!client) throw new NotFoundException('Client introuvable');
 
@@ -110,8 +114,13 @@ export class MicroCreditsService {
     }
 
     const montantTotal = BUSINESS.calculerMontantTotal(dto.montantPrincipal);
-    const paiementJournalier = BUSINESS.calculerPaiementJournalier(montantTotal, DUREE_CREDIT_JOURS);
-    const dateEcheance = new Date(Date.now() + DUREE_CREDIT_JOURS * 24 * 60 * 60 * 1000);
+    const paiementJournalier = BUSINESS.calculerPaiementJournalier(
+      montantTotal,
+      DUREE_CREDIT_JOURS,
+    );
+    const dateEcheance = new Date(
+      Date.now() + DUREE_CREDIT_JOURS * 24 * 60 * 60 * 1000,
+    );
     const methode = dto.methodeConsentement ?? 'SMARTPHONE';
 
     const credit = await this.prisma.microCredit.create({
@@ -162,7 +171,9 @@ export class MicroCreditsService {
     // Normaliser le numéro (AT peut envoyer sans +)
     const telephone = dto.from.startsWith('+') ? dto.from : `+${dto.from}`;
 
-    const client = await this.prisma.utilisateur.findUnique({ where: { telephone } });
+    const client = await this.prisma.utilisateur.findUnique({
+      where: { telephone },
+    });
     if (!client) {
       return { succes: true, message: 'Numéro inconnu — ignoré' };
     }
@@ -178,7 +189,10 @@ export class MicroCreditsService {
     });
 
     if (!credit) {
-      return { succes: true, message: 'Aucune demande en attente de consentement' };
+      return {
+        succes: true,
+        message: 'Aucune demande en attente de consentement',
+      };
     }
 
     // Vérifier délai 30 minutes
@@ -190,7 +204,10 @@ export class MicroCreditsService {
         where: { id: credit.id },
         data: { statut: StatutCredit.EXPIRE },
       });
-      return { succes: true, message: 'Délai de consentement expiré — demande annulée' };
+      return {
+        succes: true,
+        message: 'Délai de consentement expiré — demande annulée',
+      };
     }
 
     const reponse = dto.text.trim();
@@ -202,7 +219,7 @@ export class MicroCreditsService {
       });
       await this.sms.envoyer(
         telephone,
-        'TontineBénin: Consentement reçu ✅. Votre dossier est transmis à l\'administration pour validation.',
+        "TontineBénin: Consentement reçu ✅. Votre dossier est transmis à l'administration pour validation.",
       );
       return { succes: true, message: 'Consentement enregistré.' };
     }
@@ -212,7 +229,10 @@ export class MicroCreditsService {
         where: { id: credit.id },
         data: { statut: StatutCredit.REFUSE },
       });
-      await this.sms.envoyer(telephone, 'TontineBénin: Vous avez refusé le micro-crédit. Aucun prélèvement ne sera effectué.');
+      await this.sms.envoyer(
+        telephone,
+        'TontineBénin: Vous avez refusé le micro-crédit. Aucun prélèvement ne sera effectué.',
+      );
       return { succes: true, message: 'Crédit refusé par le client.' };
     }
 
@@ -227,18 +247,28 @@ export class MicroCreditsService {
     ]);
 
     if (!credit) throw new NotFoundException('Micro-crédit introuvable');
-    if (credit.clientId !== clientId) throw new ForbiddenException('Accès refusé');
+    if (credit.clientId !== clientId)
+      throw new ForbiddenException('Accès refusé');
     if (credit.statut !== StatutCredit.EN_ATTENTE) {
-      throw new BadRequestException({ message: 'Ce crédit ne peut plus être confirmé', code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: 'Ce crédit ne peut plus être confirmé',
+        code: 'STATUT_INVALIDE',
+      });
     }
     if (credit.consentementObtenu) {
-      throw new BadRequestException({ message: 'Consentement déjà donné', code: 'DEJA_CONSENTI' });
+      throw new BadRequestException({
+        message: 'Consentement déjà donné',
+        code: 'DEJA_CONSENTI',
+      });
     }
     if (!client?.pinHash) throw new BadRequestException('PIN non configuré');
 
     const pinValide = await bcrypt.compare(dto.pin, client.pinHash);
     if (!pinValide) {
-      throw new BadRequestException({ message: 'PIN incorrect', code: 'PIN_INCORRECT' });
+      throw new BadRequestException({
+        message: 'PIN incorrect',
+        code: 'PIN_INCORRECT',
+      });
     }
 
     await this.prisma.microCredit.update({
@@ -248,7 +278,8 @@ export class MicroCreditsService {
 
     return {
       succes: true,
-      message: 'Consentement confirmé avec PIN. Dossier transmis à l\'administration.',
+      message:
+        "Consentement confirmé avec PIN. Dossier transmis à l'administration.",
     };
   }
 
@@ -257,7 +288,9 @@ export class MicroCreditsService {
     const credits = await this.prisma.microCredit.findMany({
       where: { statut: StatutCredit.EN_ATTENTE, consentementObtenu: true },
       include: {
-        client: { select: { id: true, nom: true, telephone: true, kycVerifie: true } },
+        client: {
+          select: { id: true, nom: true, telephone: true, kycVerifie: true },
+        },
       },
       orderBy: { creeLe: 'asc' },
     });
@@ -283,7 +316,10 @@ export class MicroCreditsService {
       });
     }
     if (credit.statut !== StatutCredit.EN_ATTENTE) {
-      throw new BadRequestException({ message: 'Ce crédit n\'est plus en attente', code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: "Ce crédit n'est plus en attente",
+        code: 'STATUT_INVALIDE',
+      });
     }
 
     // Décaissement via KKiaPay
@@ -295,7 +331,10 @@ export class MicroCreditsService {
     });
 
     if (!transfert.succes) {
-      throw new BadRequestException({ message: 'Échec du décaissement KKiaPay', code: 'DECAISSEMENT_ECHOUE' });
+      throw new BadRequestException({
+        message: 'Échec du décaissement KKiaPay',
+        code: 'DECAISSEMENT_ECHOUE',
+      });
     }
 
     await this.prisma.microCredit.update({
@@ -311,7 +350,11 @@ export class MicroCreditsService {
     return {
       succes: true,
       message: `Micro-crédit de ${credit.montantPrincipal} FCFA décaissé vers ${credit.client.nom}.`,
-      donnees: { creditId, refKKiaPay: transfert.refKKiaPay, montantDecaisse: credit.montantPrincipal },
+      donnees: {
+        creditId,
+        refKKiaPay: transfert.refKKiaPay,
+        montantDecaisse: credit.montantPrincipal,
+      },
     };
   }
 
@@ -323,7 +366,10 @@ export class MicroCreditsService {
     });
     if (!credit) throw new NotFoundException('Micro-crédit introuvable');
     if (credit.statut !== StatutCredit.EN_ATTENTE) {
-      throw new BadRequestException({ message: 'Ce crédit ne peut plus être refusé', code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: 'Ce crédit ne peut plus être refusé',
+        code: 'STATUT_INVALIDE',
+      });
     }
 
     await this.prisma.microCredit.update({
@@ -346,14 +392,21 @@ export class MicroCreditsService {
       include: { _count: { select: { remboursements: true } } },
       orderBy: { creeLe: 'desc' },
     });
-    return { succes: true, message: `${credits.length} crédit(s).`, donnees: credits };
+    return {
+      succes: true,
+      message: `${credits.length} crédit(s).`,
+      donnees: credits,
+    };
   }
 
   // ─── GET /micro-credits/:id/remboursements ────────
   async remboursements(creditId: string, clientId: string) {
-    const credit = await this.prisma.microCredit.findUnique({ where: { id: creditId } });
+    const credit = await this.prisma.microCredit.findUnique({
+      where: { id: creditId },
+    });
     if (!credit) throw new NotFoundException('Micro-crédit introuvable');
-    if (credit.clientId !== clientId) throw new ForbiddenException('Accès refusé');
+    if (credit.clientId !== clientId)
+      throw new ForbiddenException('Accès refusé');
 
     const rembList = await this.prisma.remboursementCredit.findMany({
       where: { microCreditId: creditId },

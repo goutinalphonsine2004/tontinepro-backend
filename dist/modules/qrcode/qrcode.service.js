@@ -27,12 +27,19 @@ let QrcodeService = class QrcodeService {
                 code: 'ROLE_INSUFFISANT',
             });
         }
-        let qr = await this.prisma.qRCodeCollecteur.findUnique({ where: { collecteurId: utilisateurId } });
+        let qr = await this.prisma.qRCodeCollecteur.findUnique({
+            where: { collecteurId: utilisateurId },
+        });
         if (!qr || qr.expireLe < new Date()) {
             const expireLe = new Date(Date.now() + DUREE_QR_MS);
             qr = await this.prisma.qRCodeCollecteur.upsert({
                 where: { collecteurId: utilisateurId },
-                create: { collecteurId: utilisateurId, codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
+                create: {
+                    collecteurId: utilisateurId,
+                    codeQR: (0, crypto_1.randomUUID)(),
+                    expireLe,
+                    actif: true,
+                },
                 update: { codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
             });
         }
@@ -43,16 +50,32 @@ let QrcodeService = class QrcodeService {
             where: { codeQR: code },
             include: {
                 collecteur: {
-                    select: { id: true, nom: true, telephone: true, role: true, kycVerifie: true, statut: true },
+                    select: {
+                        id: true,
+                        nom: true,
+                        telephone: true,
+                        role: true,
+                        kycVerifie: true,
+                        statut: true,
+                    },
                 },
             },
         });
         if (!qr)
-            throw new common_1.NotFoundException({ message: 'QR code inconnu', code: 'QR_INVALIDE' });
+            throw new common_1.NotFoundException({
+                message: 'QR code inconnu',
+                code: 'QR_INVALIDE',
+            });
         if (!qr.actif)
-            throw new common_1.BadRequestException({ message: 'QR code désactivé', code: 'QR_DESACTIVE' });
+            throw new common_1.BadRequestException({
+                message: 'QR code désactivé',
+                code: 'QR_DESACTIVE',
+            });
         if (qr.expireLe < new Date()) {
-            throw new common_1.BadRequestException({ message: 'QR code expiré', code: 'QR_EXPIRE' });
+            throw new common_1.BadRequestException({
+                message: 'QR code expiré',
+                code: 'QR_EXPIRE',
+            });
         }
         return {
             succes: true,
@@ -68,15 +91,27 @@ let QrcodeService = class QrcodeService {
         if (!agent)
             throw new common_1.NotFoundException('Agent introuvable');
         if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT].includes(agent.role)) {
-            throw new common_1.BadRequestException({ message: 'Cet utilisateur n\'est pas un collecteur', code: 'ROLE_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: "Cet utilisateur n'est pas un collecteur",
+                code: 'ROLE_INVALIDE',
+            });
         }
         const expireLe = new Date(Date.now() + DUREE_QR_MS);
         const qr = await this.prisma.qRCodeCollecteur.upsert({
             where: { collecteurId: agentId },
-            create: { collecteurId: agentId, codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
+            create: {
+                collecteurId: agentId,
+                codeQR: (0, crypto_1.randomUUID)(),
+                expireLe,
+                actif: true,
+            },
             update: { codeQR: (0, crypto_1.randomUUID)(), expireLe, actif: true },
         });
-        return { succes: true, message: `QR code régénéré pour ${agent.nom}.`, donnees: qr };
+        return {
+            succes: true,
+            message: `QR code régénéré pour ${agent.nom}.`,
+            donnees: qr,
+        };
     }
 };
 exports.QrcodeService = QrcodeService;

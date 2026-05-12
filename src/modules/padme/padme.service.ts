@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role, StatutDossierPADME } from '@prisma/client';
 import { readFile } from 'fs/promises';
 import { basename, join, normalize } from 'path';
@@ -28,7 +33,11 @@ export class PadmeService {
       include: { scoreCredit: { select: { score: true } } },
       orderBy: { creeLe: 'desc' },
     });
-    return { succes: true, message: `${dossiers.length} dossier(s) PADME.`, donnees: dossiers };
+    return {
+      succes: true,
+      message: `${dossiers.length} dossier(s) PADME.`,
+      donnees: dossiers,
+    };
   }
 
   // ─── GET /padme/tous (Admin) ───────────────────────
@@ -41,7 +50,9 @@ export class PadmeService {
       this.prisma.dossierPADME.findMany({
         where,
         include: {
-          client: { select: { id: true, nom: true, telephone: true, kycVerifie: true } },
+          client: {
+            select: { id: true, nom: true, telephone: true, kycVerifie: true },
+          },
           scoreCredit: { select: { score: true, tauxRegularite: true } },
         },
         skip,
@@ -53,7 +64,12 @@ export class PadmeService {
     return {
       succes: true,
       message: `${total} dossier(s) PADME.`,
-      donnees: { dossiers, total, page: dto.page ?? 1, pages: Math.ceil(total / (dto.limite ?? 20)) },
+      donnees: {
+        dossiers,
+        total,
+        page: dto.page ?? 1,
+        pages: Math.ceil(total / (dto.limite ?? 20)),
+      },
     };
   }
 
@@ -62,7 +78,15 @@ export class PadmeService {
     const dossier = await this.prisma.dossierPADME.findUnique({
       where: { id: dossierId },
       include: {
-        client: { select: { id: true, nom: true, telephone: true, kycVerifie: true, creeLe: true } },
+        client: {
+          select: {
+            id: true,
+            nom: true,
+            telephone: true,
+            kycVerifie: true,
+            creeLe: true,
+          },
+        },
         scoreCredit: true,
       },
     });
@@ -103,10 +127,15 @@ export class PadmeService {
 
   // ─── PUT /padme/:id/valider (Admin) ───────────────
   async valider(dossierId: string, adminId: string) {
-    const dossier = await this.prisma.dossierPADME.findUnique({ where: { id: dossierId } });
+    const dossier = await this.prisma.dossierPADME.findUnique({
+      where: { id: dossierId },
+    });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     if (dossier.statut !== StatutDossierPADME.GENERE) {
-      throw new BadRequestException({ message: `Statut actuel: ${dossier.statut}. Attendu: GENERE`, code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: `Statut actuel: ${dossier.statut}. Attendu: GENERE`,
+        code: 'STATUT_INVALIDE',
+      });
     }
 
     const maj = await this.prisma.dossierPADME.update({
@@ -114,8 +143,16 @@ export class PadmeService {
       data: { statut: StatutDossierPADME.VALIDE_ADMIN, examineLE: new Date() },
     });
 
-    await this.journaliser(adminId, 'PADME_VALIDE', `Dossier ${dossierId} validé par Admin`);
-    return { succes: true, message: 'Dossier PADME validé par Admin.', donnees: maj };
+    await this.journaliser(
+      adminId,
+      'PADME_VALIDE',
+      `Dossier ${dossierId} validé par Admin`,
+    );
+    return {
+      succes: true,
+      message: 'Dossier PADME validé par Admin.',
+      donnees: maj,
+    };
   }
 
   // ─── PUT /padme/:id/soumettre (Admin) ─────────────
@@ -126,7 +163,10 @@ export class PadmeService {
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     if (dossier.statut !== StatutDossierPADME.VALIDE_ADMIN) {
-      throw new BadRequestException({ message: `Statut actuel: ${dossier.statut}. Attendu: VALIDE_ADMIN`, code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: `Statut actuel: ${dossier.statut}. Attendu: VALIDE_ADMIN`,
+        code: 'STATUT_INVALIDE',
+      });
     }
 
     const maj = await this.prisma.dossierPADME.update({
@@ -134,14 +174,22 @@ export class PadmeService {
       data: { statut: StatutDossierPADME.SOUMIS_PADME, soumisLe: new Date() },
     });
 
-    await this.journaliser(adminId, 'PADME_SOUMIS', `Dossier ${dossierId} soumis à PADME`);
+    await this.journaliser(
+      adminId,
+      'PADME_SOUMIS',
+      `Dossier ${dossierId} soumis à PADME`,
+    );
 
     await this.sms.envoyer(
       dossier.client.telephone,
       `TontineBénin: Votre dossier PADME a été soumis. Vous serez contacté par PADME sous 72h. Score: ${dossier.scoreAuMoment}/100.`,
     );
 
-    return { succes: true, message: 'Dossier soumis à PADME. Client notifié.', donnees: maj };
+    return {
+      succes: true,
+      message: 'Dossier soumis à PADME. Client notifié.',
+      donnees: maj,
+    };
   }
 
   // ─── PUT /padme/:id/resultat (Admin) ──────────────
@@ -152,12 +200,16 @@ export class PadmeService {
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     if (dossier.statut !== StatutDossierPADME.SOUMIS_PADME) {
-      throw new BadRequestException({ message: `Statut actuel: ${dossier.statut}. Attendu: SOUMIS_PADME`, code: 'STATUT_INVALIDE' });
+      throw new BadRequestException({
+        message: `Statut actuel: ${dossier.statut}. Attendu: SOUMIS_PADME`,
+        code: 'STATUT_INVALIDE',
+      });
     }
 
-    const nouveauStatut = dto.statut === 'ACCEPTE'
-      ? StatutDossierPADME.ACCEPTE
-      : StatutDossierPADME.REJETE;
+    const nouveauStatut =
+      dto.statut === 'ACCEPTE'
+        ? StatutDossierPADME.ACCEPTE
+        : StatutDossierPADME.REJETE;
 
     const maj = await this.prisma.dossierPADME.update({
       where: { id: dossierId },
@@ -170,16 +222,27 @@ export class PadmeService {
       `Dossier ${dossierId} — ${dto.statut}${dto.montantAccorde ? ` — ${dto.montantAccorde} FCFA` : ''}`,
     );
 
-    if (dto.statut === 'ACCEPTE' && dto.montantAccorde && dto.montantAccorde > 0) {
+    if (
+      dto.statut === 'ACCEPTE' &&
+      dto.montantAccorde &&
+      dto.montantAccorde > 0
+    ) {
       const commission = BUSINESS.calculerCommissionPADME(dto.montantAccorde);
-      await this.prisma.commission.create({
-        data: {
-          agentId: adminId,
-          transactionId: (await this.prisma.transaction.findFirst({ where: { utilisateurId: dossier.client.id } }))?.id ?? adminId,
-          montant: commission,
-          type: 'PADME',
-        },
-      }).catch(() => {}); // Ne pas bloquer si pas de transaction
+      await this.prisma.commission
+        .create({
+          data: {
+            agentId: adminId,
+            transactionId:
+              (
+                await this.prisma.transaction.findFirst({
+                  where: { utilisateurId: dossier.client.id },
+                })
+              )?.id ?? adminId,
+            montant: commission,
+            type: 'PADME',
+          },
+        })
+        .catch(() => {}); // Ne pas bloquer si pas de transaction
 
       await this.sms.envoyer(
         dossier.client.telephone,

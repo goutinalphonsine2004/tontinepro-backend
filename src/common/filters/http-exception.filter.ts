@@ -25,7 +25,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = (b.message as string) || message;
         code = b.code as string | undefined;
       } else {
-        message = body as string;
+        message = body;
       }
     }
 

@@ -1,4 +1,9 @@
-import { PrismaClient, Role, StatutCompte, TypeCollecteur } from '@prisma/client';
+import {
+  PrismaClient,
+  Role,
+  StatutCompte,
+  TypeCollecteur,
+} from '@prisma/client';
 const prisma = new PrismaClient();
 const bcrypt = require('bcrypt');
 
@@ -9,10 +14,10 @@ async function main() {
   const zone = await prisma.zone.upsert({
     where: { id: 'test-zone-id' },
     update: {},
-    create: { 
+    create: {
       id: 'test-zone-id',
       nom: 'Abomey-Calavi',
-      ville: 'Abomey-Calavi'
+      ville: 'Abomey-Calavi',
     },
   });
   console.log('Zone Abomey-Calavi prête');

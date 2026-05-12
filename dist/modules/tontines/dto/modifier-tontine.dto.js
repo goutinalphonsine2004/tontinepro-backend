@@ -23,6 +23,13 @@ class ModifierTontineDto {
     montantJournalier;
     dateDeverrouillage;
     dateFin;
+    nbMembresMax;
+    montantParMembre;
+    cautionObligatoire;
+    montantCautionObligatoire;
+    penaliteRetardActive;
+    montantPenaliteRetard;
+    modeTirage;
 }
 exports.ModifierTontineDto = ModifierTontineDto;
 __decorate([
@@ -77,4 +84,48 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Date)
 ], ModifierTontineDto.prototype, "dateFin", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(2),
+    (0, class_validator_1.Max)(100),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], ModifierTontineDto.prototype, "nbMembresMax", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(100),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], ModifierTontineDto.prototype, "montantParMembre", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], ModifierTontineDto.prototype, "cautionObligatoire", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], ModifierTontineDto.prototype, "montantCautionObligatoire", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], ModifierTontineDto.prototype, "penaliteRetardActive", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], ModifierTontineDto.prototype, "montantPenaliteRetard", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.ModeTirageGroupe),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ModifierTontineDto.prototype, "modeTirage", void 0);
 //# sourceMappingURL=modifier-tontine.dto.js.map

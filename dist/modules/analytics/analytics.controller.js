@@ -24,13 +24,27 @@ let AnalyticsController = class AnalyticsController {
     constructor(service) {
         this.service = service;
     }
-    kpis() { return this.service.kpis(); }
-    scoreParZone() { return this.service.scoreParZone(); }
-    performanceCollecteurs() { return this.service.performanceCollecteurs(); }
-    tauxRemboursement() { return this.service.tauxRemboursement(); }
-    evolutionRevenus() { return this.service.evolutionRevenus(); }
-    clientsEligibles() { return this.service.clientsEligibles(); }
-    padme() { return this.service.padme(); }
+    kpis() {
+        return this.service.kpis();
+    }
+    scoreParZone() {
+        return this.service.scoreParZone();
+    }
+    performanceCollecteurs() {
+        return this.service.performanceCollecteurs();
+    }
+    tauxRemboursement() {
+        return this.service.tauxRemboursement();
+    }
+    evolutionRevenus() {
+        return this.service.evolutionRevenus();
+    }
+    clientsEligibles() {
+        return this.service.clientsEligibles();
+    }
+    padme() {
+        return this.service.padme();
+    }
     leaderboard(limite) {
         return this.service.leaderboard(limite);
     }

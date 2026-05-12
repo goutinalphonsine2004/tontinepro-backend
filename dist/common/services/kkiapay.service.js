@@ -34,7 +34,10 @@ let KkiapayService = KkiapayService_1 = class KkiapayService {
             };
         }
         this.logger.log(`[PROD] Initier paiement KKiaPay: ${params.montant} FCFA`);
-        return { refKKiaPay, paymentUrl: `https://api.kkiapay.me/pay/${refKKiaPay}` };
+        return {
+            refKKiaPay,
+            paymentUrl: `https://api.kkiapay.me/pay/${refKKiaPay}`,
+        };
     }
     async initierTransfert(params) {
         const refKKiaPay = `transfer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

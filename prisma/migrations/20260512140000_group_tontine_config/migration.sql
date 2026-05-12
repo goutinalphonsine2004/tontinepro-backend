@@ -1,0 +1,14 @@
+-- CreateEnum
+CREATE TYPE "ModeTirageGroupe" AS ENUM ('MANUEL', 'ALEATOIRE');
+
+-- AlterTable
+ALTER TABLE "Tontine"
+ADD COLUMN "qrInvitation" TEXT,
+ADD COLUMN "nbMembresMax" INTEGER,
+ADD COLUMN "montantParMembre" DOUBLE PRECISION,
+ADD COLUMN "cautionObligatoire" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "montantCautionObligatoire" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN "penaliteRetardActive" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "montantPenaliteRetard" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN "modeTirage" "ModeTirageGroupe" NOT NULL DEFAULT 'MANUEL',
+ADD COLUMN "tourActuel" INTEGER NOT NULL DEFAULT 1;

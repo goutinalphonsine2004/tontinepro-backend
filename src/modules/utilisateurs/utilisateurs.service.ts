@@ -16,10 +16,21 @@ import { ChangerRoleDto } from './dto/changer-role.dto';
 import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 
 const SELECT_PROFIL = {
-  id: true, telephone: true, nom: true, photo: true, role: true,
-  typeCollecteur: true, statut: true, empreinteActive: true,
-  kycVerifie: true, soldeCommission: true, montantCaution: true,
-  zoneId: true, collecteurId: true, creeLe: true, misAJourLe: true,
+  id: true,
+  telephone: true,
+  nom: true,
+  photo: true,
+  role: true,
+  typeCollecteur: true,
+  statut: true,
+  empreinteActive: true,
+  kycVerifie: true,
+  soldeCommission: true,
+  montantCaution: true,
+  zoneId: true,
+  collecteurId: true,
+  creeLe: true,
+  misAJourLe: true,
 };
 
 @Injectable()
@@ -43,7 +54,10 @@ export class UtilisateursService {
     }
     const u = await this.prisma.utilisateur.update({
       where: { id: utilisateurId },
-      data: { ...(dto.nom && { nom: dto.nom }), ...(dto.photo && { photo: dto.photo }) },
+      data: {
+        ...(dto.nom && { nom: dto.nom }),
+        ...(dto.photo && { photo: dto.photo }),
+      },
       select: SELECT_PROFIL,
     });
     return { succes: true, message: 'Profil mis à jour.', donnees: u };
@@ -51,22 +65,37 @@ export class UtilisateursService {
 
   // ─── PUT /utilisateurs/pin ─────────────────────────
   async changerPin(utilisateurId: string, dto: ChangerPinDto) {
-    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
-    if (!u || !u.pinHash) throw new NotFoundException('Utilisateur introuvable');
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+    });
+    if (!u || !u.pinHash)
+      throw new NotFoundException('Utilisateur introuvable');
 
     const valide = await bcrypt.compare(dto.ancienPin, u.pinHash);
     if (!valide) {
-      throw new BadRequestException({ message: 'Ancien PIN incorrect', code: 'PIN_INCORRECT' });
+      throw new BadRequestException({
+        message: 'Ancien PIN incorrect',
+        code: 'PIN_INCORRECT',
+      });
     }
     const pinHash = await bcrypt.hash(dto.nouveauPin, 10);
-    await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { pinHash } });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateurId },
+      data: { pinHash },
+    });
     return { succes: true, message: 'PIN modifié avec succès.' };
   }
 
   // ─── PUT /utilisateurs/empreinte ───────────────────
-  async configurerEmpreinte(utilisateurId: string, dto: ConfigurerEmpreinteDto) {
-    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
-    if (!u || !u.pinHash) throw new NotFoundException('Utilisateur introuvable');
+  async configurerEmpreinte(
+    utilisateurId: string,
+    dto: ConfigurerEmpreinteDto,
+  ) {
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+    });
+    if (!u || !u.pinHash)
+      throw new NotFoundException('Utilisateur introuvable');
     if (u.statut !== StatutCompte.ACTIF) {
       throw new ForbiddenException({
         message: 'Seul un compte actif peut modifier l’empreinte digitale',
@@ -76,7 +105,10 @@ export class UtilisateursService {
 
     const pinValide = await bcrypt.compare(dto.pin, u.pinHash);
     if (!pinValide) {
-      throw new BadRequestException({ message: 'PIN incorrect', code: 'PIN_INCORRECT' });
+      throw new BadRequestException({
+        message: 'PIN incorrect',
+        code: 'PIN_INCORRECT',
+      });
     }
 
     const utilisateur = await this.prisma.utilisateur.update({
@@ -87,7 +119,9 @@ export class UtilisateursService {
 
     return {
       succes: true,
-      message: dto.actif ? 'Empreinte digitale activée.' : 'Empreinte digitale désactivée.',
+      message: dto.actif
+        ? 'Empreinte digitale activée.'
+        : 'Empreinte digitale désactivée.',
       donnees: utilisateur,
     };
   }
@@ -110,32 +144,55 @@ export class UtilisateursService {
 
     const [total, utilisateurs] = await Promise.all([
       this.prisma.utilisateur.count({ where }),
-      this.prisma.utilisateur.findMany({ where, select: SELECT_PROFIL, skip, take: limite, orderBy: { creeLe: 'desc' } }),
+      this.prisma.utilisateur.findMany({
+        where,
+        select: SELECT_PROFIL,
+        skip,
+        take: limite,
+        orderBy: { creeLe: 'desc' },
+      }),
     ]);
 
     return {
       succes: true,
       message: `${total} utilisateur(s) trouvé(s).`,
-      donnees: { utilisateurs, total, page, limite, pages: Math.ceil(total / limite) },
+      donnees: {
+        utilisateurs,
+        total,
+        page,
+        limite,
+        pages: Math.ceil(total / limite),
+      },
     };
   }
 
   // ─── PUT /utilisateurs/:id/statut (Admin) ──────────
   async changerStatut(adminId: string, cibleId: string, dto: ChangerStatutDto) {
     if (adminId === cibleId) {
-      throw new ForbiddenException('Impossible de modifier votre propre statut');
+      throw new ForbiddenException(
+        'Impossible de modifier votre propre statut',
+      );
     }
-    const cible = await this.prisma.utilisateur.findUnique({ where: { id: cibleId }, select: { id: true, role: true } });
+    const cible = await this.prisma.utilisateur.findUnique({
+      where: { id: cibleId },
+      select: { id: true, role: true },
+    });
     if (!cible) throw new NotFoundException('Utilisateur introuvable');
     if (cible.role === Role.ADMIN) {
-      throw new ForbiddenException('Impossible de modifier le statut d\'un Admin');
+      throw new ForbiddenException(
+        "Impossible de modifier le statut d'un Admin",
+      );
     }
     const u = await this.prisma.utilisateur.update({
       where: { id: cibleId },
       data: { statut: dto.statut },
       select: SELECT_PROFIL,
     });
-    return { succes: true, message: `Statut mis à jour → ${dto.statut}.`, donnees: u };
+    return {
+      succes: true,
+      message: `Statut mis à jour → ${dto.statut}.`,
+      donnees: u,
+    };
   }
 
   // ─── PUT /utilisateurs/:id/role (Admin) ────────────
@@ -143,7 +200,10 @@ export class UtilisateursService {
     if (adminId === cibleId) {
       throw new ForbiddenException('Impossible de modifier votre propre rôle');
     }
-    const cible = await this.prisma.utilisateur.findUnique({ where: { id: cibleId }, select: { id: true } });
+    const cible = await this.prisma.utilisateur.findUnique({
+      where: { id: cibleId },
+      select: { id: true },
+    });
     if (!cible) throw new NotFoundException('Utilisateur introuvable');
 
     const u = await this.prisma.utilisateur.update({
@@ -151,21 +211,39 @@ export class UtilisateursService {
       data: { role: dto.role },
       select: SELECT_PROFIL,
     });
-    return { succes: true, message: `Rôle mis à jour → ${dto.role}.`, donnees: u };
+    return {
+      succes: true,
+      message: `Rôle mis à jour → ${dto.role}.`,
+      donnees: u,
+    };
   }
 
-  async assignerSuperviseur(adminId: string, agentId: string, superviseurId: string | null) {
-    const agent = await this.prisma.utilisateur.findUnique({ where: { id: agentId }, select: { id: true, role: true } });
+  async assignerSuperviseur(
+    adminId: string,
+    agentId: string,
+    superviseurId: string | null,
+  ) {
+    const agent = await this.prisma.utilisateur.findUnique({
+      where: { id: agentId },
+      select: { id: true, role: true },
+    });
     if (!agent) throw new NotFoundException('Agent introuvable');
     if (!([Role.AGENT, Role.INDEPENDANT] as any[]).includes(agent.role)) {
-      throw new BadRequestException('Seul un collecteur (Agent ou Indépendant) peut avoir un superviseur');
+      throw new BadRequestException(
+        'Seul un collecteur (Agent ou Indépendant) peut avoir un superviseur',
+      );
     }
 
     if (superviseurId) {
-      const superviseur = await this.prisma.utilisateur.findUnique({ where: { id: superviseurId }, select: { id: true, role: true } });
+      const superviseur = await this.prisma.utilisateur.findUnique({
+        where: { id: superviseurId },
+        select: { id: true, role: true },
+      });
       if (!superviseur) throw new NotFoundException('Superviseur introuvable');
       if (superviseur.role !== Role.SUPERVISEUR) {
-        throw new BadRequestException("L'utilisateur spécifié n'est pas un superviseur");
+        throw new BadRequestException(
+          "L'utilisateur spécifié n'est pas un superviseur",
+        );
       }
     }
 
@@ -176,7 +254,9 @@ export class UtilisateursService {
 
     return {
       succes: true,
-      message: superviseurId ? 'Superviseur assigné avec succès' : 'Superviseur retiré avec succès',
+      message: superviseurId
+        ? 'Superviseur assigné avec succès'
+        : 'Superviseur retiré avec succès',
     };
   }
 
@@ -187,20 +267,37 @@ export class UtilisateursService {
     sixMoisDate.setMonth(sixMoisDate.getMonth() - 5);
     sixMoisDate.setDate(1);
 
-    const [utilisateur, scoreCredit, badge, dernieresTransactions, creditActif, prochainsGroupes] = await Promise.all([
+    const [
+      utilisateur,
+      scoreCredit,
+      badge,
+      dernieresTransactions,
+      creditActif,
+      prochainsGroupes,
+    ] = await Promise.all([
       this.prisma.utilisateur.findUnique({
         where: { id: clientId },
         select: {
-          id: true, nom: true, photo: true, telephone: true,
+          id: true,
+          nom: true,
+          photo: true,
+          telephone: true,
           tontines: {
             select: {
-              id: true, nom: true, soldeActuel: true, objectifMontant: true,
-              montantJournalier: true, type: true, dateDeverrouillage: true,
+              id: true,
+              nom: true,
+              soldeActuel: true,
+              objectifMontant: true,
+              montantJournalier: true,
+              type: true,
+              dateDeverrouillage: true,
             },
           },
         },
       }),
-      this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+      this.prisma.scoreCredit.findUnique({
+        where: { utilisateurId: clientId },
+      }),
       this.prisma.badgeClient.findFirst({
         where: { clientId },
         orderBy: { obtenuLe: 'desc' },
@@ -213,11 +310,19 @@ export class UtilisateursService {
       }),
       this.prisma.microCredit.findFirst({
         where: { clientId, statut: { in: ['ACTIF'] as any } },
-        select: { id: true, montantRestant: true, paiementJournalier: true, joursPayes: true, totalJours: true },
+        select: {
+          id: true,
+          montantRestant: true,
+          paiementJournalier: true,
+          joursPayes: true,
+          totalJours: true,
+        },
       }),
       this.prisma.ordreTirage.findMany({
         where: { utilisateurId: clientId, aRecu: false },
-        include: { tontine: { select: { id: true, nom: true, montantJournalier: true } } },
+        include: {
+          tontine: { select: { id: true, nom: true, montantJournalier: true } },
+        },
         orderBy: { position: 'asc' },
         take: 1,
       }),
@@ -240,14 +345,19 @@ export class UtilisateursService {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(maintenant);
       d.setMonth(d.getMonth() - i);
-      graphique[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] = 0;
+      graphique[
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      ] = 0;
     }
     for (const tx of cotisations6mois) {
       const key = `${tx.creeLe.getFullYear()}-${String(tx.creeLe.getMonth() + 1).padStart(2, '0')}`;
       if (graphique[key] !== undefined) graphique[key] += tx.montantNet;
     }
 
-    const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+    const soldeTotal = utilisateur.tontines.reduce(
+      (s, t) => s + t.soldeActuel,
+      0,
+    );
     const score = scoreCredit?.score ?? 0;
     const eligibleMicroCredit = scoreCredit?.eligibleMicroCredit ?? false;
     const eligiblePADME = scoreCredit?.eligiblePADME ?? false;
@@ -256,11 +366,20 @@ export class UtilisateursService {
       succes: true,
       message: 'Tableau de bord récupéré.',
       donnees: {
-        profil: { id: utilisateur.id, nom: utilisateur.nom, photo: utilisateur.photo },
+        profil: {
+          id: utilisateur.id,
+          nom: utilisateur.nom,
+          photo: utilisateur.photo,
+        },
         soldeTotal,
         tontines: utilisateur.tontines,
-        graphiqueEpargne: Object.entries(graphique).map(([mois, montant]) => ({ mois, montant: Math.round(montant) })),
-        badge: badge ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe } : null,
+        graphiqueEpargne: Object.entries(graphique).map(([mois, montant]) => ({
+          mois,
+          montant: Math.round(montant),
+        })),
+        badge: badge
+          ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe }
+          : null,
         score: {
           valeur: score,
           eligibleMicroCredit,
@@ -281,46 +400,91 @@ export class UtilisateursService {
   // ─── DELETE /utilisateurs/:id (Admin) ──────────────
   async supprimerUtilisateur(adminId: string, cibleId: string) {
     if (adminId === cibleId) {
-      throw new ForbiddenException('Impossible de supprimer votre propre compte');
+      throw new ForbiddenException(
+        'Impossible de supprimer votre propre compte',
+      );
     }
     const cible = await this.prisma.utilisateur.findUnique({
       where: { id: cibleId },
-      include: { _count: { select: { transactions: true, tontines: true, microCredits: true } } },
+      include: {
+        _count: {
+          select: { transactions: true, tontines: true, microCredits: true },
+        },
+      },
     });
     if (!cible) throw new NotFoundException('Utilisateur introuvable');
     if (cible.role === Role.ADMIN) {
       throw new ForbiddenException('Impossible de supprimer un Admin');
     }
-    if (cible._count.transactions > 0 || cible._count.tontines > 0 || cible._count.microCredits > 0) {
+    if (
+      cible._count.transactions > 0 ||
+      cible._count.tontines > 0 ||
+      cible._count.microCredits > 0
+    ) {
       // Soft delete : bannissement (intégrité des données financières)
-      await this.prisma.utilisateur.update({ where: { id: cibleId }, data: { statut: StatutCompte.BANNI } });
-      return { succes: true, message: 'Compte banni (données financières conservées).', donnees: { id: cibleId } };
+      await this.prisma.utilisateur.update({
+        where: { id: cibleId },
+        data: { statut: StatutCompte.BANNI },
+      });
+      return {
+        succes: true,
+        message: 'Compte banni (données financières conservées).',
+        donnees: { id: cibleId },
+      };
     }
     await this.prisma.utilisateur.delete({ where: { id: cibleId } });
-    return { succes: true, message: 'Utilisateur supprimé définitivement.', donnees: { id: cibleId } };
+    return {
+      succes: true,
+      message: 'Utilisateur supprimé définitivement.',
+      donnees: { id: cibleId },
+    };
   }
 
   // ─── PUT /utilisateurs/:id/reassigner (Admin/Superviseur) ──
-  async reassignerClient(clientId: string, nouveauCollecteurId: string, adminId: string) {
+  async reassignerClient(
+    clientId: string,
+    nouveauCollecteurId: string,
+    adminId: string,
+  ) {
     const client = await this.prisma.utilisateur.findUnique({
       where: { id: clientId },
-      select: { id: true, nom: true, telephone: true, collecteurId: true, role: true },
+      select: {
+        id: true,
+        nom: true,
+        telephone: true,
+        collecteurId: true,
+        role: true,
+      },
     });
     if (!client) throw new NotFoundException('Client introuvable');
     if (client.role !== Role.CLIENT) {
-      throw new BadRequestException({ message: 'Seul un client peut être réassigné', code: 'ROLE_INVALIDE' });
+      throw new BadRequestException({
+        message: 'Seul un client peut être réassigné',
+        code: 'ROLE_INVALIDE',
+      });
     }
 
     const nouveauCollecteur = await this.prisma.utilisateur.findUnique({
       where: { id: nouveauCollecteurId },
       select: { id: true, nom: true, role: true, statut: true },
     });
-    if (!nouveauCollecteur) throw new NotFoundException('Nouveau collecteur introuvable');
-    if (!([Role.AGENT, Role.INDEPENDANT] as any[]).includes(nouveauCollecteur.role)) {
-      throw new BadRequestException({ message: 'Le destinataire doit être un collecteur', code: 'ROLE_INVALIDE' });
+    if (!nouveauCollecteur)
+      throw new NotFoundException('Nouveau collecteur introuvable');
+    if (
+      !([Role.AGENT, Role.INDEPENDANT] as any[]).includes(
+        nouveauCollecteur.role,
+      )
+    ) {
+      throw new BadRequestException({
+        message: 'Le destinataire doit être un collecteur',
+        code: 'ROLE_INVALIDE',
+      });
     }
     if (nouveauCollecteur.statut !== StatutCompte.ACTIF) {
-      throw new BadRequestException({ message: 'Collecteur inactif', code: 'COLLECTEUR_INACTIF' });
+      throw new BadRequestException({
+        message: 'Collecteur inactif',
+        code: 'COLLECTEUR_INACTIF',
+      });
     }
 
     const ancienCollecteurId = client.collecteurId;
@@ -366,11 +530,17 @@ export class UtilisateursService {
     // Vérifier le PIN avant suppression
     const pinValide = await bcrypt.compare(pin, utilisateur.pinHash ?? '');
     if (!pinValide) {
-      throw new UnauthorizedException({ message: 'Code PIN incorrect', code: 'PIN_INVALIDE' });
+      throw new UnauthorizedException({
+        message: 'Code PIN incorrect',
+        code: 'PIN_INVALIDE',
+      });
     }
 
     // Bloquer si solde non nul
-    const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+    const soldeTotal = utilisateur.tontines.reduce(
+      (s, t) => s + t.soldeActuel,
+      0,
+    );
     if (soldeTotal > 0) {
       throw new BadRequestException({
         message: `Impossible de supprimer votre compte : vous avez ${soldeTotal} FCFA de solde. Faites d'abord un retrait.`,
@@ -384,7 +554,8 @@ export class UtilisateursService {
     });
     if (creditActif) {
       throw new BadRequestException({
-        message: 'Impossible de supprimer votre compte : vous avez un micro-crédit en cours.',
+        message:
+          'Impossible de supprimer votre compte : vous avez un micro-crédit en cours.',
         code: 'CREDIT_ACTIF',
       });
     }
@@ -394,13 +565,19 @@ export class UtilisateursService {
     if (aHistorique) {
       await this.prisma.utilisateur.update({
         where: { id: clientId },
-        data: { statut: StatutCompte.BANNI, nom: '[Compte supprimé]', telephone: `DELETED_${clientId}` },
+        data: {
+          statut: StatutCompte.BANNI,
+          nom: '[Compte supprimé]',
+          telephone: `DELETED_${clientId}`,
+        },
       });
-      return { succes: true, message: 'Compte supprimé. Vos données financières sont anonymisées.' };
+      return {
+        succes: true,
+        message: 'Compte supprimé. Vos données financières sont anonymisées.',
+      };
     }
 
     await this.prisma.utilisateur.delete({ where: { id: clientId } });
     return { succes: true, message: 'Compte supprimé définitivement.' };
   }
 }
-

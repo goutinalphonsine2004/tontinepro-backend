@@ -2,7 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreerZoneDto } from './dto/creer-zone.dto';
 
-const SELECT_ZONE = { id: true, nom: true, ville: true, description: true, creeLe: true };
+const SELECT_ZONE = {
+  id: true,
+  nom: true,
+  ville: true,
+  description: true,
+  creeLe: true,
+};
 
 @Injectable()
 export class ZonesService {
@@ -10,7 +16,10 @@ export class ZonesService {
 
   // ─── POST /zones (Admin) ───────────────────────────
   async creer(dto: CreerZoneDto) {
-    const zone = await this.prisma.zone.create({ data: dto, select: SELECT_ZONE });
+    const zone = await this.prisma.zone.create({
+      data: dto,
+      select: SELECT_ZONE,
+    });
     return { succes: true, message: 'Zone créée.', donnees: zone };
   }
 
@@ -20,7 +29,11 @@ export class ZonesService {
       select: { ...SELECT_ZONE, _count: { select: { agents: true } } },
       orderBy: { ville: 'asc' },
     });
-    return { succes: true, message: `${zones.length} zone(s).`, donnees: zones };
+    return {
+      succes: true,
+      message: `${zones.length} zone(s).`,
+      donnees: zones,
+    };
   }
 
   // ─── PUT /zones/:id (Admin) ────────────────────────
@@ -41,12 +54,22 @@ export class ZonesService {
     if (!zone) throw new NotFoundException('Zone introuvable');
     const agents = await this.prisma.utilisateur.findMany({
       where: { zoneId },
-      select: { id: true, nom: true, telephone: true, role: true, statut: true, kycVerifie: true },
+      select: {
+        id: true,
+        nom: true,
+        telephone: true,
+        role: true,
+        statut: true,
+        kycVerifie: true,
+      },
     });
     return {
       succes: true,
       message: `${agents.length} agent(s) dans la zone "${zone.nom}".`,
-      donnees: { zone: { id: zone.id, nom: zone.nom, ville: zone.ville }, agents },
+      donnees: {
+        zone: { id: zone.id, nom: zone.nom, ville: zone.ville },
+        agents,
+      },
     };
   }
 
@@ -89,7 +112,10 @@ export class ZonesService {
       }),
       this.prisma.utilisateur.findMany({
         where: { collecteur: { zoneId } },
-        select: { id: true, scoreCredit: { select: { score: true, tauxRegularite: true } } },
+        select: {
+          id: true,
+          scoreCredit: { select: { score: true, tauxRegularite: true } },
+        },
       }),
       this.prisma.transaction.aggregate({
         where: {
@@ -103,8 +129,13 @@ export class ZonesService {
       }),
     ]);
 
-    const scores = clients.filter((c) => c.scoreCredit).map((c) => c.scoreCredit!.score);
-    const scoreMoyen = scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 0;
+    const scores = clients
+      .filter((c) => c.scoreCredit)
+      .map((c) => c.scoreCredit!.score);
+    const scoreMoyen =
+      scores.length > 0
+        ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length)
+        : 0;
 
     return {
       succes: true,
@@ -125,10 +156,15 @@ export class ZonesService {
   async heatmap() {
     const zones = await this.prisma.zone.findMany({
       select: {
-        id: true, nom: true, ville: true, superviseurId: true,
+        id: true,
+        nom: true,
+        ville: true,
+        superviseurId: true,
         agents: {
           select: {
-            id: true, role: true, statut: true,
+            id: true,
+            role: true,
+            statut: true,
             clients: {
               select: {
                 transactions: {
@@ -145,11 +181,25 @@ export class ZonesService {
 
     const donnees = zones.map((zone) => {
       const clients = zone.agents.flatMap((a) => a.clients);
-      const volumeTotal = clients.flatMap((c) => c.transactions).reduce((s, tx) => s + tx.montant, 0);
-      const scores = clients.filter((c) => c.scoreCredit).map((c) => c.scoreCredit!.score);
-      const scoreMoyen = scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 0;
-      const eligiblesPADME = clients.filter((c) => c.scoreCredit?.eligiblePADME).length;
-      const activite = volumeTotal > 1_000_000 ? 'HAUTE' : volumeTotal > 200_000 ? 'MOYENNE' : 'FAIBLE';
+      const volumeTotal = clients
+        .flatMap((c) => c.transactions)
+        .reduce((s, tx) => s + tx.montant, 0);
+      const scores = clients
+        .filter((c) => c.scoreCredit)
+        .map((c) => c.scoreCredit!.score);
+      const scoreMoyen =
+        scores.length > 0
+          ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length)
+          : 0;
+      const eligiblesPADME = clients.filter(
+        (c) => c.scoreCredit?.eligiblePADME,
+      ).length;
+      const activite =
+        volumeTotal > 1_000_000
+          ? 'HAUTE'
+          : volumeTotal > 200_000
+            ? 'MOYENNE'
+            : 'FAIBLE';
 
       return {
         id: zone.id,

@@ -1,4 +1,11 @@
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class DemanderCreditDto {
@@ -8,7 +15,9 @@ export class DemanderCreditDto {
   montantPrincipal!: number;
 
   @IsString()
-  @IsIn(['SMARTPHONE', 'SMS'], { message: 'methodeConsentement: SMARTPHONE ou SMS' })
+  @IsIn(['SMARTPHONE', 'SMS'], {
+    message: 'methodeConsentement: SMARTPHONE ou SMS',
+  })
   @IsOptional()
   methodeConsentement?: string = 'SMARTPHONE';
 

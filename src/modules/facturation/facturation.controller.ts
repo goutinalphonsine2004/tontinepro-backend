@@ -18,7 +18,10 @@ export class FacturationController {
   }
 
   @Post('payer-abonnement')
-  payerAbonnement(@UtilisateurCourant() u: { id: string }, @Body() dto: PayerAbonnementDto) {
+  payerAbonnement(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: PayerAbonnementDto,
+  ) {
     return this.service.payerAbonnement(u.id, dto);
   }
 

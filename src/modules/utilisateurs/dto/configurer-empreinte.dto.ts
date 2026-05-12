@@ -1,4 +1,10 @@
-import { IsBoolean, IsNotEmpty, IsString, Length, Matches } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class ConfigurerEmpreinteDto {
   @IsBoolean({ message: 'Le champ actif doit être un booléen' })

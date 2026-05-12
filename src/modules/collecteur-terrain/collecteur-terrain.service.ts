@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role, StatutCompte } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
@@ -22,10 +27,16 @@ export class CollecteurTerrainService {
     });
     if (!agent) throw new NotFoundException('Agent introuvable');
     if (!([Role.AGENT, Role.INDEPENDANT] as Role[]).includes(agent.role)) {
-      throw new ForbiddenException({ message: 'Seuls les collecteurs peuvent faire un check-in', code: 'ROLE_INSUFFISANT' });
+      throw new ForbiddenException({
+        message: 'Seuls les collecteurs peuvent faire un check-in',
+        code: 'ROLE_INSUFFISANT',
+      });
     }
     if (agent.statut !== StatutCompte.ACTIF) {
-      throw new ForbiddenException({ message: 'Compte non actif', code: 'COMPTE_INACTIF' });
+      throw new ForbiddenException({
+        message: 'Compte non actif',
+        code: 'COMPTE_INACTIF',
+      });
     }
 
     // Récupérer la position GPS du client
@@ -35,7 +46,10 @@ export class CollecteurTerrainService {
     });
     if (!client) throw new NotFoundException('Client introuvable');
     if (client.collecteurId !== agentId) {
-      throw new ForbiddenException({ message: 'Ce client n\'appartient pas à votre portefeuille', code: 'ACCES_REFUSE' });
+      throw new ForbiddenException({
+        message: "Ce client n'appartient pas à votre portefeuille",
+        code: 'ACCES_REFUSE',
+      });
     }
 
     // Calcul de la distance via formule de Haversine
@@ -60,7 +74,11 @@ export class CollecteurTerrainService {
       message: estValide
         ? `Check-in validé pour ${client.nom} ✅`
         : `Check-in refusé : vous êtes trop loin du client (${Math.round(distance)}m > ${DISTANCE_MAX_METRES}m)`,
-      donnees: { presenceId: presence.id, distance: Math.round(distance), estValide },
+      donnees: {
+        presenceId: presence.id,
+        distance: Math.round(distance),
+        estValide,
+      },
     };
   }
 
@@ -73,7 +91,14 @@ export class CollecteurTerrainService {
         nom: true,
         telephone: true,
         kycVerifie: true,
-        tontines: { select: { soldeActuel: true, objectifMontant: true, montantJournalier: true }, take: 1 },
+        tontines: {
+          select: {
+            soldeActuel: true,
+            objectifMontant: true,
+            montantJournalier: true,
+          },
+          take: 1,
+        },
         scoreCredit: { select: { score: true, tauxRegularite: true } },
       },
       orderBy: { nom: 'asc' },
@@ -92,7 +117,9 @@ export class CollecteurTerrainService {
       select: { clientId: true },
     });
 
-    const clientsDejaVisites = new Set(visitesAujourdHui.map((v) => v.clientId));
+    const clientsDejaVisites = new Set(
+      visitesAujourdHui.map((v) => v.clientId),
+    );
 
     const donnees = clients.map((c) => ({
       id: c.id,
@@ -113,7 +140,11 @@ export class CollecteurTerrainService {
       message: `${clients.length} client(s) — ${nbVisites} visité(s), ${nbRestantes} restant(s)`,
       donnees: {
         clients: donnees,
-        stats: { total: clients.length, visites: nbVisites, restantes: nbRestantes },
+        stats: {
+          total: clients.length,
+          visites: nbVisites,
+          restantes: nbRestantes,
+        },
       },
     };
   }
@@ -133,7 +164,9 @@ export class CollecteurTerrainService {
       select: { clientId: true, latitude: true, longitude: true, creeLe: true },
     });
 
-    const positionsParClient = new Map(dernieresPresences.map((p) => [p.clientId, p]));
+    const positionsParClient = new Map(
+      dernieresPresences.map((p) => [p.clientId, p]),
+    );
 
     const donnees = clients.map((c) => {
       const pos = positionsParClient.get(c.id);
@@ -141,7 +174,13 @@ export class CollecteurTerrainService {
         id: c.id,
         nom: c.nom,
         telephone: c.telephone,
-        position: pos ? { latitude: pos.latitude, longitude: pos.longitude, dernierCheckIn: pos.creeLe } : null,
+        position: pos
+          ? {
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              dernierCheckIn: pos.creeLe,
+            }
+          : null,
       };
     });
 
@@ -178,41 +217,60 @@ export class CollecteurTerrainService {
   // ─── GET /collecteur/dashboard-independant ─────────
   async dashboardIndependant(agentId: string) {
     const maintenant = new Date();
-    const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+    const debutMois = new Date(
+      maintenant.getFullYear(),
+      maintenant.getMonth(),
+      1,
+    );
     const sixMoisDate = new Date(maintenant);
     sixMoisDate.setMonth(sixMoisDate.getMonth() - 5);
     sixMoisDate.setDate(1);
 
-    const [agent, clients, commissionsMois, abonnement, creditsClients] = await Promise.all([
-      this.prisma.utilisateur.findUnique({
-        where: { id: agentId },
-        select: { id: true, nom: true, telephone: true, role: true, soldeCommission: true },
-      }),
-      this.prisma.utilisateur.findMany({
-        where: { collecteurId: agentId, statut: StatutCompte.ACTIF },
-        select: {
-          id: true,
-          transactions: {
-            where: { type: 'COTISATION' as any, statut: 'SUCCES' as any, creeLe: { gte: debutMois } },
-            select: { montant: true },
+    const [agent, clients, commissionsMois, abonnement, creditsClients] =
+      await Promise.all([
+        this.prisma.utilisateur.findUnique({
+          where: { id: agentId },
+          select: {
+            id: true,
+            nom: true,
+            telephone: true,
+            role: true,
+            soldeCommission: true,
           },
-        },
-      }),
-      this.prisma.commission.aggregate({
-        where: { agentId, creeLe: { gte: debutMois } },
-        _sum: { montant: true },
-      }),
-      this.prisma.facturationAgent.findFirst({
-        where: { agentId },
-        orderBy: { creeLe: 'desc' },
-        select: { plan: true, actif: true, prochainPaiement: true },
-      }),
-      this.prisma.microCredit.findMany({
-        where: { clientId: { in: [] } }, // sera enrichi via clients ci-dessous
-        select: { montantPrincipal: true, montantTotal: true, montantRestant: true },
-        take: 0,
-      }),
-    ]);
+        }),
+        this.prisma.utilisateur.findMany({
+          where: { collecteurId: agentId, statut: StatutCompte.ACTIF },
+          select: {
+            id: true,
+            transactions: {
+              where: {
+                type: 'COTISATION' as any,
+                statut: 'SUCCES' as any,
+                creeLe: { gte: debutMois },
+              },
+              select: { montant: true },
+            },
+          },
+        }),
+        this.prisma.commission.aggregate({
+          where: { agentId, creeLe: { gte: debutMois } },
+          _sum: { montant: true },
+        }),
+        this.prisma.facturationAgent.findFirst({
+          where: { agentId },
+          orderBy: { creeLe: 'desc' },
+          select: { plan: true, actif: true, prochainPaiement: true },
+        }),
+        this.prisma.microCredit.findMany({
+          where: { clientId: { in: [] } }, // sera enrichi via clients ci-dessous
+          select: {
+            montantPrincipal: true,
+            montantTotal: true,
+            montantRestant: true,
+          },
+          take: 0,
+        }),
+      ]);
 
     if (!agent) throw new NotFoundException('Agent introuvable');
 
@@ -226,7 +284,9 @@ export class CollecteurTerrainService {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(maintenant);
       d.setMonth(d.getMonth() - i);
-      graphique[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`] = 0;
+      graphique[
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      ] = 0;
     }
     for (const c of commissionsParMois) {
       const key = `${c.creeLe.getFullYear()}-${String(c.creeLe.getMonth() + 1).padStart(2, '0')}`;
@@ -234,22 +294,42 @@ export class CollecteurTerrainService {
     }
 
     const clientsActifs = clients.length;
-    const nbClientsCotiseCeMois = clients.filter((c) => c.transactions.length > 0).length;
-    const tauxCollecteMois = clientsActifs > 0 ? Math.round((nbClientsCotiseCeMois / clientsActifs) * 100) : 0;
-    const interetsMicroCredits = creditsClients.reduce((s, c) => s + (c.montantTotal - c.montantPrincipal) * 0.1, 0);
+    const nbClientsCotiseCeMois = clients.filter(
+      (c) => c.transactions.length > 0,
+    ).length;
+    const tauxCollecteMois =
+      clientsActifs > 0
+        ? Math.round((nbClientsCotiseCeMois / clientsActifs) * 100)
+        : 0;
+    const interetsMicroCredits = creditsClients.reduce(
+      (s, c) => s + (c.montantTotal - c.montantPrincipal) * 0.1,
+      0,
+    );
 
     return {
       succes: true,
       message: 'Tableau de bord collecteur indépendant.',
       donnees: {
-        agent: { id: agent.id, nom: agent.nom, role: agent.role, soldeCommission: agent.soldeCommission },
+        agent: {
+          id: agent.id,
+          nom: agent.nom,
+          role: agent.role,
+          soldeCommission: agent.soldeCommission,
+        },
         clientsActifs,
         commissionsCeMois: commissionsMois._sum.montant ?? 0,
         tauxCollecteMois,
-        graphiqueRevenus: Object.entries(graphique).map(([mois, montant]) => ({ mois, montant: Math.round(montant) })),
+        graphiqueRevenus: Object.entries(graphique).map(([mois, montant]) => ({
+          mois,
+          montant: Math.round(montant),
+        })),
         revenutsMicroCredits: Math.round(interetsMicroCredits),
         abonnement: abonnement
-          ? { plan: abonnement.plan, actif: abonnement.actif, prochainPaiement: abonnement.prochainPaiement }
+          ? {
+              plan: abonnement.plan,
+              actif: abonnement.actif,
+              prochainPaiement: abonnement.prochainPaiement,
+            }
           : null,
       },
     };
@@ -263,7 +343,10 @@ export class CollecteurTerrainService {
     });
     if (!client) throw new NotFoundException('Client introuvable');
     if (client.collecteurId !== agentId) {
-      throw new ForbiddenException({ message: 'Ce client n\'est pas dans votre portefeuille', code: 'ACCES_REFUSE' });
+      throw new ForbiddenException({
+        message: "Ce client n'est pas dans votre portefeuille",
+        code: 'ACCES_REFUSE',
+      });
     }
 
     // Normaliser le numéro béninois (+229 ou 00229)
@@ -274,8 +357,12 @@ export class CollecteurTerrainService {
     return {
       succes: true,
       message: `Lien WhatsApp généré pour ${client.nom}.`,
-      donnees: { clientId: client.id, nom: client.nom, telephone: client.telephone, lienWhatsApp },
+      donnees: {
+        clientId: client.id,
+        nom: client.nom,
+        telephone: client.telephone,
+        lienWhatsApp,
+      },
     };
   }
 }
-

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -54,7 +62,10 @@ export class ZonesController {
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
   @Put(':id/superviseur')
-  assignerSuperviseur(@Param('id') id: string, @Body() body: { superviseurId: string }) {
+  assignerSuperviseur(
+    @Param('id') id: string,
+    @Body() body: { superviseurId: string },
+  ) {
     return this.service.assignerSuperviseur(id, body.superviseurId);
   }
 }

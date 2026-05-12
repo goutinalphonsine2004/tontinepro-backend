@@ -39,14 +39,20 @@ let SupportService = class SupportService {
         const article = await this.prisma.articleFAQ.findUnique({ where: { id } });
         if (!article)
             throw new common_1.NotFoundException('Article FAQ introuvable');
-        const maj = await this.prisma.articleFAQ.update({ where: { id }, data: dto });
+        const maj = await this.prisma.articleFAQ.update({
+            where: { id },
+            data: dto,
+        });
         return { succes: true, message: 'Article FAQ mis à jour.', donnees: maj };
     }
     async supprimerFAQ(id) {
         const article = await this.prisma.articleFAQ.findUnique({ where: { id } });
         if (!article)
             throw new common_1.NotFoundException('Article FAQ introuvable');
-        await this.prisma.articleFAQ.update({ where: { id }, data: { actif: false } });
+        await this.prisma.articleFAQ.update({
+            where: { id },
+            data: { actif: false },
+        });
         return { succes: true, message: 'Article désactivé.' };
     }
 };

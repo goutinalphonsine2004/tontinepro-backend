@@ -203,8 +203,8 @@ export declare class UtilisateursService {
                 id: string;
                 utilisateurId: string;
                 creeLe: Date;
-                aRecu: boolean;
                 position: number;
+                aRecu: boolean;
                 recuLe: Date | null;
                 montantRecu: number | null;
             };

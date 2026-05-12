@@ -49,7 +49,9 @@ let LitigesService = class LitigesService {
                 statut: client_1.StatutLitige.OUVERT,
             },
             include: {
-                transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+                transaction: {
+                    select: { id: true, montant: true, type: true, creeLe: true },
+                },
             },
         });
         return {
@@ -62,7 +64,9 @@ let LitigesService = class LitigesService {
         const litiges = await this.prisma.litige.findMany({
             where: { clientId },
             include: {
-                transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+                transaction: {
+                    select: { id: true, montant: true, type: true, creeLe: true },
+                },
             },
             orderBy: { creeLe: 'desc' },
         });
@@ -72,17 +76,23 @@ let LitigesService = class LitigesService {
         const skip = (page - 1) * limite;
         const [litiges, total] = await this.prisma.$transaction([
             this.prisma.litige.findMany({
-                where: { statut: { in: [client_1.StatutLitige.OUVERT, client_1.StatutLitige.EN_EXAMEN] } },
+                where: {
+                    statut: { in: [client_1.StatutLitige.OUVERT, client_1.StatutLitige.EN_EXAMEN] },
+                },
                 include: {
                     client: { select: { id: true, nom: true, telephone: true } },
-                    transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+                    transaction: {
+                        select: { id: true, montant: true, type: true, creeLe: true },
+                    },
                 },
                 orderBy: { creeLe: 'asc' },
                 skip,
                 take: limite,
             }),
             this.prisma.litige.count({
-                where: { statut: { in: [client_1.StatutLitige.OUVERT, client_1.StatutLitige.EN_EXAMEN] } },
+                where: {
+                    statut: { in: [client_1.StatutLitige.OUVERT, client_1.StatutLitige.EN_EXAMEN] },
+                },
             }),
         ]);
         return {
@@ -106,7 +116,11 @@ let LitigesService = class LitigesService {
             data: { statut: client_1.StatutLitige.EN_EXAMEN, resoluPar: adminId },
         });
         await this.sms.envoyer(litige.client.telephone, `TontineBénin: Votre litige est en cours d'examen par notre équipe. Nous reviendrons vers vous sous 48h.`);
-        return { succes: true, message: 'Litige pris en charge', donnees: { litige: litigeMaj } };
+        return {
+            succes: true,
+            message: 'Litige pris en charge',
+            donnees: { litige: litigeMaj },
+        };
     }
     async resoudre(litigeId, adminId, dto) {
         const litige = await this.prisma.litige.findUnique({
@@ -115,7 +129,8 @@ let LitigesService = class LitigesService {
         });
         if (!litige)
             throw new common_1.NotFoundException('Litige introuvable');
-        if (litige.statut === client_1.StatutLitige.RESOLU || litige.statut === client_1.StatutLitige.REJETE) {
+        if (litige.statut === client_1.StatutLitige.RESOLU ||
+            litige.statut === client_1.StatutLitige.REJETE) {
             throw new common_1.BadRequestException('Ce litige est déjà clôturé');
         }
         const litigeMaj = await this.prisma.litige.update({
@@ -128,7 +143,11 @@ let LitigesService = class LitigesService {
             },
         });
         await this.sms.envoyer(litige.client.telephone, `TontineBénin: ✅ Votre litige a été résolu. ${dto.resolution}`);
-        return { succes: true, message: 'Litige résolu avec succès', donnees: { litige: litigeMaj } };
+        return {
+            succes: true,
+            message: 'Litige résolu avec succès',
+            donnees: { litige: litigeMaj },
+        };
     }
     async rejeter(litigeId, adminId, dto) {
         const litige = await this.prisma.litige.findUnique({
@@ -137,7 +156,8 @@ let LitigesService = class LitigesService {
         });
         if (!litige)
             throw new common_1.NotFoundException('Litige introuvable');
-        if (litige.statut === client_1.StatutLitige.RESOLU || litige.statut === client_1.StatutLitige.REJETE) {
+        if (litige.statut === client_1.StatutLitige.RESOLU ||
+            litige.statut === client_1.StatutLitige.REJETE) {
             throw new common_1.BadRequestException('Ce litige est déjà clôturé');
         }
         const litigeMaj = await this.prisma.litige.update({
@@ -150,14 +170,20 @@ let LitigesService = class LitigesService {
             },
         });
         await this.sms.envoyer(litige.client.telephone, `TontineBénin: Votre litige a été rejeté. Motif: ${dto.motifRejet}. Pour toute question, contactez notre support.`);
-        return { succes: true, message: 'Litige rejeté', donnees: { litige: litigeMaj } };
+        return {
+            succes: true,
+            message: 'Litige rejeté',
+            donnees: { litige: litigeMaj },
+        };
     }
     async detail(litigeId, userId, role) {
         const litige = await this.prisma.litige.findUnique({
             where: { id: litigeId },
             include: {
                 client: { select: { id: true, nom: true, telephone: true } },
-                transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+                transaction: {
+                    select: { id: true, montant: true, type: true, creeLe: true },
+                },
                 commentaires: { orderBy: { creeLe: 'asc' } },
             },
         });
@@ -181,12 +207,24 @@ let LitigesService = class LitigesService {
             throw new common_1.ForbiddenException('Accès refusé au litige');
         }
         if (['RESOLU', 'REJETE'].includes(litige.statut)) {
-            throw new common_1.BadRequestException({ message: 'Impossible de commenter un litige clôturé', code: 'LITIGE_CLOTURE' });
+            throw new common_1.BadRequestException({
+                message: 'Impossible de commenter un litige clôturé',
+                code: 'LITIGE_CLOTURE',
+            });
         }
         const commentaire = await this.prisma.commentaireLitige.create({
-            data: { litigeId, auteurId, message: dto.message, pieceJointeUrl: dto.pieceJointeUrl },
+            data: {
+                litigeId,
+                auteurId,
+                message: dto.message,
+                pieceJointeUrl: dto.pieceJointeUrl,
+            },
         });
-        return { succes: true, message: 'Commentaire ajouté.', donnees: commentaire };
+        return {
+            succes: true,
+            message: 'Commentaire ajouté.',
+            donnees: commentaire,
+        };
     }
     async commentaires(litigeId, userId, role) {
         const litige = await this.prisma.litige.findUnique({
@@ -203,7 +241,11 @@ let LitigesService = class LitigesService {
             where: { litigeId },
             orderBy: { creeLe: 'asc' },
         });
-        return { succes: true, message: `${commentaires.length} commentaire(s).`, donnees: commentaires };
+        return {
+            succes: true,
+            message: `${commentaires.length} commentaire(s).`,
+            donnees: commentaires,
+        };
     }
 };
 exports.LitigesService = LitigesService;

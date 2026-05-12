@@ -13,7 +13,8 @@ export class AuditService {
 
     const where: Record<string, unknown> = {};
     if (dto.utilisateurId) where.utilisateurId = dto.utilisateurId;
-    if (dto.action) where.action = { contains: dto.action, mode: 'insensitive' };
+    if (dto.action)
+      where.action = { contains: dto.action, mode: 'insensitive' };
     if (dto.dateDebut || dto.dateFin) {
       where.creeLe = {
         ...(dto.dateDebut && { gte: new Date(dto.dateDebut) }),
@@ -39,7 +40,13 @@ export class AuditService {
     return {
       succes: true,
       message: `${total} journal(aux) d’audit.`,
-      donnees: { journaux, total, page, limite, pages: Math.ceil(total / limite) },
+      donnees: {
+        journaux,
+        total,
+        page,
+        limite,
+        pages: Math.ceil(total / limite),
+      },
     };
   }
 }

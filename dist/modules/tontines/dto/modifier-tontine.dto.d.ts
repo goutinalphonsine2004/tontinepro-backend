@@ -1,4 +1,4 @@
-import { FrequenceTontine, PolitiqueRetrait } from '@prisma/client';
+import { FrequenceTontine, ModeTirageGroupe, PolitiqueRetrait } from '@prisma/client';
 export declare class ModifierTontineDto {
     nom?: string;
     description?: string;
@@ -9,4 +9,11 @@ export declare class ModifierTontineDto {
     montantJournalier?: number;
     dateDeverrouillage?: Date;
     dateFin?: Date;
+    nbMembresMax?: number;
+    montantParMembre?: number;
+    cautionObligatoire?: boolean;
+    montantCautionObligatoire?: number;
+    penaliteRetardActive?: boolean;
+    montantPenaliteRetard?: number;
+    modeTirage?: ModeTirageGroupe;
 }

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -15,17 +23,26 @@ export class RetraitsController {
   constructor(private service: RetraitsService) {}
 
   @Post('demander')
-  demander(@UtilisateurCourant() u: { id: string }, @Body() dto: DemanderRetraitDto) {
+  demander(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: DemanderRetraitDto,
+  ) {
     return this.service.demanderOtp(u.id, dto);
   }
 
   @Post('demander-otp')
-  demanderOtp(@UtilisateurCourant() u: { id: string }, @Body() dto: DemanderRetraitDto) {
+  demanderOtp(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: DemanderRetraitDto,
+  ) {
     return this.service.demanderOtp(u.id, dto);
   }
 
   @Post('confirmer')
-  confirmer(@UtilisateurCourant() u: { id: string }, @Body() dto: ConfirmerRetraitDto) {
+  confirmer(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: ConfirmerRetraitDto,
+  ) {
     return this.service.confirmer(u.id, dto);
   }
 
@@ -51,7 +68,11 @@ export class RetraitsController {
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
   @Put(':id/rejeter')
-  rejeter(@Param('id') id: string, @UtilisateurCourant() u: { id: string }, @Body() dto: RejeterRetraitDto) {
+  rejeter(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: RejeterRetraitDto,
+  ) {
     return this.service.rejeter(id, u.id, dto);
   }
 }

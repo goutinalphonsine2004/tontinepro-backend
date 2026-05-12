@@ -1,4 +1,11 @@
-import { ForbiddenException, Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { Canal, TypeNotification } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from './sms.service';
@@ -28,7 +35,9 @@ export class NotificationsService {
     types: TypeNotif = 'TOUS',
     typeNotification: TypeNotification = TypeNotification.PAIEMENT_RECU,
   ) {
-    const rows = await this.prisma.$queryRaw<{ telephone: string; tokenPush: string | null; nom: string }[]>`
+    const rows = await this.prisma.$queryRaw<
+      { telephone: string; tokenPush: string | null; nom: string }[]
+    >`
       SELECT telephone, "tokenPush", nom FROM "Utilisateur" WHERE id = ${utilisateurId} LIMIT 1`;
     const user = rows[0] ?? null;
     if (!user) return;
@@ -36,14 +45,38 @@ export class NotificationsService {
     const preferences = await this.getPreferencesBrutes(utilisateurId);
     const resultats: Record<string, any> = {};
 
-    if ((types === 'TOUS' || types === 'SMS') && preferences.smsActif && user.telephone) {
+    if (
+      (types === 'TOUS' || types === 'SMS') &&
+      preferences.smsActif &&
+      user.telephone
+    ) {
       resultats.sms = await this.sms.envoyer(user.telephone, message);
-      await this.creerNotification(utilisateurId, typeNotification, titre, message, Canal.SMS);
+      await this.creerNotification(
+        utilisateurId,
+        typeNotification,
+        titre,
+        message,
+        Canal.SMS,
+      );
     }
 
-    if ((types === 'TOUS' || types === 'PUSH') && preferences.pushActif && user.tokenPush) {
-      resultats.push = await this.push.envoyerNotification(user.tokenPush, titre, message);
-      await this.creerNotification(utilisateurId, typeNotification, titre, message, Canal.PUSH);
+    if (
+      (types === 'TOUS' || types === 'PUSH') &&
+      preferences.pushActif &&
+      user.tokenPush
+    ) {
+      resultats.push = await this.push.envoyerNotification(
+        user.tokenPush,
+        titre,
+        message,
+      );
+      await this.creerNotification(
+        utilisateurId,
+        typeNotification,
+        titre,
+        message,
+        Canal.PUSH,
+      );
     }
 
     return resultats;
@@ -54,12 +87,15 @@ export class NotificationsService {
       telephones.map((tel) => this.sms.envoyer(tel, message)),
     );
     const succes = resultats.filter((r) => r.status === 'fulfilled').length;
-    this.logger.log(`[Notif groupe] ${succes}/${telephones.length} SMS envoyés`);
+    this.logger.log(
+      `[Notif groupe] ${succes}/${telephones.length} SMS envoyés`,
+    );
     return { succes, total: telephones.length };
   }
 
   async enregistrerTokenPush(utilisateurId: string, token: string) {
-    await this.prisma.$executeRaw`UPDATE "Utilisateur" SET "tokenPush" = ${token} WHERE id = ${utilisateurId}`;
+    await this.prisma
+      .$executeRaw`UPDATE "Utilisateur" SET "tokenPush" = ${token} WHERE id = ${utilisateurId}`;
     return { succes: true, message: 'Token push enregistré' };
   }
 
@@ -67,7 +103,10 @@ export class NotificationsService {
     const page = dto.page ?? 1;
     const limite = dto.limite ?? 20;
     const skip = (page - 1) * limite;
-    const where = { utilisateurId, ...(dto.lu !== undefined && { lu: dto.lu }) };
+    const where = {
+      utilisateurId,
+      ...(dto.lu !== undefined && { lu: dto.lu }),
+    };
 
     const [total, notifications] = await Promise.all([
       this.prisma.notification.count({ where }),
@@ -82,17 +121,31 @@ export class NotificationsService {
     return {
       succes: true,
       message: `${total} notification(s).`,
-      donnees: { notifications, total, page, limite, pages: Math.ceil(total / limite) },
+      donnees: {
+        notifications,
+        total,
+        page,
+        limite,
+        pages: Math.ceil(total / limite),
+      },
     };
   }
 
   async compterNonLues(utilisateurId: string) {
-    const total = await this.prisma.notification.count({ where: { utilisateurId, lu: false } });
-    return { succes: true, message: `${total} notification(s) non lue(s).`, donnees: { total } };
+    const total = await this.prisma.notification.count({
+      where: { utilisateurId, lu: false },
+    });
+    return {
+      succes: true,
+      message: `${total} notification(s) non lue(s).`,
+      donnees: { total },
+    };
   }
 
   async marquerLu(utilisateurId: string, notificationId: string) {
-    const notification = await this.prisma.notification.findUnique({ where: { id: notificationId } });
+    const notification = await this.prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
     if (!notification) throw new NotFoundException('Notification introuvable');
     if (notification.utilisateurId !== utilisateurId) {
       throw new ForbiddenException('Accès interdit à cette notification');
@@ -102,7 +155,11 @@ export class NotificationsService {
       where: { id: notificationId },
       data: { lu: true },
     });
-    return { succes: true, message: 'Notification marquée comme lue.', donnees: maj };
+    return {
+      succes: true,
+      message: 'Notification marquée comme lue.',
+      donnees: maj,
+    };
   }
 
   async toutMarquerLu(utilisateurId: string) {
@@ -110,15 +167,25 @@ export class NotificationsService {
       where: { utilisateurId, lu: false },
       data: { lu: true },
     });
-    return { succes: true, message: `${result.count} notification(s) marquée(s) comme lue(s).` };
+    return {
+      succes: true,
+      message: `${result.count} notification(s) marquée(s) comme lue(s).`,
+    };
   }
 
   async getPreferences(utilisateurId: string) {
     const preferences = await this.getPreferencesBrutes(utilisateurId);
-    return { succes: true, message: 'Préférences notifications récupérées.', donnees: preferences };
+    return {
+      succes: true,
+      message: 'Préférences notifications récupérées.',
+      donnees: preferences,
+    };
   }
 
-  async modifierPreferences(utilisateurId: string, dto: ModifierPreferencesNotificationDto) {
+  async modifierPreferences(
+    utilisateurId: string,
+    dto: ModifierPreferencesNotificationDto,
+  ) {
     const preferences = await this.prisma.preferenceNotification.upsert({
       where: { utilisateurId },
       create: {
@@ -132,7 +199,11 @@ export class NotificationsService {
       },
     });
 
-    return { succes: true, message: 'Préférences notifications mises à jour.', donnees: preferences };
+    return {
+      succes: true,
+      message: 'Préférences notifications mises à jour.',
+      donnees: preferences,
+    };
   }
 
   async envoyerAEquipe(agentId: string, titre: string, message: string) {
@@ -146,7 +217,12 @@ export class NotificationsService {
     });
 
     if (agent?.superviseurId) {
-      await this.envoyerAUtilisateur(agent.superviseurId, `[Équipe] ${titre}`, message, 'PUSH');
+      await this.envoyerAUtilisateur(
+        agent.superviseurId,
+        `[Équipe] ${titre}`,
+        message,
+        'PUSH',
+      );
     }
   }
 

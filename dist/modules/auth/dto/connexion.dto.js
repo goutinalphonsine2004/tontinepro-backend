@@ -20,7 +20,9 @@ exports.ConnexionDto = ConnexionDto;
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)({ message: 'Le numéro de téléphone est obligatoire' }),
-    (0, class_validator_1.Matches)(/^\+229\d{8,10}$/, { message: 'Numéro béninois invalide (ex: +2290141193597)' }),
+    (0, class_validator_1.Matches)(/^\+229\d{8,10}$/, {
+        message: 'Numéro béninois invalide (ex: +2290141193597)',
+    }),
     __metadata("design:type", String)
 ], ConnexionDto.prototype, "telephone", void 0);
 __decorate([

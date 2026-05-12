@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { SupportService } from './support.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -19,7 +29,16 @@ export class SupportController {
   @Post('faq')
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  creerFAQ(@Body() dto: { categorie: string; question: string; reponse: string; ordre?: number }, @UtilisateurCourant() u: { id: string }) {
+  creerFAQ(
+    @Body()
+    dto: {
+      categorie: string;
+      question: string;
+      reponse: string;
+      ordre?: number;
+    },
+    @UtilisateurCourant() u: { id: string },
+  ) {
     return this.service.creerFAQ(dto, u.id);
   }
 

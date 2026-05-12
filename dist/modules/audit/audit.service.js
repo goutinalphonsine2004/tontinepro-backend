@@ -49,7 +49,13 @@ let AuditService = class AuditService {
         return {
             succes: true,
             message: `${total} journal(aux) d’audit.`,
-            donnees: { journaux, total, page, limite, pages: Math.ceil(total / limite) },
+            donnees: {
+                journaux,
+                total,
+                page,
+                limite,
+                pages: Math.ceil(total / limite),
+            },
         };
     }
 };

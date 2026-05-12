@@ -37,7 +37,10 @@ export class DeviceFingerprintGuard implements CanActivate {
     });
 
     if (!session || !session.actif) {
-      throw new UnauthorizedException({ message: 'Session révoquée', code: 'SESSION_REVOQUEE' });
+      throw new UnauthorizedException({
+        message: 'Session révoquée',
+        code: 'SESSION_REVOQUEE',
+      });
     }
 
     const ipActuelle = this.extraireIP(req);
@@ -51,15 +54,13 @@ export class DeviceFingerprintGuard implements CanActivate {
 
     // Détecter changement de User-Agent
     const uaSuspect =
-      session.userAgent &&
-      uaActuel &&
-      session.userAgent !== uaActuel;
+      session.userAgent && uaActuel && session.userAgent !== uaActuel;
 
     if (ipSuspecte && uaSuspect) {
       this.logger.warn(
         `[DeviceFingerprint] Changement IP+UA suspect — session: ${session.id} | ` +
-        `IP connue: ${session.adresseIP} → actuelle: ${ipActuelle} | ` +
-        `UA connu: ${session.userAgent?.slice(0, 50)} → actuel: ${uaActuel.slice(0, 50)}`,
+          `IP connue: ${session.adresseIP} → actuelle: ${ipActuelle} | ` +
+          `UA connu: ${session.userAgent?.slice(0, 50)} → actuel: ${uaActuel.slice(0, 50)}`,
       );
 
       // Révoquer la session immédiatement
@@ -70,15 +71,18 @@ export class DeviceFingerprintGuard implements CanActivate {
 
       // Alerter le client par SMS
       if (session.utilisateur?.telephone) {
-        await this.sms.envoyer(
-          session.utilisateur.telephone,
-          `TontineBénin: 🚨 Alerte sécurité — connexion suspecte détectée depuis un nouvel appareil/réseau. ` +
-          `Si ce n'est pas vous, changez votre PIN immédiatement.`,
-        ).catch(() => {});
+        await this.sms
+          .envoyer(
+            session.utilisateur.telephone,
+            `TontineBénin: 🚨 Alerte sécurité — connexion suspecte détectée depuis un nouvel appareil/réseau. ` +
+              `Si ce n'est pas vous, changez votre PIN immédiatement.`,
+          )
+          .catch(() => {});
       }
 
       throw new UnauthorizedException({
-        message: 'Session révoquée pour raison de sécurité. Veuillez vous reconnecter.',
+        message:
+          'Session révoquée pour raison de sécurité. Veuillez vous reconnecter.',
         code: 'SESSION_SUSPECTE',
       });
     }
@@ -89,7 +93,8 @@ export class DeviceFingerprintGuard implements CanActivate {
   private extraireIP(req: Request): string | null {
     const forwarded = req.headers['x-forwarded-for'];
     if (Array.isArray(forwarded)) return forwarded[0] ?? null;
-    if (typeof forwarded === 'string') return forwarded.split(',')[0]?.trim() ?? null;
+    if (typeof forwarded === 'string')
+      return forwarded.split(',')[0]?.trim() ?? null;
     return req.ip ?? null;
   }
 

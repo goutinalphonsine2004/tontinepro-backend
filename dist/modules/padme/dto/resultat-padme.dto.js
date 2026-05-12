@@ -19,7 +19,9 @@ class ResultatPadmeDto {
 }
 exports.ResultatPadmeDto = ResultatPadmeDto;
 __decorate([
-    (0, class_validator_1.IsEnum)(['ACCEPTE', 'REJETE'], { message: 'statut doit être ACCEPTE ou REJETE' }),
+    (0, class_validator_1.IsEnum)(['ACCEPTE', 'REJETE'], {
+        message: 'statut doit être ACCEPTE ou REJETE',
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], ResultatPadmeDto.prototype, "statut", void 0);

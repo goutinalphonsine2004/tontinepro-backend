@@ -17,7 +17,9 @@ class PayerAbonnementDto {
 exports.PayerAbonnementDto = PayerAbonnementDto;
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(['STANDARD', 'PRO'], { message: 'Plan invalide. Valeurs: STANDARD, PRO' }),
+    (0, class_validator_1.IsIn)(['STANDARD', 'PRO'], {
+        message: 'Plan invalide. Valeurs: STANDARD, PRO',
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], PayerAbonnementDto.prototype, "plan", void 0);

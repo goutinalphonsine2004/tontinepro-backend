@@ -24,7 +24,10 @@ let CommissionsService = class CommissionsService {
     }
     async monSolde(utilisateurId, role) {
         if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT, client_1.Role.SUPERVISEUR].includes(role)) {
-            throw new common_1.ForbiddenException({ message: 'Seuls les collecteurs ont des commissions', code: 'ROLE_INSUFFISANT' });
+            throw new common_1.ForbiddenException({
+                message: 'Seuls les collecteurs ont des commissions',
+                code: 'ROLE_INSUFFISANT',
+            });
         }
         const u = await this.prisma.utilisateur.findUnique({
             where: { id: utilisateurId },
@@ -52,13 +55,23 @@ let CommissionsService = class CommissionsService {
             where: { agentId: utilisateurId },
             include: {
                 transaction: {
-                    select: { reference: true, montant: true, type: true, creeLe: true, utilisateur: { select: { nom: true } } },
+                    select: {
+                        reference: true,
+                        montant: true,
+                        type: true,
+                        creeLe: true,
+                        utilisateur: { select: { nom: true } },
+                    },
                 },
             },
             orderBy: { creeLe: 'desc' },
             take: 50,
         });
-        return { succes: true, message: `${commissions.length} commission(s).`, donnees: commissions };
+        return {
+            succes: true,
+            message: `${commissions.length} commission(s).`,
+            donnees: commissions,
+        };
     }
     async retirer(utilisateurId, dto) {
         const agent = await this.prisma.utilisateur.findUnique({
@@ -81,7 +94,10 @@ let CommissionsService = class CommissionsService {
             motif: 'Retrait commission TontineBénin',
         });
         if (!transfert.succes) {
-            throw new common_1.BadRequestException({ message: 'Échec du transfert', code: 'TRANSFERT_ECHOUE' });
+            throw new common_1.BadRequestException({
+                message: 'Échec du transfert',
+                code: 'TRANSFERT_ECHOUE',
+            });
         }
         await this.prisma.utilisateur.update({
             where: { id: utilisateurId },

@@ -25,7 +25,10 @@ let FacturationService = class FacturationService {
     }
     async monStatut(utilisateurId, role) {
         if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT].includes(role)) {
-            throw new common_1.BadRequestException({ message: 'Seuls les collecteurs ont une facturation', code: 'ROLE_INSUFFISANT' });
+            throw new common_1.BadRequestException({
+                message: 'Seuls les collecteurs ont une facturation',
+                code: 'ROLE_INSUFFISANT',
+            });
         }
         const facturation = await this.prisma.facturationAgent.findUnique({
             where: { agentId: utilisateurId },
@@ -43,9 +46,17 @@ let FacturationService = class FacturationService {
                     actif: true,
                 },
             });
-            return { succes: true, message: 'Facturation STANDARD initialisée.', donnees: fact };
+            return {
+                succes: true,
+                message: 'Facturation STANDARD initialisée.',
+                donnees: fact,
+            };
         }
-        return { succes: true, message: 'Statut de facturation récupéré.', donnees: facturation };
+        return {
+            succes: true,
+            message: 'Statut de facturation récupéré.',
+            donnees: facturation,
+        };
     }
     async payerAbonnement(utilisateurId, dto) {
         const montant = MONTANTS[dto.plan];
@@ -77,11 +88,16 @@ let FacturationService = class FacturationService {
         };
     }
     async upgrader(utilisateurId) {
-        const facturation = await this.prisma.facturationAgent.findUnique({ where: { agentId: utilisateurId } });
+        const facturation = await this.prisma.facturationAgent.findUnique({
+            where: { agentId: utilisateurId },
+        });
         if (!facturation)
-            throw new common_1.NotFoundException('Aucune facturation trouvée. Payez d\'abord un abonnement.');
+            throw new common_1.NotFoundException("Aucune facturation trouvée. Payez d'abord un abonnement.");
         if (facturation.plan === 'PRO') {
-            throw new common_1.BadRequestException({ message: 'Vous êtes déjà sur le plan PRO', code: 'DEJA_PRO' });
+            throw new common_1.BadRequestException({
+                message: 'Vous êtes déjà sur le plan PRO',
+                code: 'DEJA_PRO',
+            });
         }
         const prochainPaiement = new Date();
         prochainPaiement.setMonth(prochainPaiement.getMonth() + 1);
@@ -102,7 +118,9 @@ let FacturationService = class FacturationService {
     }
     async tous() {
         const facturations = await this.prisma.facturationAgent.findMany({
-            include: { agent: { select: { id: true, nom: true, telephone: true, role: true } } },
+            include: {
+                agent: { select: { id: true, nom: true, telephone: true, role: true } },
+            },
             orderBy: { prochainPaiement: 'asc' },
         });
         const totalMensuel = facturations.reduce((s, f) => s + f.fraisMensuels, 0);

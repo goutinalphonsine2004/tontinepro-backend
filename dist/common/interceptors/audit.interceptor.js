@@ -32,7 +32,9 @@ let AuditInterceptor = class AuditInterceptor {
         const methode = request.method?.toUpperCase() ?? 'UNKNOWN';
         const chemin = request.originalUrl ?? request.url ?? 'UNKNOWN';
         const utilisateurId = request.user?.id;
-        if (!utilisateurId || !METHODES_AUDITEES.has(methode) || this.doitIgnorer(chemin)) {
+        if (!utilisateurId ||
+            !METHODES_AUDITEES.has(methode) ||
+            this.doitIgnorer(chemin)) {
             return next.handle();
         }
         return next.handle().pipe((0, rxjs_1.tap)(() => {

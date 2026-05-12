@@ -21,7 +21,10 @@ function secretRefreshJwt(config: ConfigService) {
 }
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor(
     config: ConfigService,
     private prisma: PrismaService,
@@ -35,7 +38,8 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
   }
 
   async validate(req: Request, payload: JwtPayload) {
-    if (!payload?.sub) throw new UnauthorizedException('Refresh token invalide');
+    if (!payload?.sub)
+      throw new UnauthorizedException('Refresh token invalide');
     if (!payload.sid) throw new UnauthorizedException('Session invalide');
 
     const session = await this.prisma.sessionUtilisateur.findFirst({
@@ -47,10 +51,11 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       },
       select: { id: true },
     });
-    if (!session) throw new UnauthorizedException('Session expirée ou révoquée');
+    if (!session)
+      throw new UnauthorizedException('Session expirée ou révoquée');
 
     // Extraire le refresh token brut pour la vérification blacklist
-    const refreshTokenBrut = (req.body as any)?.refreshToken ?? null;
+    const refreshTokenBrut = req.body?.refreshToken ?? null;
 
     return {
       id: payload.sub,

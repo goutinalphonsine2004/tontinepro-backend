@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
 import { StatutLitige } from '@prisma/client';
@@ -32,7 +37,9 @@ export class LitigesService {
       },
     });
     if (litigeExistant) {
-      throw new BadRequestException('Un litige est déjà ouvert pour cette transaction');
+      throw new BadRequestException(
+        'Un litige est déjà ouvert pour cette transaction',
+      );
     }
 
     const litige = await this.prisma.litige.create({
@@ -43,13 +50,16 @@ export class LitigesService {
         statut: StatutLitige.OUVERT,
       },
       include: {
-        transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+        transaction: {
+          select: { id: true, montant: true, type: true, creeLe: true },
+        },
       },
     });
 
     return {
       succes: true,
-      message: 'Litige ouvert avec succès. Notre équipe va examiner votre dossier.',
+      message:
+        'Litige ouvert avec succès. Notre équipe va examiner votre dossier.',
       donnees: { litige },
     };
   }
@@ -58,7 +68,9 @@ export class LitigesService {
     const litiges = await this.prisma.litige.findMany({
       where: { clientId },
       include: {
-        transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+        transaction: {
+          select: { id: true, montant: true, type: true, creeLe: true },
+        },
       },
       orderBy: { creeLe: 'desc' },
     });
@@ -69,17 +81,23 @@ export class LitigesService {
     const skip = (page - 1) * limite;
     const [litiges, total] = await this.prisma.$transaction([
       this.prisma.litige.findMany({
-        where: { statut: { in: [StatutLitige.OUVERT, StatutLitige.EN_EXAMEN] } },
+        where: {
+          statut: { in: [StatutLitige.OUVERT, StatutLitige.EN_EXAMEN] },
+        },
         include: {
           client: { select: { id: true, nom: true, telephone: true } },
-          transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+          transaction: {
+            select: { id: true, montant: true, type: true, creeLe: true },
+          },
         },
         orderBy: { creeLe: 'asc' },
         skip,
         take: limite,
       }),
       this.prisma.litige.count({
-        where: { statut: { in: [StatutLitige.OUVERT, StatutLitige.EN_EXAMEN] } },
+        where: {
+          statut: { in: [StatutLitige.OUVERT, StatutLitige.EN_EXAMEN] },
+        },
       }),
     ]);
     return {
@@ -96,7 +114,9 @@ export class LitigesService {
     });
     if (!litige) throw new NotFoundException('Litige introuvable');
     if (litige.statut !== StatutLitige.OUVERT) {
-      throw new BadRequestException(`Ce litige est déjà en statut ${litige.statut}`);
+      throw new BadRequestException(
+        `Ce litige est déjà en statut ${litige.statut}`,
+      );
     }
 
     const litigeMaj = await this.prisma.litige.update({
@@ -109,7 +129,11 @@ export class LitigesService {
       `TontineBénin: Votre litige est en cours d'examen par notre équipe. Nous reviendrons vers vous sous 48h.`,
     );
 
-    return { succes: true, message: 'Litige pris en charge', donnees: { litige: litigeMaj } };
+    return {
+      succes: true,
+      message: 'Litige pris en charge',
+      donnees: { litige: litigeMaj },
+    };
   }
 
   async resoudre(litigeId: string, adminId: string, dto: ResoudreLitigeDto) {
@@ -118,7 +142,10 @@ export class LitigesService {
       include: { client: { select: { telephone: true, nom: true } } },
     });
     if (!litige) throw new NotFoundException('Litige introuvable');
-    if (litige.statut === StatutLitige.RESOLU || litige.statut === StatutLitige.REJETE) {
+    if (
+      litige.statut === StatutLitige.RESOLU ||
+      litige.statut === StatutLitige.REJETE
+    ) {
       throw new BadRequestException('Ce litige est déjà clôturé');
     }
 
@@ -137,7 +164,11 @@ export class LitigesService {
       `TontineBénin: ✅ Votre litige a été résolu. ${dto.resolution}`,
     );
 
-    return { succes: true, message: 'Litige résolu avec succès', donnees: { litige: litigeMaj } };
+    return {
+      succes: true,
+      message: 'Litige résolu avec succès',
+      donnees: { litige: litigeMaj },
+    };
   }
 
   async rejeter(litigeId: string, adminId: string, dto: RejeterLitigeDto) {
@@ -146,7 +177,10 @@ export class LitigesService {
       include: { client: { select: { telephone: true, nom: true } } },
     });
     if (!litige) throw new NotFoundException('Litige introuvable');
-    if (litige.statut === StatutLitige.RESOLU || litige.statut === StatutLitige.REJETE) {
+    if (
+      litige.statut === StatutLitige.RESOLU ||
+      litige.statut === StatutLitige.REJETE
+    ) {
       throw new BadRequestException('Ce litige est déjà clôturé');
     }
 
@@ -165,7 +199,11 @@ export class LitigesService {
       `TontineBénin: Votre litige a été rejeté. Motif: ${dto.motifRejet}. Pour toute question, contactez notre support.`,
     );
 
-    return { succes: true, message: 'Litige rejeté', donnees: { litige: litigeMaj } };
+    return {
+      succes: true,
+      message: 'Litige rejeté',
+      donnees: { litige: litigeMaj },
+    };
   }
 
   async detail(litigeId: string, userId: string, role: string) {
@@ -173,7 +211,9 @@ export class LitigesService {
       where: { id: litigeId },
       include: {
         client: { select: { id: true, nom: true, telephone: true } },
-        transaction: { select: { id: true, montant: true, type: true, creeLe: true } },
+        transaction: {
+          select: { id: true, montant: true, type: true, creeLe: true },
+        },
         commentaires: { orderBy: { creeLe: 'asc' } },
       },
     });
@@ -205,14 +245,26 @@ export class LitigesService {
       throw new ForbiddenException('Accès refusé au litige');
     }
     if (['RESOLU', 'REJETE'].includes(litige.statut)) {
-      throw new BadRequestException({ message: 'Impossible de commenter un litige clôturé', code: 'LITIGE_CLOTURE' });
+      throw new BadRequestException({
+        message: 'Impossible de commenter un litige clôturé',
+        code: 'LITIGE_CLOTURE',
+      });
     }
 
     const commentaire = await this.prisma.commentaireLitige.create({
-      data: { litigeId, auteurId, message: dto.message, pieceJointeUrl: dto.pieceJointeUrl },
+      data: {
+        litigeId,
+        auteurId,
+        message: dto.message,
+        pieceJointeUrl: dto.pieceJointeUrl,
+      },
     });
 
-    return { succes: true, message: 'Commentaire ajouté.', donnees: commentaire };
+    return {
+      succes: true,
+      message: 'Commentaire ajouté.',
+      donnees: commentaire,
+    };
   }
 
   // ─── GET /litiges/:id/commentaires ────────────────
@@ -233,6 +285,10 @@ export class LitigesService {
       orderBy: { creeLe: 'asc' },
     });
 
-    return { succes: true, message: `${commentaires.length} commentaire(s).`, donnees: commentaires };
+    return {
+      succes: true,
+      message: `${commentaires.length} commentaire(s).`,
+      donnees: commentaires,
+    };
   }
 }

@@ -1,10 +1,19 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { TontinesService } from './tontines.service';
 import { CreerTontineDto } from './dto/creer-tontine.dto';
 import { ModifierTontineDto } from './dto/modifier-tontine.dto';
 import { RejoindreTonitneDto } from './dto/rejoindre-tontine.dto';
+import { OrdreTirageDto } from './dto/ordre-tirage.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tontines')
@@ -28,7 +37,11 @@ export class TontinesController {
   }
 
   @Put(':id')
-  modifier(@Param('id') id: string, @UtilisateurCourant() u: { id: string }, @Body() dto: ModifierTontineDto) {
+  modifier(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: ModifierTontineDto,
+  ) {
     return this.service.modifier(id, u.id, dto);
   }
 
@@ -59,7 +72,11 @@ export class TontinesController {
 
   // ─── Membres & tirage ─────────────────────────────
   @Post(':id/rejoindre')
-  rejoindre(@Param('id') id: string, @UtilisateurCourant() u: { id: string }, @Body() dto: RejoindreTonitneDto) {
+  rejoindre(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: RejoindreTonitneDto,
+  ) {
     return this.service.rejoindre(id, u.id, dto);
   }
 
@@ -70,7 +87,11 @@ export class TontinesController {
   }
 
   @Post('rejoindre-code/:code')
-  rejoindreCode(@Param('code') code: string, @UtilisateurCourant() u: { id: string }, @Body() dto: RejoindreTonitneDto) {
+  rejoindreCode(
+    @Param('code') code: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: RejoindreTonitneDto,
+  ) {
     return this.service.rejoindreParCode(code, u.id, dto);
   }
 
@@ -84,9 +105,31 @@ export class TontinesController {
     return this.service.membres(id);
   }
 
+  @Get(':id/invitation')
+  invitation(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.invitation(id, u.id);
+  }
+
   @Get(':id/ordre-tirage')
   ordreTirage(@Param('id') id: string) {
     return this.service.ordreTirage(id);
+  }
+
+  @Post(':id/ordre-tirage/manuel')
+  definirOrdreTirage(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: OrdreTirageDto,
+  ) {
+    return this.service.definirOrdreTirage(id, u.id, dto.utilisateurIds);
+  }
+
+  @Post(':id/ordre-tirage/aleatoire')
+  randomiserOrdreTirage(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+  ) {
+    return this.service.randomiserOrdreTirage(id, u.id);
   }
 
   @Post(':id/distribuer')

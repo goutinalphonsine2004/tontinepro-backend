@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Header, Headers, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Headers,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
@@ -31,7 +43,10 @@ export class TransactionsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('historique')
-  historique(@UtilisateurCourant() u: { id: string }, @Query() filtres: FiltrerTransactionsDto) {
+  historique(
+    @UtilisateurCourant() u: { id: string },
+    @Query() filtres: FiltrerTransactionsDto,
+  ) {
     return this.service.historique(u.id, filtres);
   }
 

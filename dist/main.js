@@ -17,12 +17,15 @@ async function bootstrap() {
         transform: true,
     }));
     app.useGlobalFilters(new http_exception_filter_1.HttpExceptionFilter());
-    const corsOrigins = process.env.CORS_ORIGINS
-        ?.split(',')
+    const corsOrigins = process.env.CORS_ORIGINS?.split(',')
         .map((origin) => origin.trim())
         .filter(Boolean);
     app.enableCors({
-        origin: corsOrigins?.length ? corsOrigins : process.env.NODE_ENV === 'production' ? false : true,
+        origin: corsOrigins?.length
+            ? corsOrigins
+            : process.env.NODE_ENV === 'production'
+                ? false
+                : true,
         credentials: true,
     });
     const port = process.env.PORT ?? 3000;

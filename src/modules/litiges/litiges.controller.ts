@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
 import { LitigesService } from './litiges.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -44,14 +55,22 @@ export class LitigesController {
   @Put(':id/resoudre')
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  resoudre(@Param('id') id: string, @UtilisateurCourant() u: any, @Body() dto: ResoudreLitigeDto) {
+  resoudre(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: any,
+    @Body() dto: ResoudreLitigeDto,
+  ) {
     return this.service.resoudre(id, u.id, dto);
   }
 
   @Put(':id/rejeter')
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
-  rejeter(@Param('id') id: string, @UtilisateurCourant() u: any, @Body() dto: RejeterLitigeDto) {
+  rejeter(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: any,
+    @Body() dto: RejeterLitigeDto,
+  ) {
     return this.service.rejeter(id, u.id, dto);
   }
 

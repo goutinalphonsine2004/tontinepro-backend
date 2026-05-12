@@ -1,5 +1,6 @@
 import {
   IsDateString,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -9,7 +10,11 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { FrequenceTontine, PolitiqueRetrait } from '@prisma/client';
+import {
+  FrequenceTontine,
+  ModeTirageGroupe,
+  PolitiqueRetrait,
+} from '@prisma/client';
 
 export class ModifierTontineDto {
   @IsString()
@@ -54,4 +59,41 @@ export class ModifierTontineDto {
   @IsDateString()
   @IsOptional()
   dateFin?: Date;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(2)
+  @Max(100)
+  @IsOptional()
+  nbMembresMax?: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(100)
+  @IsOptional()
+  montantParMembre?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  cautionObligatoire?: boolean;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  montantCautionObligatoire?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  penaliteRetardActive?: boolean;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  montantPenaliteRetard?: number;
+
+  @IsEnum(ModeTirageGroupe)
+  @IsOptional()
+  modeTirage?: ModeTirageGroupe;
 }

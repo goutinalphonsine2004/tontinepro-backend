@@ -38,16 +38,17 @@ let DeviceFingerprintGuard = DeviceFingerprintGuard_1 = class DeviceFingerprintG
             },
         });
         if (!session || !session.actif) {
-            throw new common_1.UnauthorizedException({ message: 'Session révoquée', code: 'SESSION_REVOQUEE' });
+            throw new common_1.UnauthorizedException({
+                message: 'Session révoquée',
+                code: 'SESSION_REVOQUEE',
+            });
         }
         const ipActuelle = this.extraireIP(req);
         const uaActuel = req.headers['user-agent'] ?? '';
         const ipSuspecte = session.adresseIP &&
             ipActuelle &&
             !this.memeSubnet(session.adresseIP, ipActuelle);
-        const uaSuspect = session.userAgent &&
-            uaActuel &&
-            session.userAgent !== uaActuel;
+        const uaSuspect = session.userAgent && uaActuel && session.userAgent !== uaActuel;
         if (ipSuspecte && uaSuspect) {
             this.logger.warn(`[DeviceFingerprint] Changement IP+UA suspect — session: ${session.id} | ` +
                 `IP connue: ${session.adresseIP} → actuelle: ${ipActuelle} | ` +
@@ -57,8 +58,10 @@ let DeviceFingerprintGuard = DeviceFingerprintGuard_1 = class DeviceFingerprintG
                 data: { actif: false, revoqueLe: new Date(), refreshTokenHash: null },
             });
             if (session.utilisateur?.telephone) {
-                await this.sms.envoyer(session.utilisateur.telephone, `TontineBénin: 🚨 Alerte sécurité — connexion suspecte détectée depuis un nouvel appareil/réseau. ` +
-                    `Si ce n'est pas vous, changez votre PIN immédiatement.`).catch(() => { });
+                await this.sms
+                    .envoyer(session.utilisateur.telephone, `TontineBénin: 🚨 Alerte sécurité — connexion suspecte détectée depuis un nouvel appareil/réseau. ` +
+                    `Si ce n'est pas vous, changez votre PIN immédiatement.`)
+                    .catch(() => { });
             }
             throw new common_1.UnauthorizedException({
                 message: 'Session révoquée pour raison de sécurité. Veuillez vous reconnecter.',

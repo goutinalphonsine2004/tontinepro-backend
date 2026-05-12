@@ -1,8 +1,17 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ResultatPadmeDto {
-  @IsEnum(['ACCEPTE', 'REJETE'], { message: 'statut doit être ACCEPTE ou REJETE' })
+  @IsEnum(['ACCEPTE', 'REJETE'], {
+    message: 'statut doit être ACCEPTE ou REJETE',
+  })
   @IsNotEmpty()
   statut!: 'ACCEPTE' | 'REJETE';
 

@@ -1,5 +1,6 @@
 import {
   IsDateString,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -12,7 +13,12 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { FrequenceTontine, PolitiqueRetrait, TypeTontine } from '@prisma/client';
+import {
+  FrequenceTontine,
+  ModeTirageGroupe,
+  PolitiqueRetrait,
+  TypeTontine,
+} from '@prisma/client';
 
 export class CreerTontineDto {
   @IsString()
@@ -38,7 +44,9 @@ export class CreerTontineDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(28, { message: 'jourFixe doit être entre 1 et 28 (garanti dans tous les mois)' })
+  @Max(28, {
+    message: 'jourFixe doit être entre 1 et 28 (garanti dans tous les mois)',
+  })
   @IsOptional()
   jourFixe?: number;
 
@@ -65,4 +73,41 @@ export class CreerTontineDto {
   @IsUUID()
   @IsOptional()
   clientId?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(2, { message: 'Une tontine GROUPE doit avoir au moins 2 membres' })
+  @Max(100)
+  @IsOptional()
+  nbMembresMax?: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(100)
+  @IsOptional()
+  montantParMembre?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  cautionObligatoire?: boolean = false;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  montantCautionObligatoire?: number = 0;
+
+  @IsBoolean()
+  @IsOptional()
+  penaliteRetardActive?: boolean = false;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  montantPenaliteRetard?: number = 0;
+
+  @IsEnum(ModeTirageGroupe)
+  @IsOptional()
+  modeTirage?: ModeTirageGroupe = ModeTirageGroupe.MANUEL;
 }

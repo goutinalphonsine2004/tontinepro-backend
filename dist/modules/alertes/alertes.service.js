@@ -50,7 +50,13 @@ let AlertesService = class AlertesService {
         return {
             succes: true,
             message: `${total} alerte(s) système.`,
-            donnees: { alertes, total, page, limite, pages: Math.ceil(total / limite) },
+            donnees: {
+                alertes,
+                total,
+                page,
+                limite,
+                pages: Math.ceil(total / limite),
+            },
         };
     }
     async statistiques() {
@@ -73,17 +79,24 @@ let AlertesService = class AlertesService {
         };
     }
     async detail(id) {
-        const alerte = await this.prisma.alerteSysteme.findUnique({ where: { id } });
+        const alerte = await this.prisma.alerteSysteme.findUnique({
+            where: { id },
+        });
         if (!alerte)
             throw new common_1.NotFoundException('Alerte introuvable');
         return { succes: true, message: 'Alerte récupérée.', donnees: alerte };
     }
     async resoudre(id, adminId, dto) {
-        const alerte = await this.prisma.alerteSysteme.findUnique({ where: { id } });
+        const alerte = await this.prisma.alerteSysteme.findUnique({
+            where: { id },
+        });
         if (!alerte)
             throw new common_1.NotFoundException('Alerte introuvable');
         if (alerte.statut === 'RESOLUE') {
-            throw new common_1.BadRequestException({ message: 'Cette alerte est déjà résolue', code: 'ALERTE_DEJA_RESOLUE' });
+            throw new common_1.BadRequestException({
+                message: 'Cette alerte est déjà résolue',
+                code: 'ALERTE_DEJA_RESOLUE',
+            });
         }
         const metadata = this.ajouterResolutionMetadata(alerte.metadata, adminId, dto.commentaire);
         const maj = await this.prisma.alerteSysteme.update({
@@ -98,17 +111,26 @@ let AlertesService = class AlertesService {
             data: {
                 utilisateurId: adminId,
                 action: 'ALERTE_RESOLUE',
-                details: JSON.stringify({ alerteId: id, type: alerte.type, commentaire: dto.commentaire ?? null }),
+                details: JSON.stringify({
+                    alerteId: id,
+                    type: alerte.type,
+                    commentaire: dto.commentaire ?? null,
+                }),
             },
         });
         return { succes: true, message: 'Alerte résolue.', donnees: maj };
     }
     async rouvrir(id, adminId, dto) {
-        const alerte = await this.prisma.alerteSysteme.findUnique({ where: { id } });
+        const alerte = await this.prisma.alerteSysteme.findUnique({
+            where: { id },
+        });
         if (!alerte)
             throw new common_1.NotFoundException('Alerte introuvable');
         if (alerte.statut === 'OUVERTE') {
-            throw new common_1.BadRequestException({ message: 'Cette alerte est déjà ouverte', code: 'ALERTE_DEJA_OUVERTE' });
+            throw new common_1.BadRequestException({
+                message: 'Cette alerte est déjà ouverte',
+                code: 'ALERTE_DEJA_OUVERTE',
+            });
         }
         const metadata = this.ajouterReouvertureMetadata(alerte.metadata, adminId, dto.commentaire);
         const maj = await this.prisma.alerteSysteme.update({
@@ -123,7 +145,11 @@ let AlertesService = class AlertesService {
             data: {
                 utilisateurId: adminId,
                 action: 'ALERTE_ROUVERTE',
-                details: JSON.stringify({ alerteId: id, type: alerte.type, commentaire: dto.commentaire ?? null }),
+                details: JSON.stringify({
+                    alerteId: id,
+                    type: alerte.type,
+                    commentaire: dto.commentaire ?? null,
+                }),
             },
         });
         return { succes: true, message: 'Alerte rouverte.', donnees: maj };
@@ -131,13 +157,21 @@ let AlertesService = class AlertesService {
     ajouterResolutionMetadata(metadata, adminId, commentaire) {
         return JSON.stringify({
             ...this.parseMetadata(metadata),
-            resolution: { adminId, commentaire: commentaire ?? null, date: new Date().toISOString() },
+            resolution: {
+                adminId,
+                commentaire: commentaire ?? null,
+                date: new Date().toISOString(),
+            },
         });
     }
     ajouterReouvertureMetadata(metadata, adminId, commentaire) {
         return JSON.stringify({
             ...this.parseMetadata(metadata),
-            reouverture: { adminId, commentaire: commentaire ?? null, date: new Date().toISOString() },
+            reouverture: {
+                adminId,
+                commentaire: commentaire ?? null,
+                date: new Date().toISOString(),
+            },
         });
     }
     parseMetadata(metadata) {

@@ -3,11 +3,31 @@ import { NiveauBadge, Role, StatutCompte } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
 
-const REGLES_BADGES: { mois: number; regulariteMin: number; niveau: NiveauBadge; label: string }[] = [
-  { mois: 12, regulariteMin: 0.8, niveau: NiveauBadge.DIAMANT, label: 'DIAMANT 💎' },
-  { mois: 6,  regulariteMin: 0.7, niveau: NiveauBadge.OR,      label: 'OR 🥇' },
-  { mois: 3,  regulariteMin: 0.6, niveau: NiveauBadge.ARGENT,  label: 'ARGENT 🥈' },
-  { mois: 1,  regulariteMin: 0.5, niveau: NiveauBadge.BRONZE,  label: 'BRONZE 🥉' },
+const REGLES_BADGES: {
+  mois: number;
+  regulariteMin: number;
+  niveau: NiveauBadge;
+  label: string;
+}[] = [
+  {
+    mois: 12,
+    regulariteMin: 0.8,
+    niveau: NiveauBadge.DIAMANT,
+    label: 'DIAMANT 💎',
+  },
+  { mois: 6, regulariteMin: 0.7, niveau: NiveauBadge.OR, label: 'OR 🥇' },
+  {
+    mois: 3,
+    regulariteMin: 0.6,
+    niveau: NiveauBadge.ARGENT,
+    label: 'ARGENT 🥈',
+  },
+  {
+    mois: 1,
+    regulariteMin: 0.5,
+    niveau: NiveauBadge.BRONZE,
+    label: 'BRONZE 🥉',
+  },
 ];
 
 @Injectable()
@@ -88,12 +108,18 @@ export class BadgesService {
       orderBy: { obtenuLe: 'desc' },
     });
 
-    const niveauActuel = badges.length > 0
-      ? badges.reduce((best, b) => {
-          const ordre: Record<string, number> = { BRONZE: 1, ARGENT: 2, OR: 3, DIAMANT: 4 };
-          return ordre[b.niveau] > ordre[best.niveau] ? b : best;
-        })
-      : null;
+    const niveauActuel =
+      badges.length > 0
+        ? badges.reduce((best, b) => {
+            const ordre: Record<string, number> = {
+              BRONZE: 1,
+              ARGENT: 2,
+              OR: 3,
+              DIAMANT: 4,
+            };
+            return ordre[b.niveau] > ordre[best.niveau] ? b : best;
+          })
+        : null;
 
     return {
       succes: true,
@@ -130,6 +156,10 @@ export class BadgesService {
       ville: s.utilisateur.zone?.ville ?? 'N/A',
     }));
 
-    return { succes: true, message: 'Classement top 10 épargnants.', donnees: classement };
+    return {
+      succes: true,
+      message: 'Classement top 10 épargnants.',
+      donnees: classement,
+    };
   }
 }

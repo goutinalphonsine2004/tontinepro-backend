@@ -31,15 +31,19 @@ let TontinesService = TontinesService_1 = class TontinesService {
         this.notifications = notifications;
     }
     async creer(requesterId, dto) {
-        const requester = await this.prisma.utilisateur.findUnique({ where: { id: requesterId } });
+        const requester = await this.prisma.utilisateur.findUnique({
+            where: { id: requesterId },
+        });
         if (!requester)
             throw new common_1.NotFoundException('Requérant introuvable');
         let actualOwnerId = requesterId;
         if (dto.clientId && dto.clientId !== requesterId) {
             if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT].includes(requester.role)) {
-                throw new common_1.ForbiddenException("Seuls les collecteurs peuvent créer une tontine pour un tiers.");
+                throw new common_1.ForbiddenException('Seuls les collecteurs peuvent créer une tontine pour un tiers.');
             }
-            const client = await this.prisma.utilisateur.findUnique({ where: { id: dto.clientId } });
+            const client = await this.prisma.utilisateur.findUnique({
+                where: { id: dto.clientId },
+            });
             if (!client)
                 throw new common_1.NotFoundException('Client introuvable');
             if (client.collecteurId !== requesterId) {
@@ -73,10 +77,20 @@ let TontinesService = TontinesService_1 = class TontinesService {
                 code: 'JOUR_FIXE_REQUIS',
             });
         }
+        this.verifierConfigurationGroupe(dto);
+        this.verifierConfigurationPolitiqueRetrait({
+            politique: dto.politique ?? client_1.PolitiqueRetrait.FLEXIBLE,
+            dateDeverrouillage: dto.dateDeverrouillage,
+            objectifMontant: dto.objectifMontant,
+            montantJournalier: dto.montantJournalier ?? 500,
+            frequence: dto.frequence ?? client_1.FrequenceTontine.MENSUEL,
+        });
         const dateProchaineCotisation = this.calculerProchaineDateCotisation(dto.frequence ?? client_1.FrequenceTontine.MENSUEL, dto.jourFixe);
         let codeInvitation;
+        let qrInvitation;
         if (dto.type === client_1.TypeTontine.GROUPE) {
             codeInvitation = Math.random().toString(36).substring(2, 8).toUpperCase();
+            qrInvitation = this.genererPayloadInvitation(codeInvitation);
         }
         const tontine = await this.prisma.tontine.create({
             data: {
@@ -93,9 +107,31 @@ let TontinesService = TontinesService_1 = class TontinesService {
                 dateFin: dto.dateFin,
                 dateProchaineCotisation,
                 codeInvitation,
+                qrInvitation,
+                nbMembresMax: dto.type === client_1.TypeTontine.GROUPE ? dto.nbMembresMax : undefined,
+                montantParMembre: dto.type === client_1.TypeTontine.GROUPE
+                    ? (dto.montantParMembre ?? dto.montantJournalier ?? 500)
+                    : undefined,
+                cautionObligatoire: dto.type === client_1.TypeTontine.GROUPE
+                    ? (dto.cautionObligatoire ?? false)
+                    : false,
+                montantCautionObligatoire: dto.type === client_1.TypeTontine.GROUPE
+                    ? (dto.montantCautionObligatoire ?? 0)
+                    : 0,
+                penaliteRetardActive: dto.type === client_1.TypeTontine.GROUPE
+                    ? (dto.penaliteRetardActive ?? false)
+                    : false,
+                montantPenaliteRetard: dto.type === client_1.TypeTontine.GROUPE
+                    ? (dto.montantPenaliteRetard ?? 0)
+                    : 0,
+                modeTirage: dto.type === client_1.TypeTontine.GROUPE
+                    ? (dto.modeTirage ?? client_1.ModeTirageGroupe.MANUEL)
+                    : client_1.ModeTirageGroupe.MANUEL,
                 proprietaireId: actualOwnerId,
             },
-            include: { proprietaire: { select: { id: true, nom: true, telephone: true } } },
+            include: {
+                proprietaire: { select: { id: true, nom: true, telephone: true } },
+            },
         });
         return {
             succes: true,
@@ -125,17 +161,31 @@ let TontinesService = TontinesService_1 = class TontinesService {
                     code: 'MEMBRES_INSUFFISANTS',
                 });
             }
+            if (t.modeTirage === client_1.ModeTirageGroupe.ALEATOIRE) {
+                await this.randomiserOrdreTirage(id, proprietaireId);
+            }
+            else {
+                const nbOrdres = await this.prisma.ordreTirage.count({
+                    where: { tontineId: id },
+                });
+                if (nbOrdres < nbMembres) {
+                    throw new common_1.BadRequestException({
+                        message: 'Définissez l’ordre de passage de tous les membres avant activation.',
+                        code: 'ORDRE_TIRAGE_INCOMPLET',
+                    });
+                }
+            }
         }
         if (t.type === client_1.TypeTontine.PROJET) {
             if (!t.dateFin) {
                 throw new common_1.BadRequestException({
-                    message: 'Impossible d\'activer : dateFin manquante pour une tontine PROJET.',
+                    message: "Impossible d'activer : dateFin manquante pour une tontine PROJET.",
                     code: 'DATE_FIN_MANQUANTE',
                 });
             }
             if (t.dateFin <= new Date()) {
                 throw new common_1.BadRequestException({
-                    message: 'Impossible d\'activer : la dateFin est déjà passée.',
+                    message: "Impossible d'activer : la dateFin est déjà passée.",
                     code: 'DATE_FIN_PASSEE',
                 });
             }
@@ -183,7 +233,11 @@ let TontinesService = TontinesService_1 = class TontinesService {
             where: { id },
             data: { statut: client_1.StatutTontine.TERMINEE },
         });
-        return { succes: true, message: 'Tontine clôturée définitivement.', donnees: maj };
+        return {
+            succes: true,
+            message: 'Tontine clôturée définitivement.',
+            donnees: maj,
+        };
     }
     async suspendre(id, proprietaireId) {
         const t = await this.prisma.tontine.findUnique({ where: { id } });
@@ -192,8 +246,14 @@ let TontinesService = TontinesService_1 = class TontinesService {
         if (t.proprietaireId !== proprietaireId)
             throw new common_1.ForbiddenException('Seul le propriétaire peut suspendre cette tontine');
         if (t.statut !== client_1.StatutTontine.ACTIVE)
-            throw new common_1.BadRequestException({ message: 'Seule une tontine ACTIVE peut être suspendue.', code: 'TRANSITION_INVALIDE' });
-        const maj = await this.prisma.tontine.update({ where: { id }, data: { statut: client_1.StatutTontine.SUSPENDUE } });
+            throw new common_1.BadRequestException({
+                message: 'Seule une tontine ACTIVE peut être suspendue.',
+                code: 'TRANSITION_INVALIDE',
+            });
+        const maj = await this.prisma.tontine.update({
+            where: { id },
+            data: { statut: client_1.StatutTontine.SUSPENDUE },
+        });
         return { succes: true, message: 'Tontine suspendue.', donnees: maj };
     }
     async reactiver(id, proprietaireId) {
@@ -203,8 +263,14 @@ let TontinesService = TontinesService_1 = class TontinesService {
         if (t.proprietaireId !== proprietaireId)
             throw new common_1.ForbiddenException('Seul le propriétaire peut réactiver cette tontine');
         if (t.statut !== client_1.StatutTontine.SUSPENDUE)
-            throw new common_1.BadRequestException({ message: 'Seule une tontine SUSPENDUE peut être réactivée.', code: 'TRANSITION_INVALIDE' });
-        const maj = await this.prisma.tontine.update({ where: { id }, data: { statut: client_1.StatutTontine.ACTIVE } });
+            throw new common_1.BadRequestException({
+                message: 'Seule une tontine SUSPENDUE peut être réactivée.',
+                code: 'TRANSITION_INVALIDE',
+            });
+        const maj = await this.prisma.tontine.update({
+            where: { id },
+            data: { statut: client_1.StatutTontine.ACTIVE },
+        });
         return { succes: true, message: 'Tontine réactivée.', donnees: maj };
     }
     async mesTontines(utilisateurId) {
@@ -216,7 +282,9 @@ let TontinesService = TontinesService_1 = class TontinesService {
             }),
             this.prisma.membreTontineGroupe.findMany({
                 where: { utilisateurId, statut: client_1.StatutMembreGroupe.ACTIF },
-                include: { tontine: { include: { _count: { select: { membres: true } } } } },
+                include: {
+                    tontine: { include: { _count: { select: { membres: true } } } },
+                },
             }),
         ]);
         return {
@@ -224,7 +292,11 @@ let TontinesService = TontinesService_1 = class TontinesService {
             message: 'Tontines récupérées.',
             donnees: {
                 proprietaire: proprietes,
-                membre: membre.map((m) => ({ ...m.tontine, monStatut: m.statut, caution: m.montantCaution })),
+                membre: membre.map((m) => ({
+                    ...m.tontine,
+                    monStatut: m.statut,
+                    caution: m.montantCaution,
+                })),
             },
         };
     }
@@ -238,7 +310,9 @@ let TontinesService = TontinesService_1 = class TontinesService {
         });
         if (!t)
             throw new common_1.NotFoundException('Tontine introuvable');
-        const estMembre = await this.prisma.membreTontineGroupe.findFirst({ where: { tontineId: id, utilisateurId } });
+        const estMembre = await this.prisma.membreTontineGroupe.findFirst({
+            where: { tontineId: id, utilisateurId },
+        });
         if (t.proprietaireId !== utilisateurId && !estMembre)
             throw new common_1.ForbiddenException('Accès refusé à cette tontine');
         return { succes: true, message: 'Tontine récupérée.', donnees: t };
@@ -250,7 +324,28 @@ let TontinesService = TontinesService_1 = class TontinesService {
         if (t.proprietaireId !== proprietaireId)
             throw new common_1.ForbiddenException('Seul le propriétaire peut modifier cette tontine');
         if (t.statut === client_1.StatutTontine.TERMINEE)
-            throw new common_1.BadRequestException({ message: 'Une tontine terminée ne peut plus être modifiée.', code: 'TONTINE_TERMINEE' });
+            throw new common_1.BadRequestException({
+                message: 'Une tontine terminée ne peut plus être modifiée.',
+                code: 'TONTINE_TERMINEE',
+            });
+        this.verifierConfigurationGroupe({
+            ...dto,
+            type: t.type,
+            nbMembresMax: dto.nbMembresMax ?? t.nbMembresMax ?? undefined,
+            montantParMembre: dto.montantParMembre ?? t.montantParMembre ?? undefined,
+            cautionObligatoire: dto.cautionObligatoire ?? t.cautionObligatoire,
+            montantCautionObligatoire: dto.montantCautionObligatoire ?? t.montantCautionObligatoire,
+            penaliteRetardActive: dto.penaliteRetardActive ?? t.penaliteRetardActive,
+            montantPenaliteRetard: dto.montantPenaliteRetard ?? t.montantPenaliteRetard,
+            modeTirage: dto.modeTirage ?? t.modeTirage,
+        });
+        this.verifierConfigurationPolitiqueRetrait({
+            politique: dto.politique ?? t.politique,
+            dateDeverrouillage: dto.dateDeverrouillage ?? t.dateDeverrouillage ?? undefined,
+            objectifMontant: dto.objectifMontant ?? t.objectifMontant ?? undefined,
+            montantJournalier: dto.montantJournalier ?? t.montantJournalier,
+            frequence: dto.frequence ?? t.frequence,
+        });
         const maj = await this.prisma.tontine.update({
             where: { id },
             data: {
@@ -259,20 +354,50 @@ let TontinesService = TontinesService_1 = class TontinesService {
                 ...(dto.politique && { politique: dto.politique }),
                 ...(dto.frequence && { frequence: dto.frequence }),
                 ...(dto.jourFixe !== undefined && { jourFixe: dto.jourFixe }),
-                ...(dto.objectifMontant !== undefined && { objectifMontant: dto.objectifMontant }),
-                ...(dto.montantJournalier && { montantJournalier: dto.montantJournalier }),
-                ...(dto.dateDeverrouillage && { dateDeverrouillage: dto.dateDeverrouillage }),
+                ...(dto.objectifMontant !== undefined && {
+                    objectifMontant: dto.objectifMontant,
+                }),
+                ...(dto.montantJournalier && {
+                    montantJournalier: dto.montantJournalier,
+                }),
+                ...(dto.dateDeverrouillage && {
+                    dateDeverrouillage: dto.dateDeverrouillage,
+                }),
                 ...(dto.dateFin && { dateFin: dto.dateFin }),
+                ...(dto.nbMembresMax !== undefined && {
+                    nbMembresMax: dto.nbMembresMax,
+                }),
+                ...(dto.montantParMembre !== undefined && {
+                    montantParMembre: dto.montantParMembre,
+                }),
+                ...(dto.cautionObligatoire !== undefined && {
+                    cautionObligatoire: dto.cautionObligatoire,
+                }),
+                ...(dto.montantCautionObligatoire !== undefined && {
+                    montantCautionObligatoire: dto.montantCautionObligatoire,
+                }),
+                ...(dto.penaliteRetardActive !== undefined && {
+                    penaliteRetardActive: dto.penaliteRetardActive,
+                }),
+                ...(dto.montantPenaliteRetard !== undefined && {
+                    montantPenaliteRetard: dto.montantPenaliteRetard,
+                }),
+                ...(dto.modeTirage && { modeTirage: dto.modeTirage }),
             },
         });
         return { succes: true, message: 'Tontine mise à jour.', donnees: maj };
     }
     async rejoindre(tontineId, utilisateurId, dto) {
-        const t = await this.prisma.tontine.findUnique({ where: { id: tontineId } });
+        const t = await this.prisma.tontine.findUnique({
+            where: { id: tontineId },
+        });
         if (!t)
             throw new common_1.NotFoundException('Tontine introuvable');
         if (t.type !== client_1.TypeTontine.GROUPE) {
-            throw new common_1.BadRequestException({ message: 'Seules les tontines GROUPE peuvent être rejointes', code: 'TYPE_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: 'Seules les tontines GROUPE peuvent être rejointes',
+                code: 'TYPE_INVALIDE',
+            });
         }
         if (t.statut !== client_1.StatutTontine.CREATION) {
             throw new common_1.BadRequestException({
@@ -281,34 +406,78 @@ let TontinesService = TontinesService_1 = class TontinesService {
             });
         }
         if (t.proprietaireId === utilisateurId) {
-            throw new common_1.BadRequestException({ message: 'Vous êtes déjà propriétaire de cette tontine', code: 'DEJA_PROPRIETAIRE' });
+            throw new common_1.BadRequestException({
+                message: 'Vous êtes déjà propriétaire de cette tontine',
+                code: 'DEJA_PROPRIETAIRE',
+            });
         }
         const existant = await this.prisma.membreTontineGroupe.findUnique({
             where: { tontineId_utilisateurId: { tontineId, utilisateurId } },
         });
         if (existant?.statut === client_1.StatutMembreGroupe.ACTIF) {
-            throw new common_1.BadRequestException({ message: 'Vous êtes déjà membre de cette tontine', code: 'DEJA_MEMBRE' });
+            throw new common_1.BadRequestException({
+                message: 'Vous êtes déjà membre de cette tontine',
+                code: 'DEJA_MEMBRE',
+            });
         }
-        const nbMembres = await this.prisma.membreTontineGroupe.count({ where: { tontineId } });
+        const nbMembres = await this.prisma.membreTontineGroupe.count({
+            where: { tontineId },
+        });
+        if (t.nbMembresMax && nbMembres >= t.nbMembresMax) {
+            throw new common_1.BadRequestException({
+                message: `Nombre maximum de membres atteint (${t.nbMembresMax}).`,
+                code: 'GROUPE_COMPLET',
+            });
+        }
+        if (t.cautionObligatoire &&
+            (dto.montantCaution ?? 0) < t.montantCautionObligatoire) {
+            throw new common_1.BadRequestException({
+                message: `Caution obligatoire de ${t.montantCautionObligatoire} FCFA requise.`,
+                code: 'CAUTION_REQUISE',
+            });
+        }
         const membre = await this.prisma.membreTontineGroupe.upsert({
             where: { tontineId_utilisateurId: { tontineId, utilisateurId } },
-            create: { tontineId, utilisateurId, statut: client_1.StatutMembreGroupe.ACTIF, montantCaution: dto.montantCaution ?? 0, cautionBloquee: true },
-            update: { statut: client_1.StatutMembreGroupe.ACTIF, montantCaution: dto.montantCaution ?? 0 },
-            include: { utilisateur: { select: { id: true, nom: true, collecteurId: true } } },
+            create: {
+                tontineId,
+                utilisateurId,
+                statut: client_1.StatutMembreGroupe.ACTIF,
+                montantCaution: dto.montantCaution ?? 0,
+                cautionBloquee: true,
+            },
+            update: {
+                statut: client_1.StatutMembreGroupe.ACTIF,
+                montantCaution: dto.montantCaution ?? 0,
+            },
+            include: {
+                utilisateur: { select: { id: true, nom: true, collecteurId: true } },
+            },
         });
         if (membre.utilisateur.collecteurId) {
             await this.notifications.envoyerAEquipe(membre.utilisateur.collecteurId, 'Nouveau membre de groupe', `Votre client ${membre.utilisateur.nom} vient de rejoindre le groupe '${t.nom}'.`);
         }
-        const dejaOrdre = await this.prisma.ordreTirage.findFirst({ where: { tontineId, utilisateurId } });
+        const dejaOrdre = await this.prisma.ordreTirage.findFirst({
+            where: { tontineId, utilisateurId },
+        });
         if (!dejaOrdre) {
             try {
-                await this.prisma.ordreTirage.create({ data: { tontineId, utilisateurId, position: nbMembres + 1 } });
+                const nbOrdres = await this.prisma.ordreTirage.count({
+                    where: { tontineId },
+                });
+                await this.prisma.ordreTirage.create({
+                    data: { tontineId, utilisateurId, position: nbOrdres + 1 },
+                });
             }
             catch (error) {
-                this.logger.error(`Erreur notifications adhésion tontine ${tontineId}: ${error.message}`);
+                const message = error instanceof Error ? error.message : String(error);
+                this.logger.error(`Erreur notifications adhésion tontine ${tontineId}: ${message}`);
             }
         }
-        return { succes: true, message: 'Vous avez rejoint la tontine. En attente d\'activation par le propriétaire.', donnees: membre };
+        return {
+            succes: true,
+            message: "Vous avez rejoint la tontine. En attente d'activation par le propriétaire.",
+            donnees: membre,
+        };
     }
     async getDetailsParCode(code) {
         const t = await this.prisma.tontine.findUnique({
@@ -316,7 +485,7 @@ let TontinesService = TontinesService_1 = class TontinesService {
             include: { proprietaire: { select: { nom: true } } },
         });
         if (!t)
-            throw new common_1.NotFoundException('Code d\'invitation invalide');
+            throw new common_1.NotFoundException("Code d'invitation invalide");
         return {
             succes: true,
             message: 'Tontine trouvée.',
@@ -325,9 +494,13 @@ let TontinesService = TontinesService_1 = class TontinesService {
                 nom: t.nom,
                 type: t.type,
                 montantJournalier: t.montantJournalier,
+                montantParMembre: t.montantParMembre,
                 frequence: t.frequence,
                 president: t.proprietaire.nom,
                 statut: t.statut,
+                cautionObligatoire: t.cautionObligatoire,
+                montantCautionObligatoire: t.montantCautionObligatoire,
+                nbMembresMax: t.nbMembresMax,
             },
         };
     }
@@ -336,7 +509,7 @@ let TontinesService = TontinesService_1 = class TontinesService {
             where: { codeInvitation: code.toUpperCase() },
         });
         if (!t)
-            throw new common_1.NotFoundException('Code d\'invitation invalide');
+            throw new common_1.NotFoundException("Code d'invitation invalide");
         return this.rejoindre(t.id, utilisateurId, dto);
     }
     async quitter(tontineId, utilisateurId) {
@@ -344,52 +517,223 @@ let TontinesService = TontinesService_1 = class TontinesService {
             where: { tontineId_utilisateurId: { tontineId, utilisateurId } },
         });
         if (!membre)
-            throw new common_1.BadRequestException({ message: 'Vous n\'êtes pas membre de cette tontine', code: 'PAS_MEMBRE' });
+            throw new common_1.BadRequestException({
+                message: "Vous n'êtes pas membre de cette tontine",
+                code: 'PAS_MEMBRE',
+            });
         if (membre.statut === client_1.StatutMembreGroupe.A_RECU)
-            throw new common_1.BadRequestException({ message: 'Impossible de quitter après avoir reçu la distribution', code: 'DEJA_RECU' });
+            throw new common_1.BadRequestException({
+                message: 'Impossible de quitter après avoir reçu la distribution',
+                code: 'DEJA_RECU',
+            });
         if (membre.statut !== client_1.StatutMembreGroupe.ACTIF)
-            throw new common_1.BadRequestException({ message: 'Vous n\'êtes plus membre actif', code: 'PAS_MEMBRE' });
+            throw new common_1.BadRequestException({
+                message: "Vous n'êtes plus membre actif",
+                code: 'PAS_MEMBRE',
+            });
         await this.prisma.membreTontineGroupe.update({
             where: { tontineId_utilisateurId: { tontineId, utilisateurId } },
-            data: { statut: client_1.StatutMembreGroupe.EXCLU, excluLe: new Date(), motifExclusion: 'Départ volontaire' },
+            data: {
+                statut: client_1.StatutMembreGroupe.EXCLU,
+                excluLe: new Date(),
+                motifExclusion: 'Départ volontaire',
+            },
         });
         return { succes: true, message: 'Vous avez quitté la tontine.' };
     }
+    async invitation(tontineId, proprietaireId) {
+        const t = await this.prisma.tontine.findUnique({
+            where: { id: tontineId },
+            include: { _count: { select: { membres: true } } },
+        });
+        if (!t)
+            throw new common_1.NotFoundException('Tontine introuvable');
+        if (t.proprietaireId !== proprietaireId)
+            throw new common_1.ForbiddenException('Seul le propriétaire peut voir cette invitation');
+        if (t.type !== client_1.TypeTontine.GROUPE)
+            throw new common_1.BadRequestException({
+                message: 'Invitation disponible uniquement pour les tontines GROUPE',
+                code: 'TYPE_INVALIDE',
+            });
+        return {
+            succes: true,
+            message: 'Invitation groupe.',
+            donnees: {
+                codeInvitation: t.codeInvitation,
+                qrInvitation: t.qrInvitation ??
+                    (t.codeInvitation
+                        ? this.genererPayloadInvitation(t.codeInvitation)
+                        : null),
+                membresInvites: t._count.membres,
+                minimumActivation: 2,
+                nbMembresMax: t.nbMembresMax,
+            },
+        };
+    }
     async membres(tontineId) {
-        const t = await this.prisma.tontine.findUnique({ where: { id: tontineId } });
+        const t = await this.prisma.tontine.findUnique({
+            where: { id: tontineId },
+        });
         if (!t)
             throw new common_1.NotFoundException('Tontine introuvable');
         const membres = await this.prisma.membreTontineGroupe.findMany({
             where: { tontineId },
-            include: { utilisateur: { select: { id: true, nom: true, telephone: true, kycVerifie: true } } },
+            include: {
+                utilisateur: {
+                    select: { id: true, nom: true, telephone: true, kycVerifie: true },
+                },
+            },
             orderBy: { rejointLe: 'asc' },
         });
-        return { succes: true, message: `${membres.length} membre(s).`, donnees: membres };
+        return {
+            succes: true,
+            message: `${membres.length} membre(s).`,
+            donnees: membres,
+        };
     }
     async ordreTirage(tontineId) {
         const ordres = await this.prisma.ordreTirage.findMany({
             where: { tontineId },
-            include: { utilisateur: { select: { id: true, nom: true, telephone: true } } },
+            include: {
+                utilisateur: { select: { id: true, nom: true, telephone: true } },
+            },
             orderBy: { position: 'asc' },
         });
-        return { succes: true, message: `Ordre de tirage (${ordres.length} membres).`, donnees: ordres };
+        return {
+            succes: true,
+            message: `Ordre de tirage (${ordres.length} membres).`,
+            donnees: ordres,
+        };
+    }
+    async definirOrdreTirage(tontineId, proprietaireId, utilisateurIds) {
+        const t = await this.prisma.tontine.findUnique({
+            where: { id: tontineId },
+        });
+        if (!t)
+            throw new common_1.NotFoundException('Tontine introuvable');
+        if (t.proprietaireId !== proprietaireId)
+            throw new common_1.ForbiddenException('Seul le propriétaire peut définir l’ordre');
+        if (t.type !== client_1.TypeTontine.GROUPE)
+            throw new common_1.BadRequestException({
+                message: 'Ordre réservé aux groupes',
+                code: 'TYPE_INVALIDE',
+            });
+        if (t.statut !== client_1.StatutTontine.CREATION)
+            throw new common_1.BadRequestException({
+                message: 'L’ordre ne peut être modifié qu’avant activation.',
+                code: 'TONTINE_DEJA_DEMARREE',
+            });
+        const membres = await this.prisma.membreTontineGroupe.findMany({
+            where: { tontineId, statut: client_1.StatutMembreGroupe.ACTIF },
+            select: { utilisateurId: true },
+        });
+        const membresIds = new Set(membres.map((m) => m.utilisateurId));
+        const idsUniques = new Set(utilisateurIds);
+        if (idsUniques.size !== utilisateurIds.length ||
+            utilisateurIds.some((id) => !membresIds.has(id))) {
+            throw new common_1.BadRequestException({
+                message: 'La liste doit contenir uniquement des membres actifs, sans doublon.',
+                code: 'ORDRE_TIRAGE_INVALIDE',
+            });
+        }
+        if (utilisateurIds.length !== membres.length) {
+            throw new common_1.BadRequestException({
+                message: 'Tous les membres actifs doivent être dans l’ordre de passage.',
+                code: 'ORDRE_TIRAGE_INCOMPLET',
+            });
+        }
+        await this.prisma.$transaction([
+            this.prisma.ordreTirage.deleteMany({ where: { tontineId } }),
+            ...utilisateurIds.map((utilisateurId, index) => this.prisma.ordreTirage.create({
+                data: { tontineId, utilisateurId, position: index + 1 },
+            })),
+            this.prisma.tontine.update({
+                where: { id: tontineId },
+                data: { modeTirage: client_1.ModeTirageGroupe.MANUEL },
+            }),
+        ]);
+        return this.ordreTirage(tontineId);
+    }
+    async randomiserOrdreTirage(tontineId, proprietaireId) {
+        const t = await this.prisma.tontine.findUnique({
+            where: { id: tontineId },
+        });
+        if (!t)
+            throw new common_1.NotFoundException('Tontine introuvable');
+        if (t.proprietaireId !== proprietaireId)
+            throw new common_1.ForbiddenException('Seul le propriétaire peut lancer le tirage');
+        if (t.type !== client_1.TypeTontine.GROUPE)
+            throw new common_1.BadRequestException({
+                message: 'Tirage réservé aux groupes',
+                code: 'TYPE_INVALIDE',
+            });
+        if (t.statut !== client_1.StatutTontine.CREATION)
+            throw new common_1.BadRequestException({
+                message: 'Le tirage aléatoire ne peut être lancé qu’avant activation.',
+                code: 'TONTINE_DEJA_DEMARREE',
+            });
+        const membres = await this.prisma.membreTontineGroupe.findMany({
+            where: { tontineId, statut: client_1.StatutMembreGroupe.ACTIF },
+            select: { utilisateurId: true },
+        });
+        if (membres.length < 2) {
+            throw new common_1.BadRequestException({
+                message: 'Au moins 2 membres actifs sont requis pour tirer un ordre.',
+                code: 'MEMBRES_INSUFFISANTS',
+            });
+        }
+        const melanges = [...membres].sort(() => Math.random() - 0.5);
+        await this.prisma.$transaction([
+            this.prisma.ordreTirage.deleteMany({ where: { tontineId } }),
+            ...melanges.map((membre, index) => this.prisma.ordreTirage.create({
+                data: {
+                    tontineId,
+                    utilisateurId: membre.utilisateurId,
+                    position: index + 1,
+                },
+            })),
+            this.prisma.tontine.update({
+                where: { id: tontineId },
+                data: { modeTirage: client_1.ModeTirageGroupe.ALEATOIRE },
+            }),
+        ]);
+        return this.ordreTirage(tontineId);
     }
     async distribuer(tontineId, proprietaireId) {
-        const t = await this.prisma.tontine.findUnique({ where: { id: tontineId } });
+        const t = await this.prisma.tontine.findUnique({
+            where: { id: tontineId },
+        });
         if (!t)
             throw new common_1.NotFoundException('Tontine introuvable');
         if (t.proprietaireId !== proprietaireId)
             throw new common_1.ForbiddenException('Seul le propriétaire peut déclencher la distribution');
         if (t.type !== client_1.TypeTontine.GROUPE)
-            throw new common_1.BadRequestException({ message: 'Distribution uniquement pour les tontines GROUPE', code: 'TYPE_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: 'Distribution uniquement pour les tontines GROUPE',
+                code: 'TYPE_INVALIDE',
+            });
         if (t.statut !== client_1.StatutTontine.ACTIVE) {
             throw new common_1.BadRequestException({
                 message: 'La tontine doit être active pour distribuer.',
                 code: 'TONTINE_NON_ACTIVE',
             });
         }
+        const membresActifs = await this.prisma.membreTontineGroupe.count({
+            where: { tontineId, statut: client_1.StatutMembreGroupe.ACTIF },
+        });
+        const montantParMembre = t.montantParMembre ?? t.montantJournalier;
+        const cagnotteAttendue = membresActifs * montantParMembre;
+        if (t.soldeActuel < cagnotteAttendue) {
+            throw new common_1.BadRequestException({
+                message: `Cotisations du tour incomplètes. Cagnotte attendue: ${cagnotteAttendue} FCFA, disponible: ${t.soldeActuel} FCFA.`,
+                code: 'COTISATIONS_TOUR_INCOMPLETES',
+            });
+        }
         if (t.soldeActuel <= 0)
-            throw new common_1.BadRequestException({ message: 'Solde insuffisant pour distribuer', code: 'SOLDE_INSUFFISANT' });
+            throw new common_1.BadRequestException({
+                message: 'Solde insuffisant pour distribuer',
+                code: 'SOLDE_INSUFFISANT',
+            });
         this.verifierPolitique(t);
         await this.verifierAucuneAlerteBloquante(tontineId);
         const prochainTirage = await this.prisma.ordreTirage.findFirst({
@@ -398,18 +742,24 @@ let TontinesService = TontinesService_1 = class TontinesService {
             include: {
                 utilisateur: {
                     include: {
-                        badges: { where: { niveau: 'DIAMANT' }, take: 1 }
-                    }
-                }
+                        badges: { where: { niveau: 'DIAMANT' }, take: 1 },
+                    },
+                },
             },
         });
         if (!prochainTirage) {
-            await this.prisma.tontine.update({ where: { id: tontineId }, data: { statut: client_1.StatutTontine.TERMINEE } });
-            throw new common_1.BadRequestException({ message: 'Tous les membres ont reçu. Tontine marquée TERMINEE.', code: 'CYCLE_TERMINE' });
+            await this.prisma.tontine.update({
+                where: { id: tontineId },
+                data: { statut: client_1.StatutTontine.TERMINEE },
+            });
+            throw new common_1.BadRequestException({
+                message: 'Tous les membres ont reçu. Tontine marquée TERMINEE.',
+                code: 'CYCLE_TERMINE',
+            });
         }
         const montantDistribution = t.soldeActuel;
-        const estDiamant = prochainTirage.utilisateur.badges.length > 0;
-        const montantNet = montantDistribution - business_constants_1.BUSINESS.calculerFraisPlateforme(montantDistribution, estDiamant);
+        const fraisDistribution = business_constants_1.BUSINESS.calculerFraisRetrait(montantDistribution);
+        const montantNet = montantDistribution - fraisDistribution;
         const transfert = await this.kkiapay.initierTransfert({
             montant: montantNet,
             telephone: prochainTirage.utilisateur.telephone,
@@ -417,8 +767,13 @@ let TontinesService = TontinesService_1 = class TontinesService {
             motif: `Distribution tontine ${t.nom}`,
         });
         if (!transfert.succes)
-            throw new common_1.BadRequestException({ message: 'Échec du transfert KKiaPay', code: 'TRANSFERT_ECHOUE' });
-        const nbRestants = await this.prisma.ordreTirage.count({ where: { tontineId, aRecu: false } });
+            throw new common_1.BadRequestException({
+                message: 'Échec du transfert KKiaPay',
+                code: 'TRANSFERT_ECHOUE',
+            });
+        const nbRestants = await this.prisma.ordreTirage.count({
+            where: { tontineId, aRecu: false },
+        });
         const estDerniere = nbRestants === 1;
         const prochaineDateCotisation = this.calculerProchaineDateCotisation(t.frequence, t.jourFixe ?? undefined);
         await this.prisma.$transaction([
@@ -427,7 +782,12 @@ let TontinesService = TontinesService_1 = class TontinesService {
                 data: { aRecu: true, recuLe: new Date(), montantRecu: montantNet },
             }),
             this.prisma.membreTontineGroupe.update({
-                where: { tontineId_utilisateurId: { tontineId, utilisateurId: prochainTirage.utilisateurId } },
+                where: {
+                    tontineId_utilisateurId: {
+                        tontineId,
+                        utilisateurId: prochainTirage.utilisateurId,
+                    },
+                },
                 data: { statut: client_1.StatutMembreGroupe.A_RECU },
             }),
             this.prisma.tontine.update({
@@ -435,6 +795,7 @@ let TontinesService = TontinesService_1 = class TontinesService {
                 data: {
                     soldeActuel: 0,
                     dateProchaineCotisation: estDerniere ? null : prochaineDateCotisation,
+                    ...(!estDerniere && { tourActuel: { increment: 1 } }),
                     ...(estDerniere && { statut: client_1.StatutTontine.TERMINEE }),
                 },
             }),
@@ -478,7 +839,8 @@ let TontinesService = TontinesService_1 = class TontinesService {
             }
         }
         catch (error) {
-            this.logger.error(`Erreur notifications distribution tontine ${tontineId}: ${error.message}`);
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Erreur notifications distribution tontine ${tontineId}: ${message}`);
         }
         return {
             succes: true,
@@ -513,22 +875,139 @@ let TontinesService = TontinesService_1 = class TontinesService {
             }
         }
     }
+    verifierConfigurationPolitiqueRetrait(input) {
+        if (input.politique !== client_1.PolitiqueRetrait.PROGRAMME &&
+            input.politique !== client_1.PolitiqueRetrait.BLOQUE)
+            return;
+        if (!input.dateDeverrouillage) {
+            throw new common_1.BadRequestException({
+                message: `Une tontine ${input.politique} doit avoir une dateDeverrouillage.`,
+                code: 'DATE_DEVERROUILLAGE_REQUISE',
+            });
+        }
+        const dateDeverrouillage = new Date(input.dateDeverrouillage);
+        const now = new Date();
+        if (Number.isNaN(dateDeverrouillage.getTime()) ||
+            dateDeverrouillage <= now) {
+            throw new common_1.BadRequestException({
+                message: 'La dateDeverrouillage doit être une date future.',
+                code: 'DATE_DEVERROUILLAGE_INVALIDE',
+            });
+        }
+        if (input.politique === client_1.PolitiqueRetrait.PROGRAMME)
+            return;
+        if (!input.objectifMontant || input.objectifMontant <= 0) {
+            throw new common_1.BadRequestException({
+                message: 'Une tontine BLOQUE doit avoir un objectifMontant positif.',
+                code: 'OBJECTIF_REQUIS',
+            });
+        }
+        const montantCotisation = input.montantJournalier ?? 500;
+        if (montantCotisation < 100) {
+            throw new common_1.BadRequestException({
+                message: 'Le montant de cotisation doit être au moins 100 FCFA.',
+                code: 'MONTANT_COTISATION_INVALIDE',
+            });
+        }
+        const dateFinEstimee = this.calculerDateFinEstimee(input.objectifMontant, montantCotisation, input.frequence);
+        if (this.debutJour(dateDeverrouillage) < this.debutJour(dateFinEstimee)) {
+            throw new common_1.BadRequestException({
+                message: `La dateDeverrouillage doit être supérieure ou égale à la date de fin estimée (${dateFinEstimee.toLocaleDateString('fr-FR')}).`,
+                code: 'DATE_DEVERROUILLAGE_AVANT_OBJECTIF',
+            });
+        }
+    }
+    verifierConfigurationGroupe(input) {
+        if (input.type !== client_1.TypeTontine.GROUPE)
+            return;
+        if (!input.nbMembresMax || input.nbMembresMax < 2) {
+            throw new common_1.BadRequestException({
+                message: 'Une tontine GROUPE doit définir au moins 2 membres.',
+                code: 'NB_MEMBRES_INVALIDE',
+            });
+        }
+        if (!input.montantParMembre || input.montantParMembre < 100) {
+            throw new common_1.BadRequestException({
+                message: 'Une tontine GROUPE doit définir un montant par membre d’au moins 100 FCFA.',
+                code: 'MONTANT_PAR_MEMBRE_INVALIDE',
+            });
+        }
+        if (input.cautionObligatoire &&
+            (!input.montantCautionObligatoire || input.montantCautionObligatoire <= 0)) {
+            throw new common_1.BadRequestException({
+                message: 'Le montant de caution est obligatoire si la caution est activée.',
+                code: 'MONTANT_CAUTION_REQUIS',
+            });
+        }
+        if (input.penaliteRetardActive &&
+            (!input.montantPenaliteRetard || input.montantPenaliteRetard <= 0)) {
+            throw new common_1.BadRequestException({
+                message: 'Le montant de pénalité est obligatoire si la pénalité retard est activée.',
+                code: 'MONTANT_PENALITE_REQUIS',
+            });
+        }
+    }
+    genererPayloadInvitation(codeInvitation) {
+        return `tontinebenin://tontines/rejoindre?code=${codeInvitation}`;
+    }
+    calculerDateFinEstimee(objectifMontant, montantCotisation, frequence) {
+        const nombreCotisations = Math.max(Math.ceil(objectifMontant / montantCotisation), 1);
+        const joursParCotisation = {
+            [client_1.FrequenceTontine.JOURNALIER]: 1,
+            [client_1.FrequenceTontine.HEBDOMADAIRE]: 7,
+            [client_1.FrequenceTontine.MENSUEL]: 30,
+            [client_1.FrequenceTontine.DATE_FIXE]: 30,
+        };
+        const dateFin = new Date();
+        dateFin.setDate(dateFin.getDate() + nombreCotisations * joursParCotisation[frequence]);
+        return dateFin;
+    }
+    debutJour(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
     verifierPolitique(tontine) {
         if (tontine.politique === client_1.PolitiqueRetrait.BLOQUE) {
-            if (!tontine.dateDeverrouillage || tontine.dateDeverrouillage > new Date()) {
-                const date = tontine.dateDeverrouillage?.toLocaleDateString('fr-FR') ?? 'indéfinie';
-                throw new common_1.BadRequestException({ message: `Tontine bloquée jusqu'au ${date}`, code: 'TONTINE_BLOQUEE' });
+            if (!tontine.dateDeverrouillage ||
+                tontine.dateDeverrouillage > new Date()) {
+                const date = tontine.dateDeverrouillage?.toLocaleDateString('fr-FR') ??
+                    'indéfinie';
+                throw new common_1.BadRequestException({
+                    message: `Tontine bloquée jusqu'au ${date}`,
+                    code: 'TONTINE_BLOQUEE',
+                });
+            }
+            if (!tontine.objectifMontant) {
+                throw new common_1.BadRequestException({
+                    message: 'Objectif requis pour une tontine bloquée.',
+                    code: 'OBJECTIF_REQUIS',
+                });
+            }
+            if (tontine.soldeActuel < tontine.objectifMontant) {
+                throw new common_1.BadRequestException({
+                    message: `Objectif non atteint. Progression: ${tontine.soldeActuel}/${tontine.objectifMontant} FCFA`,
+                    code: 'OBJECTIF_NON_ATTEINT',
+                });
             }
         }
         if (tontine.politique === client_1.PolitiqueRetrait.PROGRAMME) {
-            if (!tontine.dateDeverrouillage || tontine.dateDeverrouillage > new Date()) {
-                throw new common_1.BadRequestException({ message: 'Date programmée non atteinte', code: 'DATE_NON_ATTEINTE' });
+            if (!tontine.dateDeverrouillage ||
+                tontine.dateDeverrouillage > new Date()) {
+                throw new common_1.BadRequestException({
+                    message: 'Date programmée non atteinte',
+                    code: 'DATE_NON_ATTEINTE',
+                });
             }
         }
     }
     async verifierAucuneAlerteBloquante(tontineId) {
         const alerte = await this.prisma.alerteSysteme.findFirst({
-            where: { type: 'COHERENCE_COMPTABLE', severite: 'CRITIQUE', statut: 'OUVERTE', resourceType: 'TONTINE', resourceId: tontineId },
+            where: {
+                type: 'COHERENCE_COMPTABLE',
+                severite: 'CRITIQUE',
+                statut: 'OUVERTE',
+                resourceType: 'TONTINE',
+                resourceId: tontineId,
+            },
             select: { id: true },
         });
         if (alerte) {

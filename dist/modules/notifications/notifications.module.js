@@ -23,7 +23,12 @@ let NotificationsModule = class NotificationsModule {
 exports.NotificationsModule = NotificationsModule;
 exports.NotificationsModule = NotificationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [axios_1.HttpModule, prisma_module_1.PrismaModule, (0, common_1.forwardRef)(() => retraits_module_1.RetraitsModule), (0, common_1.forwardRef)(() => tontines_module_1.TontinesModule)],
+        imports: [
+            axios_1.HttpModule,
+            prisma_module_1.PrismaModule,
+            (0, common_1.forwardRef)(() => retraits_module_1.RetraitsModule),
+            (0, common_1.forwardRef)(() => tontines_module_1.TontinesModule),
+        ],
         controllers: [notifications_controller_1.NotificationsController, sms_webhook_controller_1.SmsWebhookController],
         providers: [sms_service_1.SmsService, push_service_1.PushService, whatsapp_service_1.WhatsappService, notifications_service_1.NotificationsService],
         exports: [sms_service_1.SmsService, push_service_1.PushService, whatsapp_service_1.WhatsappService, notifications_service_1.NotificationsService],

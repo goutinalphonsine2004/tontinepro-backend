@@ -72,7 +72,7 @@ let SmsService = SmsService_1 = class SmsService {
                     return this.gererCommandeRejoindre(utilisateur, mots[1]);
                 case 'AIDE':
                 default:
-                    return this.envoyer(from, "TontinePro: Commandes valides: SOLDE, RETRAIT [Montant], REJOINDRE [Code], AIDE.");
+                    return this.envoyer(from, 'TontinePro: Commandes valides: SOLDE, RETRAIT [Montant], REJOINDRE [Code], AIDE.');
             }
         }
         catch (error) {
@@ -91,7 +91,9 @@ let SmsService = SmsService_1 = class SmsService {
             return this.envoyer(utilisateur.telephone, "TontinePro: Code d'invitation invalide.");
         }
         try {
-            await this.tontinesService.rejoindre(tontine.id, utilisateur.id, { montantCaution: 0 });
+            await this.tontinesService.rejoindre(tontine.id, utilisateur.id, {
+                montantCaution: 0,
+            });
             await this.envoyer(utilisateur.telephone, `TontinePro: Félicitations ! Vous avez rejoint le groupe '${tontine.nom}'.`);
         }
         catch (err) {
@@ -107,16 +109,22 @@ let SmsService = SmsService_1 = class SmsService {
             return this.envoyer(utilisateur.telephone, "TontinePro: Vous n'avez aucune tontine active.");
         }
         const total = tontines.reduce((sum, t) => sum + t.soldeActuel, 0);
-        const detail = tontines.map(t => `${t.nom}: ${t.soldeActuel}F`).join(', ');
+        const detail = tontines
+            .map((t) => `${t.nom}: ${t.soldeActuel}F`)
+            .join(', ');
         await this.envoyer(utilisateur.telephone, `TontinePro: Solde Total: ${total} FCFA. Détails: ${detail}.`);
     }
     async gererCommandeRetrait(utilisateur, montantStr) {
         if (!montantStr || isNaN(Number(montantStr))) {
-            return this.envoyer(utilisateur.telephone, "TontinePro: Précisez le montant. Exemple: RETRAIT 5000");
+            return this.envoyer(utilisateur.telephone, 'TontinePro: Précisez le montant. Exemple: RETRAIT 5000');
         }
         const montant = Number(montantStr);
         const tontine = await this.prisma.tontine.findFirst({
-            where: { proprietaireId: utilisateur.id, soldeActuel: { gte: montant }, statut: 'ACTIVE' },
+            where: {
+                proprietaireId: utilisateur.id,
+                soldeActuel: { gte: montant },
+                statut: 'ACTIVE',
+            },
             orderBy: { soldeActuel: 'desc' },
         });
         if (!tontine) {

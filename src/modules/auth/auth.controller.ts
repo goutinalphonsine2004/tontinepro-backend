@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -70,7 +82,14 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('rafraichir-token')
   rafraichirToken(
-    @UtilisateurCourant() utilisateur: { id: string; telephone: string; role: any; sessionId: string; refreshTokenBrut?: string },
+    @UtilisateurCourant()
+    utilisateur: {
+      id: string;
+      telephone: string;
+      role: any;
+      sessionId: string;
+      refreshTokenBrut?: string;
+    },
     @Body() _dto: RafraichirTokenDto,
   ) {
     return this.authService.rafraichirToken(
@@ -84,19 +103,28 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('deconnexion')
-  deconnexion(@UtilisateurCourant() utilisateur: { id: string; sessionId?: string }) {
+  deconnexion(
+    @UtilisateurCourant() utilisateur: { id: string; sessionId?: string },
+  ) {
     return this.authService.deconnexion(utilisateur.id, utilisateur.sessionId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('deconnexion-tout')
-  deconnexionTout(@UtilisateurCourant() utilisateur: { id: string; sessionId?: string }) {
-    return this.authService.deconnexionTout(utilisateur.id, utilisateur.sessionId);
+  deconnexionTout(
+    @UtilisateurCourant() utilisateur: { id: string; sessionId?: string },
+  ) {
+    return this.authService.deconnexionTout(
+      utilisateur.id,
+      utilisateur.sessionId,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('sessions')
-  mesSessions(@UtilisateurCourant() utilisateur: { id: string; sessionId?: string }) {
+  mesSessions(
+    @UtilisateurCourant() utilisateur: { id: string; sessionId?: string },
+  ) {
     return this.authService.mesSessions(utilisateur.id, utilisateur.sessionId);
   }
 
@@ -106,13 +134,20 @@ export class AuthController {
     @UtilisateurCourant() utilisateur: { id: string; sessionId?: string },
     @Param('id') sessionId: string,
   ) {
-    return this.authService.revoquerSession(utilisateur.id, sessionId, utilisateur.sessionId);
+    return this.authService.revoquerSession(
+      utilisateur.id,
+      sessionId,
+      utilisateur.sessionId,
+    );
   }
 
   // ─── Biométrie ────────────────────────────────────
   @UseGuards(JwtAuthGuard)
   @Post('biometrique/enregistrer')
-  enregistrerAppareil(@UtilisateurCourant() u: { id: string }, @Body() dto: any) {
+  enregistrerAppareil(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: any,
+  ) {
     return this.authService.enregistrerAppareilBiometrique(u.id, dto);
   }
 
@@ -130,7 +165,10 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Delete('biometrique/appareils/:id')
-  revoquerAppareil(@UtilisateurCourant() u: { id: string }, @Param('id') appareilId: string) {
+  revoquerAppareil(
+    @UtilisateurCourant() u: { id: string },
+    @Param('id') appareilId: string,
+  ) {
     return this.authService.revoquerAppareil(u.id, appareilId);
   }
 

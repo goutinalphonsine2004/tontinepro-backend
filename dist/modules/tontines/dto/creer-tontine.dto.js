@@ -25,6 +25,13 @@ class CreerTontineDto {
     dateDeverrouillage;
     dateFin;
     clientId;
+    nbMembresMax;
+    montantParMembre;
+    cautionObligatoire = false;
+    montantCautionObligatoire = 0;
+    penaliteRetardActive = false;
+    montantPenaliteRetard = 0;
+    modeTirage = client_1.ModeTirageGroupe.MANUEL;
 }
 exports.CreerTontineDto = CreerTontineDto;
 __decorate([
@@ -56,7 +63,9 @@ __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(1),
-    (0, class_validator_1.Max)(28, { message: 'jourFixe doit être entre 1 et 28 (garanti dans tous les mois)' }),
+    (0, class_validator_1.Max)(28, {
+        message: 'jourFixe doit être entre 1 et 28 (garanti dans tous les mois)',
+    }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], CreerTontineDto.prototype, "jourFixe", void 0);
@@ -89,4 +98,48 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreerTontineDto.prototype, "clientId", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(2, { message: 'Une tontine GROUPE doit avoir au moins 2 membres' }),
+    (0, class_validator_1.Max)(100),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreerTontineDto.prototype, "nbMembresMax", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(100),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreerTontineDto.prototype, "montantParMembre", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreerTontineDto.prototype, "cautionObligatoire", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreerTontineDto.prototype, "montantCautionObligatoire", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreerTontineDto.prototype, "penaliteRetardActive", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreerTontineDto.prototype, "montantPenaliteRetard", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.ModeTirageGroupe),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreerTontineDto.prototype, "modeTirage", void 0);
 //# sourceMappingURL=creer-tontine.dto.js.map

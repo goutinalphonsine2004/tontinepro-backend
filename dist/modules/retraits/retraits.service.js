@@ -88,11 +88,18 @@ let RetraitsService = class RetraitsService {
         return {
             succes: true,
             message: 'Code OTP de confirmation envoyé par SMS.',
-            donnees: { tontineId: tontine.id, montant: dto.montant, telephone, expireLe },
+            donnees: {
+                tontineId: tontine.id,
+                montant: dto.montant,
+                telephone,
+                expireLe,
+            },
         };
     }
     async confirmer(utilisateurId, dto) {
-        const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { id: utilisateurId },
+        });
         if (!utilisateur)
             throw new common_1.NotFoundException('Utilisateur introuvable');
         const telephone = dto.telephone ?? utilisateur.telephone;
@@ -107,9 +114,15 @@ let RetraitsService = class RetraitsService {
             orderBy: { creeLe: 'desc' },
         });
         if (!otp || !(await this.verifierCodeOtp(dto.code, otp.code))) {
-            throw new common_1.BadRequestException({ message: 'Code OTP de retrait invalide ou expiré', code: 'OTP_RETRAIT_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: 'Code OTP de retrait invalide ou expiré',
+                code: 'OTP_RETRAIT_INVALIDE',
+            });
         }
-        await this.prisma.codeOTP.update({ where: { id: otp.id }, data: { utilise: true } });
+        await this.prisma.codeOTP.update({
+            where: { id: otp.id },
+            data: { utilise: true },
+        });
         return this.demander(utilisateurId, dto);
     }
     async demander(utilisateurId, dto) {
@@ -146,7 +159,10 @@ let RetraitsService = class RetraitsService {
     async verifierRetraitPossible(utilisateurId, tontine, montant) {
         await this.verifierAucuneAlerteBloquante(tontine.id);
         if (tontine.proprietaireId !== utilisateurId) {
-            throw new common_1.ForbiddenException({ message: 'Seul le propriétaire peut demander un retrait', code: 'ACCES_REFUSE' });
+            throw new common_1.ForbiddenException({
+                message: 'Seul le propriétaire peut demander un retrait',
+                code: 'ACCES_REFUSE',
+            });
         }
         if (tontine.soldeActuel < montant) {
             throw new common_1.BadRequestException({
@@ -155,16 +171,33 @@ let RetraitsService = class RetraitsService {
             });
         }
         if (tontine.politique === client_1.PolitiqueRetrait.BLOQUE) {
-            if (!tontine.dateDeverrouillage || tontine.dateDeverrouillage > new Date()) {
+            if (!tontine.dateDeverrouillage ||
+                tontine.dateDeverrouillage > new Date()) {
                 throw new common_1.BadRequestException({
                     message: `Retrait bloqué jusqu'au ${tontine.dateDeverrouillage?.toLocaleDateString('fr-FR') ?? 'date indéfinie'}`,
                     code: 'TONTINE_BLOQUEE',
                 });
             }
+            if (!tontine.objectifMontant) {
+                throw new common_1.BadRequestException({
+                    message: 'Objectif requis pour une tontine bloquée.',
+                    code: 'OBJECTIF_REQUIS',
+                });
+            }
+            if (tontine.soldeActuel < tontine.objectifMontant) {
+                throw new common_1.BadRequestException({
+                    message: `Objectif non atteint. Progression: ${tontine.soldeActuel}/${tontine.objectifMontant} FCFA`,
+                    code: 'OBJECTIF_NON_ATTEINT',
+                });
+            }
         }
         if (tontine.politique === client_1.PolitiqueRetrait.PROGRAMME) {
-            if (!tontine.dateDeverrouillage || tontine.dateDeverrouillage > new Date()) {
-                throw new common_1.BadRequestException({ message: 'Date de retrait programmée non atteinte', code: 'DATE_NON_ATTEINTE' });
+            if (!tontine.dateDeverrouillage ||
+                tontine.dateDeverrouillage > new Date()) {
+                throw new common_1.BadRequestException({
+                    message: 'Date de retrait programmée non atteinte',
+                    code: 'DATE_NON_ATTEINTE',
+                });
             }
         }
     }
@@ -198,7 +231,10 @@ let RetraitsService = class RetraitsService {
         });
         const retrait = await this.prisma.retrait.findUnique({
             where: { id: retraitId },
-            include: { utilisateur: { select: { id: true, nom: true, collecteurId: true } }, tontine: { select: { nom: true } } },
+            include: {
+                utilisateur: { select: { id: true, nom: true, collecteurId: true } },
+                tontine: { select: { nom: true } },
+            },
         });
         await this.prisma.$transaction([
             this.prisma.retrait.update({
@@ -225,7 +261,11 @@ let RetraitsService = class RetraitsService {
             include: { tontine: { select: { id: true, nom: true } } },
             orderBy: { creeLe: 'desc' },
         });
-        return { succes: true, message: `${retraits.length} retrait(s).`, donnees: retraits };
+        return {
+            succes: true,
+            message: `${retraits.length} retrait(s).`,
+            donnees: retraits,
+        };
     }
     async enAttente() {
         const retraits = await this.prisma.retrait.findMany({
@@ -237,7 +277,11 @@ let RetraitsService = class RetraitsService {
             orderBy: { creeLe: 'asc' },
         });
         const total = retraits.reduce((s, r) => s + r.montant, 0);
-        return { succes: true, message: `${retraits.length} retrait(s) en attente. Total: ${total} FCFA.`, donnees: retraits };
+        return {
+            succes: true,
+            message: `${retraits.length} retrait(s) en attente. Total: ${total} FCFA.`,
+            donnees: retraits,
+        };
     }
     async valider(retraitId, adminId) {
         const retrait = await this.prisma.retrait.findUnique({
@@ -247,42 +291,72 @@ let RetraitsService = class RetraitsService {
         if (!retrait)
             throw new common_1.NotFoundException('Retrait introuvable');
         if (retrait.statut !== client_1.StatutRetrait.EN_ATTENTE) {
-            throw new common_1.BadRequestException({ message: 'Ce retrait n\'est plus en attente', code: 'STATUT_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: "Ce retrait n'est plus en attente",
+                code: 'STATUT_INVALIDE',
+            });
         }
-        const tontine = await this.prisma.tontine.findUnique({ where: { id: retrait.tontineId } });
+        const tontine = await this.prisma.tontine.findUnique({
+            where: { id: retrait.tontineId },
+        });
         if (!tontine || tontine.soldeActuel < retrait.montant) {
-            throw new common_1.BadRequestException({ message: 'Solde tontine insuffisant', code: 'SOLDE_INSUFFISANT' });
+            throw new common_1.BadRequestException({
+                message: 'Solde tontine insuffisant',
+                code: 'SOLDE_INSUFFISANT',
+            });
         }
         await this.prisma.retrait.update({
             where: { id: retraitId },
             data: { statut: client_1.StatutRetrait.VALIDE, validePar: adminId },
         });
         await this.executer(retraitId, retrait.utilisateur.telephone, tontine.id, retrait.montant);
-        return { succes: true, message: `Retrait de ${retrait.montant} FCFA validé et exécuté.` };
+        return {
+            succes: true,
+            message: `Retrait de ${retrait.montant} FCFA validé et exécuté.`,
+        };
     }
     async rejeter(retraitId, adminId, dto) {
-        const retrait = await this.prisma.retrait.findUnique({ where: { id: retraitId } });
+        const retrait = await this.prisma.retrait.findUnique({
+            where: { id: retraitId },
+        });
         if (!retrait)
             throw new common_1.NotFoundException('Retrait introuvable');
         if (retrait.statut !== client_1.StatutRetrait.EN_ATTENTE) {
-            throw new common_1.BadRequestException({ message: 'Ce retrait n\'est plus en attente', code: 'STATUT_INVALIDE' });
+            throw new common_1.BadRequestException({
+                message: "Ce retrait n'est plus en attente",
+                code: 'STATUT_INVALIDE',
+            });
         }
         await this.prisma.retrait.update({
             where: { id: retraitId },
-            data: { statut: client_1.StatutRetrait.REJETE, validePar: adminId, motifRejet: dto.motif },
+            data: {
+                statut: client_1.StatutRetrait.REJETE,
+                validePar: adminId,
+                motifRejet: dto.motif,
+            },
         });
         return { succes: true, message: 'Retrait rejeté.' };
     }
     async creerOtpRetrait(utilisateurId, telephone, tontineId, montant) {
         await this.prisma.codeOTP.updateMany({
-            where: { utilisateurId, type: { startsWith: OTP_TYPE_RETRAIT }, utilise: false },
+            where: {
+                utilisateurId,
+                type: { startsWith: OTP_TYPE_RETRAIT },
+                utilise: false,
+            },
             data: { utilise: true },
         });
         const code = (0, crypto_1.randomInt)(100000, 1000000).toString();
         const codeHash = await bcrypt.hash(code, 10);
         const expireLe = new Date(Date.now() + DUREE_OTP_RETRAIT_MINUTES * 60 * 1000);
         await this.prisma.codeOTP.create({
-            data: { utilisateurId, telephone, code: codeHash, type: this.typeOtpRetrait(tontineId, montant), expireLe },
+            data: {
+                utilisateurId,
+                telephone,
+                code: codeHash,
+                type: this.typeOtpRetrait(tontineId, montant),
+                expireLe,
+            },
         });
         return { code, expireLe };
     }

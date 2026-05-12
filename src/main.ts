@@ -20,12 +20,15 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const corsOrigins = process.env.CORS_ORIGINS
-    ?.split(',')
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
   app.enableCors({
-    origin: corsOrigins?.length ? corsOrigins : process.env.NODE_ENV === 'production' ? false : true,
+    origin: corsOrigins?.length
+      ? corsOrigins
+      : process.env.NODE_ENV === 'production'
+        ? false
+        : true,
     credentials: true,
   });
 

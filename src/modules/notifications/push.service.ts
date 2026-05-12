@@ -29,7 +29,12 @@ export class PushService {
     }
   }
 
-  async envoyerNotification(token: string, titre: string, corps: string, donnees?: Record<string, string>) {
+  async envoyerNotification(
+    token: string,
+    titre: string,
+    corps: string,
+    donnees?: Record<string, string>,
+  ) {
     if (!this.initialized) {
       this.logger.warn(`[Push] Simulation → ${titre}: ${corps}`);
       return { success: true, simulated: true };
@@ -51,7 +56,12 @@ export class PushService {
     }
   }
 
-  async envoyerAMultiple(tokens: string[], titre: string, corps: string, donnees?: Record<string, string>) {
+  async envoyerAMultiple(
+    tokens: string[],
+    titre: string,
+    corps: string,
+    donnees?: Record<string, string>,
+  ) {
     if (!this.initialized || tokens.length === 0) return;
 
     const messages = tokens.map((token) => ({
@@ -62,7 +72,9 @@ export class PushService {
 
     try {
       const result = await admin.messaging().sendEach(messages);
-      this.logger.log(`[Push Multi] ${result.successCount}/${tokens.length} envoyés`);
+      this.logger.log(
+        `[Push Multi] ${result.successCount}/${tokens.length} envoyés`,
+      );
       return result;
     } catch (err: any) {
       this.logger.error(`[Push Multi] Erreur: ${err.message}`);

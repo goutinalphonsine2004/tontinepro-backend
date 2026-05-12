@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -14,7 +22,10 @@ export class KycController {
   constructor(private service: KycService) {}
 
   @Post('soumettre')
-  soumettre(@UtilisateurCourant() u: { id: string }, @Body() dto: SoumettreKycDto) {
+  soumettre(
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: SoumettreKycDto,
+  ) {
     return this.service.soumettre(u.id, dto);
   }
 
@@ -40,7 +51,11 @@ export class KycController {
   @Roles(Role.ADMIN, Role.SUPERVISEUR)
   @UseGuards(RolesGuard)
   @Put(':id/rejeter')
-  rejeter(@Param('id') id: string, @UtilisateurCourant() u: { id: string }, @Body() dto: RejeterKycDto) {
+  rejeter(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string },
+    @Body() dto: RejeterKycDto,
+  ) {
     return this.service.rejeter(id, u.id, dto);
   }
 }
