@@ -89,6 +89,17 @@ export class UtilisateursController {
 
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
+  @Put(':id/superviseur')
+  assignerSuperviseur(
+    @UtilisateurCourant() u: { id: string },
+    @Param('id') id: string,
+    @Body() body: { superviseurId: string | null },
+  ) {
+    return this.service.assignerSuperviseur(u.id, id, body.superviseurId);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
   @Delete(':id')
   supprimer(@UtilisateurCourant() u: { id: string }, @Param('id') id: string) {
     return this.service.supprimerUtilisateur(u.id, id);

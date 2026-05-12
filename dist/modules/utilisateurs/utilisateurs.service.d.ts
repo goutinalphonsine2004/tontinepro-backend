@@ -13,10 +13,12 @@ export declare class UtilisateursService {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -25,8 +27,6 @@ export declare class UtilisateursService {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     modifierProfil(utilisateurId: string, dto: ModifierProfilDto): Promise<{
@@ -34,10 +34,12 @@ export declare class UtilisateursService {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -46,8 +48,6 @@ export declare class UtilisateursService {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     changerPin(utilisateurId: string, dto: ChangerPinDto): Promise<{
@@ -59,10 +59,12 @@ export declare class UtilisateursService {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -71,8 +73,6 @@ export declare class UtilisateursService {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     listerUtilisateurs(dto: FiltrerUtilisateursDto): Promise<{
@@ -81,10 +81,12 @@ export declare class UtilisateursService {
         donnees: {
             utilisateurs: {
                 telephone: string;
-                nom: string;
-                role: import("@prisma/client").$Enums.Role;
                 id: string;
+                creeLe: Date;
+                misAJourLe: Date;
+                nom: string;
                 photo: string | null;
+                role: import("@prisma/client").$Enums.Role;
                 typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
                 statut: import("@prisma/client").$Enums.StatutCompte;
                 empreinteActive: boolean;
@@ -93,8 +95,6 @@ export declare class UtilisateursService {
                 zoneId: string | null;
                 soldeCommission: number;
                 montantCaution: number;
-                creeLe: Date;
-                misAJourLe: Date;
             }[];
             total: number;
             page: number;
@@ -107,10 +107,12 @@ export declare class UtilisateursService {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -119,8 +121,6 @@ export declare class UtilisateursService {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     changerRole(adminId: string, cibleId: string, dto: ChangerRoleDto): Promise<{
@@ -128,10 +128,12 @@ export declare class UtilisateursService {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -140,9 +142,11 @@ export declare class UtilisateursService {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
+    }>;
+    assignerSuperviseur(adminId: string, agentId: string, superviseurId: string | null): Promise<{
+        succes: boolean;
+        message: string;
     }>;
     monDashboard(clientId: string): Promise<{
         succes: boolean;
@@ -155,9 +159,9 @@ export declare class UtilisateursService {
             };
             soldeTotal: number;
             tontines: {
-                nom: string;
                 id: string;
                 type: import("@prisma/client").$Enums.TypeTontine;
+                nom: string;
                 soldeActuel: number;
                 objectifMontant: number | null;
                 dateDeverrouillage: Date | null;
@@ -190,17 +194,17 @@ export declare class UtilisateursService {
             };
             prochaineDistribution: {
                 tontine: {
-                    nom: string;
                     id: string;
+                    nom: string;
                     montantJournalier: number;
                 };
             } & {
-                id: string;
-                creeLe: Date;
-                utilisateurId: string;
                 tontineId: string;
-                position: number;
+                id: string;
+                utilisateurId: string;
+                creeLe: Date;
                 aRecu: boolean;
+                position: number;
                 recuLe: Date | null;
                 montantRecu: number | null;
             };
@@ -209,22 +213,22 @@ export declare class UtilisateursService {
                     nom: string;
                 } | null;
             } & {
+                refKKiaPay: string | null;
+                tontineId: string | null;
+                montant: number;
                 id: string;
-                statut: import("@prisma/client").$Enums.StatutTransaction;
+                utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
-                utilisateurId: string;
+                statut: import("@prisma/client").$Enums.StatutTransaction;
+                tentatives: number;
                 reference: string;
-                montant: number;
                 montantNet: number;
-                refKKiaPay: string | null;
                 operateur: string | null;
                 fraisPlateforme: number;
                 fraisAgent: number;
                 hashPrecedent: string | null;
                 hashActuel: string | null;
-                tontineId: string | null;
-                tentatives: number;
                 motifEchec: string | null;
             })[];
         };

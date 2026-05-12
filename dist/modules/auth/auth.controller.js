@@ -57,7 +57,7 @@ let AuthController = class AuthController {
         return this.authService.reinitialiserPin(dto);
     }
     rafraichirToken(utilisateur, _dto) {
-        return this.authService.rafraichirToken(utilisateur.id, utilisateur.telephone, utilisateur.role, utilisateur.sessionId);
+        return this.authService.rafraichirToken(utilisateur.id, utilisateur.telephone, utilisateur.role, utilisateur.sessionId, utilisateur.refreshTokenBrut);
     }
     deconnexion(utilisateur) {
         return this.authService.deconnexion(utilisateur.id, utilisateur.sessionId);

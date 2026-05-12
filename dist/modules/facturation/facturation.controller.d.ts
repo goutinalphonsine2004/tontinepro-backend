@@ -19,9 +19,9 @@ export declare class FacturationController {
             fraisMensuels: number;
             fraisParClient: number;
             totalClients: number;
-            cautionMontant: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
+            cautionMontant: number;
         };
     }>;
     payerAbonnement(u: {
@@ -38,9 +38,9 @@ export declare class FacturationController {
             fraisMensuels: number;
             fraisParClient: number;
             totalClients: number;
-            cautionMontant: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
+            cautionMontant: number;
         };
     }>;
     upgrader(u: {
@@ -57,9 +57,9 @@ export declare class FacturationController {
             fraisMensuels: number;
             fraisParClient: number;
             totalClients: number;
-            cautionMontant: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
+            cautionMontant: number;
         };
     }>;
     tous(): Promise<{
@@ -69,9 +69,9 @@ export declare class FacturationController {
             facturations: ({
                 agent: {
                     telephone: string;
+                    id: string;
                     nom: string;
                     role: import("@prisma/client").$Enums.Role;
-                    id: string;
                 };
             } & {
                 id: string;
@@ -82,9 +82,9 @@ export declare class FacturationController {
                 fraisMensuels: number;
                 fraisParClient: number;
                 totalClients: number;
-                cautionMontant: number;
                 dernierPaiement: Date;
                 prochainPaiement: Date;
+                cautionMontant: number;
             })[];
             totalMensuel: number;
         };

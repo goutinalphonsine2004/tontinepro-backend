@@ -35,15 +35,15 @@ export declare class RetraitsController {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         };
     }>;
@@ -54,19 +54,19 @@ export declare class RetraitsController {
         message: string;
         donnees: ({
             tontine: {
-                nom: string;
                 id: string;
+                nom: string;
             };
         } & {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         })[];
     }>;
@@ -76,24 +76,24 @@ export declare class RetraitsController {
         donnees: ({
             utilisateur: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
             };
             tontine: {
-                nom: string;
                 id: string;
+                nom: string;
                 soldeActuel: number;
             };
         } & {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         })[];
     }>;

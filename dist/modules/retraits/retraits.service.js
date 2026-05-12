@@ -41,6 +41,9 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RetraitsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -51,16 +54,20 @@ const prisma_service_1 = require("../../prisma/prisma.service");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
 const sms_service_1 = require("../notifications/sms.service");
 const business_constants_1 = require("../../common/constants/business.constants");
+const notifications_service_1 = require("../notifications/notifications.service");
+const common_2 = require("@nestjs/common");
 const OTP_TYPE_RETRAIT = 'RETRAIT';
 const DUREE_OTP_RETRAIT_MINUTES = 10;
 let RetraitsService = class RetraitsService {
     prisma;
     kkiapay;
     sms;
-    constructor(prisma, kkiapay, sms) {
+    notifications;
+    constructor(prisma, kkiapay, sms, notifications) {
         this.prisma = prisma;
         this.kkiapay = kkiapay;
         this.sms = sms;
+        this.notifications = notifications;
     }
     async demanderOtp(utilisateurId, dto) {
         const [utilisateur, tontine] = await Promise.all([
@@ -75,6 +82,9 @@ let RetraitsService = class RetraitsService {
         const telephone = dto.telephone ?? utilisateur.telephone;
         const { code, expireLe } = await this.creerOtpRetrait(utilisateurId, telephone, dto.tontineId, dto.montant);
         await this.sms.envoyer(telephone, `TontineBénin: Code retrait ${code}. Montant: ${dto.montant} FCFA. Valable ${DUREE_OTP_RETRAIT_MINUTES} min.`);
+        if (utilisateur.collecteurId) {
+            await this.notifications.envoyerAEquipe(utilisateur.collecteurId, 'Demande de retrait client', `Votre client ${utilisateur.nom} a initié un retrait de ${dto.montant} F sur ${tontine.nom}. Code OTP envoyé.`);
+        }
         return {
             succes: true,
             message: 'Code OTP de confirmation envoyé par SMS.',
@@ -178,23 +188,36 @@ let RetraitsService = class RetraitsService {
         }
     }
     async executer(retraitId, telephone, tontineId, montant) {
+        const fraisRetrait = business_constants_1.BUSINESS.calculerFraisRetrait(montant);
+        const montantNet = montant - fraisRetrait;
         const transfert = await this.kkiapay.initierTransfert({
-            montant,
+            montant: montantNet,
             telephone,
             reference: `retrait_${retraitId}`,
             motif: 'Retrait tontine',
         });
+        const retrait = await this.prisma.retrait.findUnique({
+            where: { id: retraitId },
+            include: { utilisateur: { select: { id: true, nom: true, collecteurId: true } }, tontine: { select: { nom: true } } },
+        });
         await this.prisma.$transaction([
             this.prisma.retrait.update({
                 where: { id: retraitId },
-                data: { statut: client_1.StatutRetrait.EXECUTE, executeLe: new Date(), refKKiaPay: transfert.refKKiaPay },
+                data: {
+                    statut: client_1.StatutRetrait.EXECUTE,
+                    executeLe: new Date(),
+                    refKKiaPay: transfert.refKKiaPay,
+                },
             }),
             this.prisma.tontine.update({
                 where: { id: tontineId },
                 data: { soldeActuel: { decrement: montant } },
             }),
         ]);
-        await this.sms.envoyer(telephone, `TontineBénin: Retrait de ${montant} FCFA exécuté avec succès. Référence: ${transfert.refKKiaPay}.`);
+        await this.sms.envoyer(telephone, `TontineBénin: Retrait de ${montantNet} FCFA (après ${fraisRetrait}F de frais) exécuté avec succès. Réf: ${transfert.refKKiaPay}.`);
+        if (retrait?.utilisateur.collecteurId) {
+            await this.notifications.envoyerAEquipe(retrait.utilisateur.collecteurId, 'Retrait effectué', `Le retrait de ${montant} F pour votre client ${retrait.utilisateur.nom} sur ${retrait.tontine.nom} a été payé.`);
+        }
     }
     async mesRetraits(utilisateurId) {
         const retraits = await this.prisma.retrait.findMany({
@@ -276,8 +299,11 @@ let RetraitsService = class RetraitsService {
 exports.RetraitsService = RetraitsService;
 exports.RetraitsService = RetraitsService = __decorate([
     (0, common_1.Injectable)(),
+    __param(2, (0, common_2.Inject)((0, common_2.forwardRef)(() => sms_service_1.SmsService))),
+    __param(3, (0, common_2.Inject)((0, common_2.forwardRef)(() => notifications_service_1.NotificationsService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         kkiapay_service_1.KkiapayService,
-        sms_service_1.SmsService])
+        sms_service_1.SmsService,
+        notifications_service_1.NotificationsService])
 ], RetraitsService);
 //# sourceMappingURL=retraits.service.js.map

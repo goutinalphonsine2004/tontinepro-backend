@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var NotificationsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsService = void 0;
@@ -120,6 +123,16 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
         });
         return { succes: true, message: 'Préférences notifications mises à jour.', donnees: preferences };
     }
+    async envoyerAEquipe(agentId, titre, message) {
+        await this.envoyerAUtilisateur(agentId, titre, message, 'PUSH');
+        const agent = await this.prisma.utilisateur.findUnique({
+            where: { id: agentId },
+            select: { superviseurId: true },
+        });
+        if (agent?.superviseurId) {
+            await this.envoyerAUtilisateur(agent.superviseurId, `[Équipe] ${titre}`, message, 'PUSH');
+        }
+    }
     async getPreferencesBrutes(utilisateurId) {
         return this.prisma.preferenceNotification.upsert({
             where: { utilisateurId },
@@ -136,6 +149,7 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
 exports.NotificationsService = NotificationsService;
 exports.NotificationsService = NotificationsService = NotificationsService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => sms_service_1.SmsService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         sms_service_1.SmsService,
         push_service_1.PushService,

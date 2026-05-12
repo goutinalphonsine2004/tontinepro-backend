@@ -11,11 +11,11 @@ export declare class AlertesService {
             alertes: {
                 message: string;
                 id: string;
-                statut: string;
                 creeLe: Date;
                 misAJourLe: Date;
                 type: string;
                 titre: string;
+                statut: string;
                 severite: string;
                 resourceType: string | null;
                 resourceId: string | null;
@@ -43,11 +43,11 @@ export declare class AlertesService {
             dernieres: {
                 message: string;
                 id: string;
-                statut: string;
                 creeLe: Date;
                 misAJourLe: Date;
                 type: string;
                 titre: string;
+                statut: string;
                 severite: string;
                 resourceType: string | null;
                 resourceId: string | null;
@@ -63,11 +63,11 @@ export declare class AlertesService {
         donnees: {
             message: string;
             id: string;
-            statut: string;
             creeLe: Date;
             misAJourLe: Date;
             type: string;
             titre: string;
+            statut: string;
             severite: string;
             resourceType: string | null;
             resourceId: string | null;
@@ -82,11 +82,11 @@ export declare class AlertesService {
         donnees: {
             message: string;
             id: string;
-            statut: string;
             creeLe: Date;
             misAJourLe: Date;
             type: string;
             titre: string;
+            statut: string;
             severite: string;
             resourceType: string | null;
             resourceId: string | null;
@@ -101,11 +101,11 @@ export declare class AlertesService {
         donnees: {
             message: string;
             id: string;
-            statut: string;
             creeLe: Date;
             misAJourLe: Date;
             type: string;
             titre: string;
+            statut: string;
             severite: string;
             resourceType: string | null;
             resourceId: string | null;

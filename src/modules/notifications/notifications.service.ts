@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common';
 import { Canal, TypeNotification } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from './sms.service';
@@ -15,6 +15,7 @@ export class NotificationsService {
 
   constructor(
     private prisma: PrismaService,
+    @Inject(forwardRef(() => SmsService))
     private sms: SmsService,
     private push: PushService,
     private whatsapp: WhatsappService,
@@ -132,6 +133,21 @@ export class NotificationsService {
     });
 
     return { succes: true, message: 'Préférences notifications mises à jour.', donnees: preferences };
+  }
+
+  async envoyerAEquipe(agentId: string, titre: string, message: string) {
+    // 1. Notifier l'agent
+    await this.envoyerAUtilisateur(agentId, titre, message, 'PUSH');
+
+    // 2. Trouver et notifier le superviseur
+    const agent = await this.prisma.utilisateur.findUnique({
+      where: { id: agentId },
+      select: { superviseurId: true },
+    });
+
+    if (agent?.superviseurId) {
+      await this.envoyerAUtilisateur(agent.superviseurId, `[Équipe] ${titre}`, message, 'PUSH');
+    }
   }
 
   private async getPreferencesBrutes(utilisateurId: string) {

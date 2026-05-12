@@ -61,6 +61,9 @@ let UtilisateursController = class UtilisateursController {
     changerRole(u, id, dto) {
         return this.service.changerRole(u.id, id, dto);
     }
+    assignerSuperviseur(u, id, body) {
+        return this.service.assignerSuperviseur(u.id, id, body.superviseurId);
+    }
     supprimer(u, id) {
         return this.service.supprimerUtilisateur(u.id, id);
     }
@@ -154,6 +157,17 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, changer_role_dto_1.ChangerRoleDto]),
     __metadata("design:returntype", void 0)
 ], UtilisateursController.prototype, "changerRole", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, common_1.Put)(':id/superviseur'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "assignerSuperviseur", null);
 __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),

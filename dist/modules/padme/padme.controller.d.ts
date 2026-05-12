@@ -17,10 +17,10 @@ export declare class PadmeController {
             };
         } & {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             creeLe: Date;
-            tauxRegularite: number;
+            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             clientId: string;
+            tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
             totalEpargne: number;
@@ -42,16 +42,16 @@ export declare class PadmeController {
                 };
                 client: {
                     telephone: string;
-                    nom: string;
                     id: string;
+                    nom: string;
                     kycVerifie: boolean;
                 };
             } & {
                 id: string;
-                statut: import("@prisma/client").$Enums.StatutDossierPADME;
                 creeLe: Date;
-                tauxRegularite: number;
+                statut: import("@prisma/client").$Enums.StatutDossierPADME;
                 clientId: string;
+                tauxRegularite: number;
                 scoreAuMoment: number;
                 scoreCreditId: string;
                 totalEpargne: number;
@@ -88,17 +88,17 @@ export declare class PadmeController {
             };
             client: {
                 telephone: string;
-                nom: string;
                 id: string;
-                kycVerifie: boolean;
                 creeLe: Date;
+                nom: string;
+                kycVerifie: boolean;
             };
         } & {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             creeLe: Date;
-            tauxRegularite: number;
+            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             clientId: string;
+            tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
             totalEpargne: number;
@@ -116,10 +116,10 @@ export declare class PadmeController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             creeLe: Date;
-            tauxRegularite: number;
+            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             clientId: string;
+            tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
             totalEpargne: number;
@@ -137,10 +137,10 @@ export declare class PadmeController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             creeLe: Date;
-            tauxRegularite: number;
+            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             clientId: string;
+            tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
             totalEpargne: number;
@@ -158,10 +158,10 @@ export declare class PadmeController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             creeLe: Date;
-            tauxRegularite: number;
+            statut: import("@prisma/client").$Enums.StatutDossierPADME;
             clientId: string;
+            tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
             totalEpargne: number;

@@ -1,9 +1,13 @@
 export declare const BUSINESS: {
+    TAUX_COMMISSION_BASE: number;
+    TAUX_COMMISSION_DIAMANT: number;
+    TAUX_COMMISSION_RETRAIT: number;
     TAUX_COMMISSION_COTISATION: number;
     TAUX_INTERET_MICRO_CREDIT: number;
     TAUX_COMMISSION_PADME: number;
     ABONNEMENT_STANDARD: number;
     ABONNEMENT_PRO: number;
+    FRAIS_PAR_CLIENT_MENSUEL: number;
     PLAFONDS_MICRO_CREDIT: {
         SCORE_60_70: number;
         SCORE_70_80: number;
@@ -15,11 +19,12 @@ export declare const BUSINESS: {
     SEUIL_SCORE_MICRO_CREDIT: number;
     MAX_TENTATIVES_PIN: number;
     DUREE_OTP_MINUTES: number;
-    calculerFraisPlateforme(montant: number): number;
+    calculerFraisPlateforme(montant: number, estDiamant?: boolean): number;
+    calculerFraisRetrait(montant: number): number;
     calculerInteretMicroCredit(montantPrincipal: number): number;
     calculerMontantTotal(montantPrincipal: number): number;
     calculerPaiementJournalier(montantTotal: number, jours: number): number;
     getPlafondMicroCredit(score: number): number;
-    calculerCommissionAgent(montantCotisation: number): number;
+    calculerCommissionAgent(montantCotisation: number, estIndependant: boolean): number;
     calculerCommissionPADME(montantCreditAccorde: number): number;
 };

@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { Request } from 'express';
 
 interface JwtPayload {
   sub: string;
@@ -29,10 +30,11 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
       ignoreExpiration: false,
       secretOrKey: secretRefreshJwt(config),
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(req: Request, payload: JwtPayload) {
     if (!payload?.sub) throw new UnauthorizedException('Refresh token invalide');
     if (!payload.sid) throw new UnauthorizedException('Session invalide');
 
@@ -47,6 +49,15 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     });
     if (!session) throw new UnauthorizedException('Session expirée ou révoquée');
 
-    return { id: payload.sub, telephone: payload.telephone, role: payload.role, sessionId: payload.sid };
+    // Extraire le refresh token brut pour la vérification blacklist
+    const refreshTokenBrut = (req.body as any)?.refreshToken ?? null;
+
+    return {
+      id: payload.sub,
+      telephone: payload.telephone,
+      role: payload.role,
+      sessionId: payload.sid,
+      refreshTokenBrut,
+    };
   }
 }

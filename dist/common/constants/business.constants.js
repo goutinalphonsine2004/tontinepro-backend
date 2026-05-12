@@ -2,11 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BUSINESS = void 0;
 exports.BUSINESS = {
-    TAUX_COMMISSION_COTISATION: 0.02,
+    TAUX_COMMISSION_BASE: 0.03,
+    TAUX_COMMISSION_DIAMANT: 0.02,
+    TAUX_COMMISSION_RETRAIT: 0.02,
+    TAUX_COMMISSION_COTISATION: 0.03,
     TAUX_INTERET_MICRO_CREDIT: 0.10,
     TAUX_COMMISSION_PADME: 0.03,
     ABONNEMENT_STANDARD: 2500,
     ABONNEMENT_PRO: 5000,
+    FRAIS_PAR_CLIENT_MENSUEL: 100,
     PLAFONDS_MICRO_CREDIT: {
         SCORE_60_70: 10000,
         SCORE_70_80: 25000,
@@ -18,8 +22,12 @@ exports.BUSINESS = {
     SEUIL_SCORE_MICRO_CREDIT: 60,
     MAX_TENTATIVES_PIN: 3,
     DUREE_OTP_MINUTES: 10,
-    calculerFraisPlateforme(montant) {
-        return montant * this.TAUX_COMMISSION_COTISATION;
+    calculerFraisPlateforme(montant, estDiamant = false) {
+        const taux = estDiamant ? this.TAUX_COMMISSION_DIAMANT : this.TAUX_COMMISSION_BASE;
+        return montant * taux;
+    },
+    calculerFraisRetrait(montant) {
+        return montant * this.TAUX_COMMISSION_RETRAIT;
     },
     calculerInteretMicroCredit(montantPrincipal) {
         return montantPrincipal * this.TAUX_INTERET_MICRO_CREDIT;
@@ -41,8 +49,10 @@ exports.BUSINESS = {
             return this.PLAFONDS_MICRO_CREDIT.SCORE_60_70;
         return 0;
     },
-    calculerCommissionAgent(montantCotisation) {
-        return this.calculerFraisPlateforme(montantCotisation) * 0.5;
+    calculerCommissionAgent(montantCotisation, estIndependant) {
+        if (!estIndependant)
+            return 0;
+        return (montantCotisation * this.TAUX_COMMISSION_BASE) * 0.5;
     },
     calculerCommissionPADME(montantCreditAccorde) {
         return montantCreditAccorde * this.TAUX_COMMISSION_PADME;

@@ -171,6 +171,30 @@ let UtilisateursService = class UtilisateursService {
         });
         return { succes: true, message: `Rôle mis à jour → ${dto.role}.`, donnees: u };
     }
+    async assignerSuperviseur(adminId, agentId, superviseurId) {
+        const agent = await this.prisma.utilisateur.findUnique({ where: { id: agentId }, select: { id: true, role: true } });
+        if (!agent)
+            throw new common_1.NotFoundException('Agent introuvable');
+        if (![client_1.Role.AGENT, client_1.Role.INDEPENDANT].includes(agent.role)) {
+            throw new common_1.BadRequestException('Seul un collecteur (Agent ou Indépendant) peut avoir un superviseur');
+        }
+        if (superviseurId) {
+            const superviseur = await this.prisma.utilisateur.findUnique({ where: { id: superviseurId }, select: { id: true, role: true } });
+            if (!superviseur)
+                throw new common_1.NotFoundException('Superviseur introuvable');
+            if (superviseur.role !== client_1.Role.SUPERVISEUR) {
+                throw new common_1.BadRequestException("L'utilisateur spécifié n'est pas un superviseur");
+            }
+        }
+        await this.prisma.utilisateur.update({
+            where: { id: agentId },
+            data: { superviseurId },
+        });
+        return {
+            succes: true,
+            message: superviseurId ? 'Superviseur assigné avec succès' : 'Superviseur retiré avec succès',
+        };
+    }
     async monDashboard(clientId) {
         const maintenant = new Date();
         const sixMoisDate = new Date(maintenant);

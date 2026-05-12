@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
-import { Role, StatutCompte, StatutCredit, StatutDossierPADME, StatutMembreGroupe, TypeNotification, TypeTransaction, StatutTransaction } from '@prisma/client';
+import { Role, StatutCompte, StatutCredit, StatutDossierPADME, StatutMembreGroupe, StatutTontine, FrequenceTontine, TypeNotification, TypeTransaction, StatutTransaction } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
 import { PdfService } from '../../common/services/pdf.service';
@@ -18,9 +18,11 @@ export class CronService {
   constructor(
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
+    @Inject(forwardRef(() => SmsService))
     private sms: SmsService,
     private whatsapp: WhatsappService,
     private pdf: PdfService,
+    @Inject(forwardRef(() => NotificationsService))
     private notifications: NotificationsService,
     private badges: BadgesService,
     private config: ConfigService,
@@ -60,10 +62,24 @@ export class CronService {
         },
       });
 
-      await this.sms.envoyer(
-        credit.client.telephone,
-        `TontineBénin: Prélèvement de ${credit.paiementJournalier} FCFA initié pour votre micro-crédit. Confirmation en cours.`,
-      );
+      // ✅ CORRECTION : Si le crédit était EN_DEFAUT et que le paiement réussit,
+      // on remet le statut à ACTIF (le client a rechargé son compte).
+      if (credit.statut === StatutCredit.EN_DEFAUT) {
+        await this.prisma.microCredit.update({
+          where: { id: credit.id },
+          data: { statut: StatutCredit.ACTIF },
+        });
+        this.logger.log(`[CRON] Crédit réactivé (ACTIF) après paiement réussi: ${credit.id} — ${credit.client.nom}`);
+        await this.sms.envoyer(
+          credit.client.telephone,
+          `TontineBénin: ✅ Votre prélèvement de ${credit.paiementJournalier} FCFA a réussi. Votre micro-crédit est de nouveau actif.`,
+        );
+      } else {
+        await this.sms.envoyer(
+          credit.client.telephone,
+          `TontineBénin: Prélèvement de ${credit.paiementJournalier} FCFA initié pour votre micro-crédit. Confirmation en cours.`,
+        );
+      }
     } catch {
       await this.gererEchecRemboursement(credit);
     }
@@ -74,26 +90,41 @@ export class CronService {
       data: { microCreditId: credit.id, montant: credit.paiementJournalier, statut: 'ECHEC' },
     });
 
-    const echecsRecents = await this.prisma.remboursementCredit.findMany({
-      where: { microCreditId: credit.id, statut: 'ECHEC' },
+    // ✅ CORRECTION : Compter seulement les échecs CONSÉCUTIFS.
+    // On récupère tous les remboursements récents (triés du plus récent au plus ancien)
+    // et on s'arrête dès qu'on trouve un paiement SUCCES ou EN_ATTENTE entre deux échecs.
+    const remboursementsRecents = await this.prisma.remboursementCredit.findMany({
+      where: { microCreditId: credit.id },
       orderBy: { payeLe: 'desc' },
-      take: 3,
+      take: 10, // On prend les 10 derniers pour détecter les consécutifs
     });
 
-    const tousEchec = echecsRecents.length === 3;
+    let echecsConsecutifs = 0;
+    for (const remb of remboursementsRecents) {
+      if (remb.statut === 'ECHEC') {
+        echecsConsecutifs++;
+      } else {
+        // Dès qu'on trouve un SUCCES ou EN_ATTENTE, on arrête de compter
+        break;
+      }
+    }
 
-    if (tousEchec) {
+    if (echecsConsecutifs >= 3) {
       await this.prisma.microCredit.update({
         where: { id: credit.id },
         data: { statut: StatutCredit.EN_DEFAUT },
       });
-      this.logger.warn(`[CRON] Crédit EN_DEFAUT: ${credit.id} — ${credit.client.nom}`);
+      this.logger.warn(`[CRON] Crédit EN_DEFAUT (${echecsConsecutifs} échecs consécutifs): ${credit.id} — ${credit.client.nom}`);
+      await this.sms.envoyer(
+        credit.client.telephone,
+        `TontineBénin: 🚨 Votre micro-crédit est en défaut après ${echecsConsecutifs} échecs consécutifs. Contactez votre collecteur.`,
+      );
+    } else {
+      await this.sms.envoyer(
+        credit.client.telephone,
+        `TontineBénin: ⚠️ Prélèvement échoué (${echecsConsecutifs}/3). Assurez-vous d'avoir ${credit.paiementJournalier} FCFA sur votre compte Mobile Money.`,
+      );
     }
-
-    await this.sms.envoyer(
-      credit.client.telephone,
-      `TontineBénin: ⚠️ Prélèvement échoué. Assurez-vous d'avoir ${credit.paiementJournalier} FCFA sur votre compte Mobile Money.`,
-    );
 
     if (credit.client.collecteurId) {
       const collecteur = await this.prisma.utilisateur.findUnique({
@@ -103,7 +134,7 @@ export class CronService {
       if (collecteur) {
         await this.sms.envoyer(
           collecteur.telephone,
-          `TontineBénin: Alerte — prélèvement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipal} FCFA.`,
+          `TontineBénin: Alerte — prélèvement échoué pour ${credit.client.nom} (${echecsConsecutifs}/3 échecs consécutifs). Crédit: ${credit.montantPrincipal} FCFA.`,
         );
       }
     }
@@ -431,55 +462,65 @@ export class CronService {
   }
 
   // ─────────────────────────────────────────────────
-  // CRON 8H — RAPPELS COTISATION (J-3, J-1, JOUR J)
+  // CRON 8H — RAPPELS COTISATION (basé sur dateProchaineCotisation)
   // ─────────────────────────────────────────────────
   @Cron('0 8 * * *', { name: 'rappels-cotisation' })
   async envoyerRappelsCotisation() {
-    this.logger.log('[CRON 8h] Rappels cotisation...');
+    this.logger.log('[CRON 8h] Rappels cotisation (dateProchaineCotisation)...');
     const maintenant = new Date();
+    // Horizon : tontines ACTIVES dont la prochaine cotisation est dans ≤ 3 jours
+    const horizon = new Date(maintenant.getTime() + 3 * 24 * 60 * 60 * 1000);
+
     const tontines = await this.prisma.tontine.findMany({
-      where: { dateDeverrouillage: { not: null } },
+      where: {
+        statut: StatutTontine.ACTIVE,
+        dateProchaineCotisation: { not: null, lte: horizon },
+      },
       include: {
-        proprietaire: { select: { telephone: true, nom: true } },
+        proprietaire: { select: { id: true, telephone: true, nom: true } },
         membres: {
           where: { statut: StatutMembreGroupe.ACTIF },
-          include: { utilisateur: { select: { telephone: true, nom: true } } },
+          include: { utilisateur: { select: { id: true, telephone: true, nom: true } } },
         },
       },
     });
 
     let rappelsEnvoyes = 0;
     for (const tontine of tontines) {
-      if (!tontine.dateDeverrouillage) continue;
-      const joursRestants = Math.ceil(
-        (tontine.dateDeverrouillage.getTime() - maintenant.getTime()) / (24 * 60 * 60 * 1000),
-      );
+      if (!tontine.dateProchaineCotisation) continue;
 
-      let message: string | null = null;
-      if (joursRestants === 3) {
-        message = `TontineBénin: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque dans 3 jours. Pensez à cotiser !`;
+      const msRestants = tontine.dateProchaineCotisation.getTime() - maintenant.getTime();
+      const joursRestants = Math.ceil(msRestants / (24 * 60 * 60 * 1000));
+
+      // Message adapté aux téléphones basiques (court et clair)
+      const suffixeFrequence = this.libelleMontantFrequence(tontine.frequence, tontine.montantJournalier);
+      let message: string;
+      if (joursRestants <= 0) {
+        message = `TontineBénin: Ton Gando "${tontine.nom}" attend ta cotisation ${suffixeFrequence} AUJOURD'HUI.`;
       } else if (joursRestants === 1) {
-        message = `TontineBénin: ⏰ Rappel — votre tontine "${tontine.nom}" se débloque demain ! Dernière chance de cotiser.`;
-      } else if (joursRestants === 0) {
-        message = `TontineBénin: 🎉 Aujourd'hui est le jour J pour votre tontine "${tontine.nom}" ! Cotisez maintenant.`;
+        message = `TontineBénin: Ta cotisation ${suffixeFrequence} pour "${tontine.nom}" est due DEMAIN.`;
+      } else {
+        message = `TontineBénin: Rappel — Ta cotisation ${suffixeFrequence} pour "${tontine.nom}" est dans ${joursRestants}j.`;
       }
 
-      if (message) {
-        const destinataires = [
-          tontine.proprietaire.telephone,
-          ...tontine.membres.map((m) => m.utilisateur.telephone),
-        ];
-        for (const tel of destinataires) {
-          await this.sms.envoyer(tel, message);
-          // Envoi WhatsApp en parallèle (non bloquant)
-          this.whatsapp.envoyerMessage(tel, message).catch((err) =>
-            this.logger.warn(`[WhatsApp] Échec rappel cotisation → ${tel}: ${err.message}`),
-          );
-          rappelsEnvoyes++;
-        }
+      const destinataires = [
+        { id: tontine.proprietaire.id, telephone: tontine.proprietaire.telephone },
+        ...tontine.membres.map((m) => ({ id: m.utilisateur.id, telephone: m.utilisateur.telephone })),
+      ];
+      
+      for (const dest of destinataires) {
+        // notifications.envoyerAUtilisateur gère le SMS Automatique si pas de Smartphone
+        await this.notifications.envoyerAUtilisateur(
+          dest.id,
+          'Rappel cotisation',
+          message,
+          'TOUS',
+          TypeNotification.RAPPEL_COTISATION,
+        );
+        rappelsEnvoyes++;
       }
     }
-    this.logger.log(`[CRON 8h] ${rappelsEnvoyes} rappel(s) cotisation envoyé(s)`);
+    this.logger.log(`[CRON 8h] ${rappelsEnvoyes} rappel(s) envoyé(s) pour ${tontines.length} tontine(s)`);
   }
 
   // ─────────────────────────────────────────────────
@@ -597,19 +638,30 @@ export class CronService {
     const facturations = await this.prisma.facturationAgent.findMany({
       where: { actif: true },
       include: {
-        agent: { select: { id: true, telephone: true, nom: true } },
+        agent: { 
+          select: { 
+            id: true, 
+            telephone: true, 
+            nom: true,
+            _count: { select: { clients: { where: { statut: 'ACTIF' } } } }
+          } 
+        },
       },
     });
 
     let succes = 0;
     let echecs = 0;
     for (const fact of facturations) {
+      const nbClients = fact.agent._count.clients;
+      const fraisGestion = nbClients * BUSINESS.FRAIS_PAR_CLIENT_MENSUEL;
+      const totalAFacturer = fact.fraisMensuels + fraisGestion;
+
       try {
         await this.kkiapay.initierPaiement({
-          montant: fact.fraisMensuels,
+          montant: totalAFacturer,
           telephone: fact.agent.telephone,
           reference: `abonnement_${fact.agentId}_${new Date().toISOString().slice(0, 7)}`,
-          description: `Abonnement TontineBénin ${fact.plan} — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
+          description: `Abonnement TontinePro ${fact.plan} (+ ${nbClients} clients) — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
         });
 
         await this.prisma.facturationAgent.update({
@@ -617,18 +669,20 @@ export class CronService {
           data: {
             dernierPaiement: new Date(),
             prochainPaiement: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            totalClients: nbClients, // Mise à jour stat
           },
         });
 
         await this.sms.envoyer(
           fact.agent.telephone,
-          `TontineBénin: ✅ Abonnement ${fact.plan} (${fact.fraisMensuels} FCFA) prélevé avec succès. Merci !`,
+          `TontinePro: ✅ Abonnement ${fact.plan} prélevé: ${totalAFacturer} FCFA (${fact.fraisMensuels}F base + ${fraisGestion}F pour ${nbClients} clients). Merci !`,
         );
         succes++;
-      } catch {
+      } catch (err) {
+        this.logger.error(`Erreur facturation agent ${fact.agentId}: ${err.message}`);
         await this.sms.envoyer(
           fact.agent.telephone,
-          `TontineBénin: ⚠️ Impossible de prélever votre abonnement ${fact.plan} (${fact.fraisMensuels} FCFA). Vérifiez votre solde Mobile Money.`,
+          `TontinePro: ⚠️ Échec prélèvement abonnement ${fact.plan} (${totalAFacturer} FCFA). Vérifiez votre solde Mobile Money pour éviter la suspension.`,
         );
         echecs++;
       }
@@ -772,7 +826,6 @@ export class CronService {
     );
   }
 
-
   private async creerOuMettreAJourAlerteCoherence(
     tontine: { id: string; nom: string; soldeActuel: number },
     soldeCalcule: number,
@@ -844,6 +897,131 @@ export class CronService {
   async declencherRappelsManuellement() {
     await this.envoyerRappelsCotisation();
     return { succes: true, message: 'Rappels cotisation déclenchés manuellement.' };
+  }
+
+  // ─────────────────────────────────────────────────
+  // CRON 6H — DISSOLUTION AUTOMATIQUE TONTINES PROJET ÉCHÉES
+  // ─────────────────────────────────────────────────
+  @Cron('0 6 * * *', { name: 'dissolution-projets-echus' })
+  async dissoudreProjetsEchus() {
+    this.logger.log('[CRON 6h] Vérification tontines PROJET échées...');
+    const maintenant = new Date();
+
+    const projetsEchus = await this.prisma.tontine.findMany({
+      where: {
+        type: 'PROJET',
+        statut: StatutTontine.ACTIVE,
+        dateFin: { lte: maintenant },
+      },
+      include: {
+        proprietaire: { select: { id: true, telephone: true, nom: true } },
+      },
+    });
+
+    if (projetsEchus.length === 0) {
+      this.logger.log('[CRON 6h] Aucune tontine PROJET échée.');
+      return;
+    }
+
+    let dissouts = 0;
+    for (const tontine of projetsEchus) {
+      try {
+        await this.prisma.tontine.update({
+          where: { id: tontine.id },
+          data: { statut: StatutTontine.TERMINEE },
+        });
+
+        // SMS/Push optimisé (court pour feature phones)
+        const message = `TontineBénin: Votre projet "${tontine.nom}" est arrivé à échéance et a été clôturé. Contactez votre agent pour le retrait.`;
+        await this.notifications.envoyerAUtilisateur(
+          tontine.proprietaire.id,
+          'Projet clôturé',
+          message,
+          'TOUS',
+          TypeNotification.TOUR_TONTINE,
+        );
+
+        this.logger.log(`[CRON 6h] Tontine PROJET clôturée: ${tontine.nom} (${tontine.id})`);
+        dissouts++;
+      } catch (err: any) {
+        this.logger.error(`[CRON 6h] Erreur dissolution tontine ${tontine.id}: ${err.message}`);
+      }
+    }
+    this.logger.log(`[CRON 6h] ${dissouts}/${projetsEchus.length} projet(s) dissous.`);
+  }
+
+  async declencherDissolutionProjetsManuellement() {
+    await this.dissoudreProjetsEchus();
+    return { succes: true, message: 'Dissolution projets échés déclenchée manuellement.' };
+  }
+
+  // ─────────────────────────────────────────────────
+  // CRON 8H05 — RAPPORT JOURNALIER SUPERVISEURS
+  // ─────────────────────────────────────────────────
+  @Cron('5 8 * * *', { name: 'rapport-journalier-superviseurs' })
+  async rapportJournalierSuperviseurs() {
+    this.logger.log('[CRON 8h05] Génération des rapports superviseurs...');
+    
+    const superviseurs = await this.prisma.utilisateur.findMany({
+      where: { role: Role.SUPERVISEUR, statut: StatutCompte.ACTIF },
+    });
+
+    const hier = new Date();
+    hier.setDate(hier.getDate() - 1);
+    hier.setHours(0, 0, 0, 0);
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+
+    for (const sup of superviseurs) {
+      // 1. Total collecté par ses agents hier
+      const stats = await this.prisma.transaction.aggregate({
+        where: {
+          statut: StatutTransaction.SUCCES,
+          type: TypeTransaction.COTISATION,
+          creeLe: { gte: hier, lt: aujourdhui },
+          utilisateur: {
+            collecteur: { superviseurId: sup.id },
+          },
+        },
+        _sum: { montant: true },
+        _count: { id: true },
+      });
+
+      // 2. Nouveaux clients recrutés dans la zone hier
+      const nouveauxClients = await this.prisma.utilisateur.count({
+        where: {
+          role: Role.CLIENT,
+          creeLe: { gte: hier, lt: aujourdhui },
+          collecteur: { superviseurId: sup.id },
+        },
+      });
+
+      const total = stats._sum.montant ?? 0;
+      if (total > 0 || nouveauxClients > 0) {
+        await this.notifications.envoyerAUtilisateur(
+          sup.id,
+          'Rapport Journalier Zone',
+          `Hier, votre zone a collecté ${total.toLocaleString('fr-FR')} F (${stats._count.id} dépôts). Nouveaux clients : ${nouveauxClients}.`,
+          'PUSH',
+        );
+      }
+    }
+  }
+
+  async declencherRapportSuperviseurManuellement() {
+    await this.rapportJournalierSuperviseurs();
+    return { succes: true, message: 'Rapport superviseurs déclenché.' };
+  }
+
+  private libelleMontantFrequence(frequence: FrequenceTontine, montant: number): string {
+    const fmt = `${montant.toLocaleString('fr-FR')} F`;
+    switch (frequence) {
+      case FrequenceTontine.JOURNALIER:   return `journalière de ${fmt}`;
+      case FrequenceTontine.HEBDOMADAIRE: return `hebdo de ${fmt}`;
+      case FrequenceTontine.DATE_FIXE:
+      case FrequenceTontine.MENSUEL:      return `mensuelle de ${fmt}`;
+      default: return `de ${fmt}`;
+    }
   }
 
   // ─────────────────────────────────────────────────

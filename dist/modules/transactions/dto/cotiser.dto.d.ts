@@ -3,4 +3,5 @@ export declare class CotiserDto {
     montant: number;
     operateur: string;
     telephone?: string;
+    clientId?: string;
 }

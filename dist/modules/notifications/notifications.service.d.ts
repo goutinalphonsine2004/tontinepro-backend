@@ -28,11 +28,11 @@ export declare class NotificationsService {
         donnees: {
             notifications: {
                 message: string;
+                lu: boolean;
                 id: string;
+                utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeNotification;
-                utilisateurId: string;
-                lu: boolean;
                 titre: string;
                 canal: import("@prisma/client").$Enums.Canal;
             }[];
@@ -54,11 +54,11 @@ export declare class NotificationsService {
         message: string;
         donnees: {
             message: string;
+            lu: boolean;
             id: string;
+            utilisateurId: string;
             creeLe: Date;
             type: import("@prisma/client").$Enums.TypeNotification;
-            utilisateurId: string;
-            lu: boolean;
             titre: string;
             canal: import("@prisma/client").$Enums.Canal;
         };
@@ -71,26 +71,27 @@ export declare class NotificationsService {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            creeLe: Date;
-            misAJourLe: Date;
-            utilisateurId: string;
             smsActif: boolean;
             pushActif: boolean;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            misAJourLe: Date;
         };
     }>;
     modifierPreferences(utilisateurId: string, dto: ModifierPreferencesNotificationDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            creeLe: Date;
-            misAJourLe: Date;
-            utilisateurId: string;
             smsActif: boolean;
             pushActif: boolean;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            misAJourLe: Date;
         };
     }>;
+    envoyerAEquipe(agentId: string, titre: string, message: string): Promise<void>;
     private getPreferencesBrutes;
     private creerNotification;
 }

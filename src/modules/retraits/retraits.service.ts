@@ -10,6 +10,9 @@ import { DemanderRetraitDto } from './dto/demander-retrait.dto';
 import { ConfirmerRetraitDto } from './dto/confirmer-retrait.dto';
 import { RejeterRetraitDto } from './dto/rejeter-retrait.dto';
 
+import { NotificationsService } from '../notifications/notifications.service';
+import { Inject, forwardRef } from '@nestjs/common';
+
 const OTP_TYPE_RETRAIT = 'RETRAIT';
 const DUREE_OTP_RETRAIT_MINUTES = 10;
 
@@ -18,7 +21,10 @@ export class RetraitsService {
   constructor(
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
+    @Inject(forwardRef(() => SmsService))
     private sms: SmsService,
+    @Inject(forwardRef(() => NotificationsService))
+    private notifications: NotificationsService,
   ) {}
 
   // ─── POST /retraits/demander-otp ───────────────────
@@ -38,6 +44,15 @@ export class RetraitsService {
       telephone,
       `TontineBénin: Code retrait ${code}. Montant: ${dto.montant} FCFA. Valable ${DUREE_OTP_RETRAIT_MINUTES} min.`,
     );
+
+    // Notifier l'équipe (Collecteur + Superviseur) si existant
+    if (utilisateur.collecteurId) {
+      await this.notifications.envoyerAEquipe(
+        utilisateur.collecteurId,
+        'Demande de retrait client',
+        `Votre client ${utilisateur.nom} a initié un retrait de ${dto.montant} F sur ${tontine.nom}. Code OTP envoyé.`,
+      );
+    }
 
     return {
       succes: true,
@@ -162,17 +177,29 @@ export class RetraitsService {
   }
 
   private async executer(retraitId: string, telephone: string, tontineId: string, montant: number) {
+    const fraisRetrait = BUSINESS.calculerFraisRetrait(montant);
+    const montantNet = montant - fraisRetrait;
+
     const transfert = await this.kkiapay.initierTransfert({
-      montant,
+      montant: montantNet,
       telephone,
       reference: `retrait_${retraitId}`,
       motif: 'Retrait tontine',
     });
 
+    const retrait = await this.prisma.retrait.findUnique({
+      where: { id: retraitId },
+      include: { utilisateur: { select: { id: true, nom: true, collecteurId: true } }, tontine: { select: { nom: true } } },
+    });
+
     await this.prisma.$transaction([
       this.prisma.retrait.update({
         where: { id: retraitId },
-        data: { statut: StatutRetrait.EXECUTE, executeLe: new Date(), refKKiaPay: transfert.refKKiaPay },
+        data: { 
+          statut: StatutRetrait.EXECUTE, 
+          executeLe: new Date(), 
+          refKKiaPay: transfert.refKKiaPay,
+        },
       }),
       this.prisma.tontine.update({
         where: { id: tontineId },
@@ -182,8 +209,17 @@ export class RetraitsService {
 
     await this.sms.envoyer(
       telephone,
-      `TontineBénin: Retrait de ${montant} FCFA exécuté avec succès. Référence: ${transfert.refKKiaPay}.`,
+      `TontineBénin: Retrait de ${montantNet} FCFA (après ${fraisRetrait}F de frais) exécuté avec succès. Réf: ${transfert.refKKiaPay}.`,
     );
+
+    // Notifier l'équipe (Collecteur + Superviseur) si existant
+    if (retrait?.utilisateur.collecteurId) {
+      await this.notifications.envoyerAEquipe(
+        retrait.utilisateur.collecteurId,
+        'Retrait effectué',
+        `Le retrait de ${montant} F pour votre client ${retrait.utilisateur.nom} sur ${retrait.tontine.nom} a été payé.`,
+      );
+    }
   }
 
   // ─── GET /retraits/mes-retraits ────────────────────

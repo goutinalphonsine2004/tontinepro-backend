@@ -66,6 +66,17 @@ export declare class CronService {
         succes: boolean;
         message: string;
     }>;
+    dissoudreProjetsEchus(): Promise<void>;
+    declencherDissolutionProjetsManuellement(): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
+    rapportJournalierSuperviseurs(): Promise<void>;
+    declencherRapportSuperviseurManuellement(): Promise<{
+        succes: boolean;
+        message: string;
+    }>;
+    private libelleMontantFrequence;
     revoquerSessionsExpirees(): Promise<void>;
     declencherRevocationManuellement(): Promise<{
         succes: boolean;

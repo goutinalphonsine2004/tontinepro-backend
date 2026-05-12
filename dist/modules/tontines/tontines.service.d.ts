@@ -1,33 +1,140 @@
+import { FrequenceTontine } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
 import { CreerTontineDto } from './dto/creer-tontine.dto';
 import { ModifierTontineDto } from './dto/modifier-tontine.dto';
 import { RejoindreTonitneDto } from './dto/rejoindre-tontine.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 export declare class TontinesService {
     private prisma;
     private kkiapay;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService);
-    creer(proprietaireId: string, dto: CreerTontineDto): Promise<{
+    private notifications;
+    private readonly logger;
+    constructor(prisma: PrismaService, kkiapay: KkiapayService, notifications: NotificationsService);
+    creer(requesterId: string, dto: CreerTontineDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
             proprietaire: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
             };
         } & {
-            nom: string;
             id: string;
             creeLe: Date;
             misAJourLe: Date;
             type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
             politique: import("@prisma/client").$Enums.PolitiqueRetrait;
             soldeActuel: number;
             objectifMontant: number | null;
             dateDeverrouillage: Date | null;
             montantJournalier: number;
             proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
+        };
+    }>;
+    activerTontine(id: string, proprietaireId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
+        };
+    }>;
+    terminerTontine(id: string, proprietaireId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
+        };
+    }>;
+    suspendre(id: string, proprietaireId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
+        };
+    }>;
+    reactiver(id: string, proprietaireId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
+            politique: import("@prisma/client").$Enums.PolitiqueRetrait;
+            soldeActuel: number;
+            objectifMontant: number | null;
+            dateDeverrouillage: Date | null;
+            montantJournalier: number;
+            proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
         };
     }>;
     mesTontines(utilisateurId: string): Promise<{
@@ -40,17 +147,24 @@ export declare class TontinesService {
                     membres: number;
                 };
             } & {
-                nom: string;
                 id: string;
                 creeLe: Date;
                 misAJourLe: Date;
                 type: import("@prisma/client").$Enums.TypeTontine;
+                nom: string;
+                statut: import("@prisma/client").$Enums.StatutTontine;
+                codeInvitation: string | null;
                 politique: import("@prisma/client").$Enums.PolitiqueRetrait;
                 soldeActuel: number;
                 objectifMontant: number | null;
                 dateDeverrouillage: Date | null;
                 montantJournalier: number;
                 proprietaireId: string;
+                dateFin: Date | null;
+                dateProchaineCotisation: Date | null;
+                description: string | null;
+                frequence: import("@prisma/client").$Enums.FrequenceTontine;
+                jourFixe: number | null;
             })[];
             membre: {
                 monStatut: import("@prisma/client").$Enums.StatutMembreGroupe;
@@ -58,17 +172,24 @@ export declare class TontinesService {
                 _count: {
                     membres: number;
                 };
-                nom: string;
                 id: string;
                 creeLe: Date;
                 misAJourLe: Date;
                 type: import("@prisma/client").$Enums.TypeTontine;
+                nom: string;
+                statut: import("@prisma/client").$Enums.StatutTontine;
+                codeInvitation: string | null;
                 politique: import("@prisma/client").$Enums.PolitiqueRetrait;
                 soldeActuel: number;
                 objectifMontant: number | null;
                 dateDeverrouillage: Date | null;
                 montantJournalier: number;
                 proprietaireId: string;
+                dateFin: Date | null;
+                dateProchaineCotisation: Date | null;
+                description: string | null;
+                frequence: import("@prisma/client").$Enums.FrequenceTontine;
+                jourFixe: number | null;
             }[];
         };
     }>;
@@ -82,55 +203,111 @@ export declare class TontinesService {
             };
             proprietaire: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
             };
         } & {
-            nom: string;
             id: string;
             creeLe: Date;
             misAJourLe: Date;
             type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
             politique: import("@prisma/client").$Enums.PolitiqueRetrait;
             soldeActuel: number;
             objectifMontant: number | null;
             dateDeverrouillage: Date | null;
             montantJournalier: number;
             proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
         };
     }>;
     modifier(id: string, proprietaireId: string, dto: ModifierTontineDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
-            nom: string;
             id: string;
             creeLe: Date;
             misAJourLe: Date;
             type: import("@prisma/client").$Enums.TypeTontine;
+            nom: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+            codeInvitation: string | null;
             politique: import("@prisma/client").$Enums.PolitiqueRetrait;
             soldeActuel: number;
             objectifMontant: number | null;
             dateDeverrouillage: Date | null;
             montantJournalier: number;
             proprietaireId: string;
+            dateFin: Date | null;
+            dateProchaineCotisation: Date | null;
+            description: string | null;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            jourFixe: number | null;
         };
     }>;
     rejoindre(tontineId: string, utilisateurId: string, dto: RejoindreTonitneDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
+            utilisateur: {
+                id: string;
+                nom: string;
+                collecteurId: string | null;
+            };
+        } & {
+            tontineId: string;
             id: string;
+            utilisateurId: string;
             statut: import("@prisma/client").$Enums.StatutMembreGroupe;
             montantCaution: number;
-            utilisateurId: string;
-            tontineId: string;
             cautionBloquee: boolean;
-            nombreDefaillances: number;
-            derniereDefaillanceLe: Date | null;
             rejointLe: Date;
             excluLe: Date | null;
             motifExclusion: string | null;
+            nombreDefaillances: number;
+            derniereDefaillanceLe: Date | null;
+        };
+    }>;
+    getDetailsParCode(code: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            nom: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
+            montantJournalier: number;
+            frequence: import("@prisma/client").$Enums.FrequenceTontine;
+            president: string;
+            statut: import("@prisma/client").$Enums.StatutTontine;
+        };
+    }>;
+    rejoindreParCode(code: string, utilisateurId: string, dto: RejoindreTonitneDto): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            utilisateur: {
+                id: string;
+                nom: string;
+                collecteurId: string | null;
+            };
+        } & {
+            tontineId: string;
+            id: string;
+            utilisateurId: string;
+            statut: import("@prisma/client").$Enums.StatutMembreGroupe;
+            montantCaution: number;
+            cautionBloquee: boolean;
+            rejointLe: Date;
+            excluLe: Date | null;
+            motifExclusion: string | null;
+            nombreDefaillances: number;
+            derniereDefaillanceLe: Date | null;
         };
     }>;
     quitter(tontineId: string, utilisateurId: string): Promise<{
@@ -143,22 +320,22 @@ export declare class TontinesService {
         donnees: ({
             utilisateur: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
                 kycVerifie: boolean;
             };
         } & {
+            tontineId: string;
             id: string;
+            utilisateurId: string;
             statut: import("@prisma/client").$Enums.StatutMembreGroupe;
             montantCaution: number;
-            utilisateurId: string;
-            tontineId: string;
             cautionBloquee: boolean;
-            nombreDefaillances: number;
-            derniereDefaillanceLe: Date | null;
             rejointLe: Date;
             excluLe: Date | null;
             motifExclusion: string | null;
+            nombreDefaillances: number;
+            derniereDefaillanceLe: Date | null;
         })[];
     }>;
     ordreTirage(tontineId: string): Promise<{
@@ -167,16 +344,16 @@ export declare class TontinesService {
         donnees: ({
             utilisateur: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
             };
         } & {
-            id: string;
-            creeLe: Date;
-            utilisateurId: string;
             tontineId: string;
-            position: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
             aRecu: boolean;
+            position: number;
             recuLe: Date | null;
             montantRecu: number | null;
         })[];
@@ -186,14 +363,43 @@ export declare class TontinesService {
         message: string;
         donnees: {
             beneficiaire: {
+                badges: {
+                    id: string;
+                    clientId: string;
+                    niveau: import("@prisma/client").$Enums.NiveauBadge;
+                    obtenuLe: Date;
+                }[];
+            } & {
                 telephone: string;
-                nom: string;
                 id: string;
+                creeLe: Date;
+                misAJourLe: Date;
+                nom: string;
+                photo: string | null;
+                role: import("@prisma/client").$Enums.Role;
+                typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
+                statut: import("@prisma/client").$Enums.StatutCompte;
+                pinHash: string | null;
+                deviceId: string | null;
+                empreinteActive: boolean;
+                kycVerifie: boolean;
+                tentativesEchouees: number;
+                bloqueLe: Date | null;
+                collecteurId: string | null;
+                superviseurId: string | null;
+                zoneId: string | null;
+                soldeCommission: number;
+                montantCaution: number;
+                tokenPush: string | null;
             };
             montantNet: number;
             refKKiaPay: string;
+            tontineTerminee: boolean;
+            prochaineDateCotisation: Date | null;
         };
     }>;
+    calculerProchaineDateCotisation(frequence: FrequenceTontine, jourFixe?: number): Date;
     private verifierPolitique;
     private verifierAucuneAlerteBloquante;
+    private getLibelleFrequence;
 }

@@ -11,6 +11,7 @@ import { RejoindreTonitneDto } from './dto/rejoindre-tontine.dto';
 export class TontinesController {
   constructor(private service: TontinesService) {}
 
+  // ─── CRUD de base ─────────────────────────────────
   @Post()
   creer(@UtilisateurCourant() u: { id: string }, @Body() dto: CreerTontineDto) {
     return this.service.creer(u.id, dto);
@@ -31,9 +32,46 @@ export class TontinesController {
     return this.service.modifier(id, u.id, dto);
   }
 
+  // ─── Machine à états ──────────────────────────────
+  /** CREATION → ACTIVE : ouvre les cotisations (min 2 membres pour GROUPE) */
+  @Post(':id/activer')
+  activer(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.activerTontine(id, u.id);
+  }
+
+  /** ACTIVE → SUSPENDUE : pause temporaire */
+  @Post(':id/suspendre')
+  suspendre(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.suspendre(id, u.id);
+  }
+
+  /** SUSPENDUE → ACTIVE : reprise */
+  @Post(':id/reactiver')
+  reactiver(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.reactiver(id, u.id);
+  }
+
+  /** ACTIVE/SUSPENDUE → TERMINEE : clôture manuelle */
+  @Post(':id/terminer')
+  terminer(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.terminerTontine(id, u.id);
+  }
+
+  // ─── Membres & tirage ─────────────────────────────
   @Post(':id/rejoindre')
   rejoindre(@Param('id') id: string, @UtilisateurCourant() u: { id: string }, @Body() dto: RejoindreTonitneDto) {
     return this.service.rejoindre(id, u.id, dto);
+  }
+
+  // ─── Joindre via Code (SCAN QR) ───────────────────
+  @Get('details-code/:code')
+  detailsCode(@Param('code') code: string) {
+    return this.service.getDetailsParCode(code);
+  }
+
+  @Post('rejoindre-code/:code')
+  rejoindreCode(@Param('code') code: string, @UtilisateurCourant() u: { id: string }, @Body() dto: RejoindreTonitneDto) {
+    return this.service.rejoindreParCode(code, u.id, dto);
   }
 
   @Post(':id/quitter')

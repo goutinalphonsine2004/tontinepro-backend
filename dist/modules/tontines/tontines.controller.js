@@ -37,8 +37,26 @@ let TontinesController = class TontinesController {
     modifier(id, u, dto) {
         return this.service.modifier(id, u.id, dto);
     }
+    activer(id, u) {
+        return this.service.activerTontine(id, u.id);
+    }
+    suspendre(id, u) {
+        return this.service.suspendre(id, u.id);
+    }
+    reactiver(id, u) {
+        return this.service.reactiver(id, u.id);
+    }
+    terminer(id, u) {
+        return this.service.terminerTontine(id, u.id);
+    }
     rejoindre(id, u, dto) {
         return this.service.rejoindre(id, u.id, dto);
+    }
+    detailsCode(code) {
+        return this.service.getDetailsParCode(code);
+    }
+    rejoindreCode(code, u, dto) {
+        return this.service.rejoindreParCode(code, u.id, dto);
     }
     quitter(id, u) {
         return this.service.quitter(id, u.id);
@@ -87,6 +105,38 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TontinesController.prototype, "modifier", null);
 __decorate([
+    (0, common_1.Post)(':id/activer'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "activer", null);
+__decorate([
+    (0, common_1.Post)(':id/suspendre'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "suspendre", null);
+__decorate([
+    (0, common_1.Post)(':id/reactiver'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "reactiver", null);
+__decorate([
+    (0, common_1.Post)(':id/terminer'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "terminer", null);
+__decorate([
     (0, common_1.Post)(':id/rejoindre'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
@@ -95,6 +145,22 @@ __decorate([
     __metadata("design:paramtypes", [String, Object, rejoindre_tontine_dto_1.RejoindreTonitneDto]),
     __metadata("design:returntype", void 0)
 ], TontinesController.prototype, "rejoindre", null);
+__decorate([
+    (0, common_1.Get)('details-code/:code'),
+    __param(0, (0, common_1.Param)('code')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "detailsCode", null);
+__decorate([
+    (0, common_1.Post)('rejoindre-code/:code'),
+    __param(0, (0, common_1.Param)('code')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, rejoindre_tontine_dto_1.RejoindreTonitneDto]),
+    __metadata("design:returntype", void 0)
+], TontinesController.prototype, "rejoindreCode", null);
 __decorate([
     (0, common_1.Post)(':id/quitter'),
     __param(0, (0, common_1.Param)('id')),

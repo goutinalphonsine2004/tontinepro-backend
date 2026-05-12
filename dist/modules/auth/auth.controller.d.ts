@@ -66,6 +66,7 @@ export declare class AuthController {
         telephone: string;
         role: any;
         sessionId: string;
+        refreshTokenBrut?: string;
     }, _dto: RafraichirTokenDto): Promise<{
         succes: boolean;
         message: string;
@@ -100,9 +101,9 @@ export declare class AuthController {
         message: string;
         donnees: {
             sessionCourante: boolean;
-            deviceId: string | null;
             id: string;
             creeLe: Date;
+            deviceId: string | null;
             expireLe: Date;
             userAgent: string | null;
             adresseIP: string | null;
@@ -150,9 +151,9 @@ export declare class AuthController {
         succes: boolean;
         message: string;
         donnees: {
-            deviceId: string;
             id: string;
             creeLe: Date;
+            deviceId: string;
             nomAppareil: string | null;
             modeleAppareil: string | null;
             systemeExploitation: string | null;

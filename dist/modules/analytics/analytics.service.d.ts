@@ -82,8 +82,8 @@ export declare class AnalyticsService {
                 sansDossierEnCours: {
                     score: number;
                     telephone: string;
-                    nom: string;
                     id: string;
+                    nom: string;
                 }[];
             };
             eligiblesMicroCredit: {
@@ -115,15 +115,15 @@ export declare class AnalyticsService {
             derniersDossiers: ({
                 client: {
                     telephone: string;
-                    nom: string;
                     id: string;
+                    nom: string;
                 };
             } & {
                 id: string;
-                statut: import("@prisma/client").$Enums.StatutDossierPADME;
                 creeLe: Date;
-                tauxRegularite: number;
+                statut: import("@prisma/client").$Enums.StatutDossierPADME;
                 clientId: string;
+                tauxRegularite: number;
                 scoreAuMoment: number;
                 scoreCreditId: string;
                 totalEpargne: number;

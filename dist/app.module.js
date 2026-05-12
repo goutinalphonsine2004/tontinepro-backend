@@ -37,6 +37,7 @@ const rapports_module_1 = require("./modules/rapports/rapports.module");
 const collecteur_terrain_module_1 = require("./modules/collecteur-terrain/collecteur-terrain.module");
 const parametres_module_1 = require("./modules/parametres/parametres.module");
 const support_module_1 = require("./modules/support/support.module");
+const notifications_module_1 = require("./modules/notifications/notifications.module");
 const audit_interceptor_1 = require("./common/interceptors/audit.interceptor");
 let AppModule = class AppModule {
 };
@@ -46,7 +47,10 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             schedule_1.ScheduleModule.forRoot(),
-            throttler_1.ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
+            throttler_1.ThrottlerModule.forRoot([
+                { name: 'default', ttl: 60000, limit: 60 },
+                { name: 'strict', ttl: 60000, limit: 5 },
+            ]),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
             utilisateurs_module_1.UtilisateursModule,
@@ -71,9 +75,13 @@ exports.AppModule = AppModule = __decorate([
             collecteur_terrain_module_1.CollecteurTerrainModule,
             parametres_module_1.ParametresModule,
             support_module_1.SupportModule,
+            notifications_module_1.NotificationsModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [{ provide: core_1.APP_INTERCEPTOR, useClass: audit_interceptor_1.AuditInterceptor }],
+        providers: [
+            { provide: core_1.APP_INTERCEPTOR, useClass: audit_interceptor_1.AuditInterceptor },
+            { provide: core_1.APP_GUARD, useClass: throttler_1.ThrottlerGuard },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

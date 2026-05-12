@@ -1,12 +1,17 @@
 export const BUSINESS = {
   // ─── Commissions ──────────────────────────────────────
-  TAUX_COMMISSION_COTISATION: 0.02,   // 2% sur chaque cotisation
+  TAUX_COMMISSION_BASE: 0.03,         // 3% standard sur cotisation
+  TAUX_COMMISSION_DIAMANT: 0.02,      // 2% pour les clients fidèles (Badge Diamant)
+  TAUX_COMMISSION_RETRAIT: 0.02,      // 2% sur les retraits (couvre frais MoMo + marge)
+  TAUX_COMMISSION_COTISATION: 0.03,   // Alias pour compatibilité
+  
   TAUX_INTERET_MICRO_CREDIT: 0.10,    // 10% d'intérêt sur micro-crédit
   TAUX_COMMISSION_PADME: 0.03,        // 3% commission sur crédit PADME accordé
 
   // ─── Abonnements collecteurs (FCFA) ───────────────────
   ABONNEMENT_STANDARD: 2500,
   ABONNEMENT_PRO: 5000,
+  FRAIS_PAR_CLIENT_MENSUEL: 100,      // 100 F par client actif / mois pour les indépendants
 
   // ─── Plafonds micro-crédit par score (FCFA) ───────────
   PLAFONDS_MICRO_CREDIT: {
@@ -25,8 +30,15 @@ export const BUSINESS = {
 
   // ─── Calculs financiers ───────────────────────────────
 
-  calculerFraisPlateforme(montant: number): number {
-    return montant * this.TAUX_COMMISSION_COTISATION;
+  /** Calcule les frais plateforme selon le niveau du client */
+  calculerFraisPlateforme(montant: number, estDiamant = false): number {
+    const taux = estDiamant ? this.TAUX_COMMISSION_DIAMANT : this.TAUX_COMMISSION_BASE;
+    return montant * taux;
+  },
+
+  /** Calcule les frais de retrait (MoMo + Marge) */
+  calculerFraisRetrait(montant: number): number {
+    return montant * this.TAUX_COMMISSION_RETRAIT;
   },
 
   calculerInteretMicroCredit(montantPrincipal: number): number {
@@ -49,9 +61,14 @@ export const BUSINESS = {
     return 0;
   },
 
-  // Agent reçoit 50% de la commission plateforme
-  calculerCommissionAgent(montantCotisation: number): number {
-    return this.calculerFraisPlateforme(montantCotisation) * 0.5;
+  /** 
+   * Calcule la commission de l'agent.
+   * L'agent reçoit 50% de la commission SI il est indépendant.
+   * Si c'est un membre de l'équipe (AGENT salairé), la plateforme garde tout (3%).
+   */
+  calculerCommissionAgent(montantCotisation: number, estIndependant: boolean): number {
+    if (!estIndependant) return 0;
+    return (montantCotisation * this.TAUX_COMMISSION_BASE) * 0.5;
   },
 
   calculerCommissionPADME(montantCreditAccorde: number): number {

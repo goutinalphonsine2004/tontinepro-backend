@@ -6,15 +6,17 @@ import { WhatsappService } from '../notifications/whatsapp.service';
 import { CotiserDto } from './dto/cotiser.dto';
 import { WebhookKkiapayDto } from './dto/webhook-kkiapay.dto';
 import { FiltrerTransactionsDto } from './dto/filtrer-transactions.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 export declare class TransactionsService {
     private prisma;
     private kkiapay;
     private sms;
     private pdf;
     private whatsapp;
+    private notifications;
     private readonly logger;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService, pdf: PdfService, whatsapp: WhatsappService);
-    cotiser(utilisateurId: string, dto: CotiserDto): Promise<{
+    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService, pdf: PdfService, whatsapp: WhatsappService, notifications: NotificationsService);
+    cotiser(requesterId: string, dto: CotiserDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -41,26 +43,26 @@ export declare class TransactionsService {
         donnees: {
             transactions: ({
                 tontine: {
-                    nom: string;
                     id: string;
+                    nom: string;
                 } | null;
             } & {
+                refKKiaPay: string | null;
+                tontineId: string | null;
+                montant: number;
                 id: string;
-                statut: import("@prisma/client").$Enums.StatutTransaction;
+                utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
-                utilisateurId: string;
+                statut: import("@prisma/client").$Enums.StatutTransaction;
+                tentatives: number;
                 reference: string;
-                montant: number;
                 montantNet: number;
-                refKKiaPay: string | null;
                 operateur: string | null;
                 fraisPlateforme: number;
                 fraisAgent: number;
                 hashPrecedent: string | null;
                 hashActuel: string | null;
-                tontineId: string | null;
-                tentatives: number;
                 motifEchec: string | null;
             })[];
             total: number;

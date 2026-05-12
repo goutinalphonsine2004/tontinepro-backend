@@ -13,11 +13,11 @@ export declare class NotificationsController {
         donnees: {
             notifications: {
                 message: string;
+                lu: boolean;
                 id: string;
+                utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeNotification;
-                utilisateurId: string;
-                lu: boolean;
                 titre: string;
                 canal: import("@prisma/client").$Enums.Canal;
             }[];
@@ -42,12 +42,12 @@ export declare class NotificationsController {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            creeLe: Date;
-            misAJourLe: Date;
-            utilisateurId: string;
             smsActif: boolean;
             pushActif: boolean;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            misAJourLe: Date;
         };
     }>;
     modifierPreferences(u: {
@@ -56,12 +56,12 @@ export declare class NotificationsController {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            creeLe: Date;
-            misAJourLe: Date;
-            utilisateurId: string;
             smsActif: boolean;
             pushActif: boolean;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            misAJourLe: Date;
         };
     }>;
     toutMarquerLu(u: {
@@ -77,11 +77,11 @@ export declare class NotificationsController {
         message: string;
         donnees: {
             message: string;
+            lu: boolean;
             id: string;
+            utilisateurId: string;
             creeLe: Date;
             type: import("@prisma/client").$Enums.TypeNotification;
-            utilisateurId: string;
-            lu: boolean;
             titre: string;
             canal: import("@prisma/client").$Enums.Canal;
         };

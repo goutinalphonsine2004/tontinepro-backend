@@ -9,18 +9,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsModule = void 0;
 const common_1 = require("@nestjs/common");
 const axios_1 = require("@nestjs/axios");
+const prisma_module_1 = require("../../prisma/prisma.module");
+const retraits_module_1 = require("../retraits/retraits.module");
+const tontines_module_1 = require("../tontines/tontines.module");
 const sms_service_1 = require("./sms.service");
 const push_service_1 = require("./push.service");
 const whatsapp_service_1 = require("./whatsapp.service");
 const notifications_service_1 = require("./notifications.service");
 const notifications_controller_1 = require("./notifications.controller");
+const sms_webhook_controller_1 = require("./sms-webhook.controller");
 let NotificationsModule = class NotificationsModule {
 };
 exports.NotificationsModule = NotificationsModule;
 exports.NotificationsModule = NotificationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [axios_1.HttpModule],
-        controllers: [notifications_controller_1.NotificationsController],
+        imports: [axios_1.HttpModule, prisma_module_1.PrismaModule, (0, common_1.forwardRef)(() => retraits_module_1.RetraitsModule), (0, common_1.forwardRef)(() => tontines_module_1.TontinesModule)],
+        controllers: [notifications_controller_1.NotificationsController, sms_webhook_controller_1.SmsWebhookController],
         providers: [sms_service_1.SmsService, push_service_1.PushService, whatsapp_service_1.WhatsappService, notifications_service_1.NotificationsService],
         exports: [sms_service_1.SmsService, push_service_1.PushService, whatsapp_service_1.WhatsappService, notifications_service_1.NotificationsService],
     })

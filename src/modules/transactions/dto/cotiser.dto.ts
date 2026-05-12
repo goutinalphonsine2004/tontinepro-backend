@@ -18,4 +18,8 @@ export class CotiserDto {
   @IsString()
   @IsOptional()
   telephone?: string;
+
+  @IsUUID()
+  @IsOptional()
+  clientId?: string;
 }

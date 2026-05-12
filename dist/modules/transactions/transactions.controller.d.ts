@@ -36,26 +36,26 @@ export declare class TransactionsController {
         donnees: {
             transactions: ({
                 tontine: {
-                    nom: string;
                     id: string;
+                    nom: string;
                 } | null;
             } & {
+                refKKiaPay: string | null;
+                tontineId: string | null;
+                montant: number;
                 id: string;
-                statut: import("@prisma/client").$Enums.StatutTransaction;
+                utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
-                utilisateurId: string;
+                statut: import("@prisma/client").$Enums.StatutTransaction;
+                tentatives: number;
                 reference: string;
-                montant: number;
                 montantNet: number;
-                refKKiaPay: string | null;
                 operateur: string | null;
                 fraisPlateforme: number;
                 fraisAgent: number;
                 hashPrecedent: string | null;
                 hashActuel: string | null;
-                tontineId: string | null;
-                tentatives: number;
                 motifEchec: string | null;
             })[];
             total: number;

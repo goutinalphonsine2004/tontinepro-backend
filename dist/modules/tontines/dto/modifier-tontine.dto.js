@@ -14,17 +14,45 @@ const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const client_1 = require("@prisma/client");
 class ModifierTontineDto {
+    nom;
+    description;
     politique;
+    frequence;
+    jourFixe;
     objectifMontant;
     montantJournalier;
     dateDeverrouillage;
+    dateFin;
 }
 exports.ModifierTontineDto = ModifierTontineDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ModifierTontineDto.prototype, "nom", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ModifierTontineDto.prototype, "description", void 0);
 __decorate([
     (0, class_validator_1.IsEnum)(client_1.PolitiqueRetrait),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], ModifierTontineDto.prototype, "politique", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.FrequenceTontine),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ModifierTontineDto.prototype, "frequence", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(31),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], ModifierTontineDto.prototype, "jourFixe", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
@@ -40,7 +68,13 @@ __decorate([
     __metadata("design:type", Number)
 ], ModifierTontineDto.prototype, "montantJournalier", void 0);
 __decorate([
+    (0, class_validator_1.IsDateString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Date)
 ], ModifierTontineDto.prototype, "dateDeverrouillage", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Date)
+], ModifierTontineDto.prototype, "dateFin", void 0);
 //# sourceMappingURL=modifier-tontine.dto.js.map

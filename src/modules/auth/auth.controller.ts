@@ -70,7 +70,7 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('rafraichir-token')
   rafraichirToken(
-    @UtilisateurCourant() utilisateur: { id: string; telephone: string; role: any; sessionId: string },
+    @UtilisateurCourant() utilisateur: { id: string; telephone: string; role: any; sessionId: string; refreshTokenBrut?: string },
     @Body() _dto: RafraichirTokenDto,
   ) {
     return this.authService.rafraichirToken(
@@ -78,6 +78,7 @@ export class AuthController {
       utilisateur.telephone,
       utilisateur.role,
       utilisateur.sessionId,
+      utilisateur.refreshTokenBrut,
     );
   }
 

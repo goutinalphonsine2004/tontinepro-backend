@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════
-// SCHEMA PRISMA COMPLET — TONTINEPRO
-// ═══════════════════════════════════════════════════════
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,9 +6,505 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─────────────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────────────
+model Utilisateur {
+  id                     String                  @id @default(uuid())
+  telephone              String                  @unique
+  nom                    String
+  photo                  String?
+  role                   Role                    @default(CLIENT)
+  typeCollecteur         TypeCollecteur?
+  statut                 StatutCompte            @default(EN_ATTENTE)
+  pinHash                String?
+  deviceId               String?
+  empreinteActive        Boolean                 @default(false)
+  kycVerifie             Boolean                 @default(false)
+  tentativesEchouees     Int                     @default(0)
+  bloqueLe               DateTime?
+  collecteurId           String?
+  superviseurId          String?
+  zoneId                 String?
+  soldeCommission        Float                   @default(0)
+  montantCaution         Float                   @default(0)
+  creeLe                 DateTime                @default(now())
+  misAJourLe             DateTime                @updatedAt
+  tokenPush              String?
+  appareilsBiometriques  AppareilBiometrique[]
+  badges                 BadgeClient[]
+  codesOTP               CodeOTP[]
+  commissions            Commission[]
+  documentsKYC           DocumentKYC[]
+  dossiersPADME          DossierPADME[]
+  facturation            FacturationAgent?
+  journalAudit           JournalAudit[]
+  litiges                Litige[]
+  membresGroupe          MembreTontineGroupe[]
+  microCredits           MicroCredit[]
+  notifications          Notification[]
+  ordresTirage           OrdreTirage[]
+  preferenceNotification PreferenceNotification?
+  presences              PresenceCollecteur[]    @relation("PresenceAgent")
+  presencesComme         PresenceCollecteur[]    @relation("PresenceClient")
+  qrCode                 QRCodeCollecteur?
+  retraits               Retrait[]
+  scoreCredit            ScoreCredit?
+  sessions               SessionUtilisateur[]
+  tontines               Tontine[]
+  transactions           Transaction[]
+  collecteur             Utilisateur?            @relation("CollecteurClients", fields: [collecteurId], references: [id])
+  clients                Utilisateur[]           @relation("CollecteurClients")
+  superviseur            Utilisateur?            @relation("SuperviseurAgents", fields: [superviseurId], references: [id])
+  agents                 Utilisateur[]           @relation("SuperviseurAgents")
+  zone                   Zone?                   @relation(fields: [zoneId], references: [id])
+
+  @@index([telephone])
+  @@index([role])
+  @@index([collecteurId])
+  @@index([zoneId])
+}
+
+model Zone {
+  id            String        @id @default(uuid())
+  nom           String
+  ville         String
+  description   String?
+  creeLe        DateTime      @default(now())
+  superviseurId String?
+  agents        Utilisateur[]
+}
+
+model DocumentKYC {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  typeDocument  String
+  urlDocument   String
+  statut        StatutKYC   @default(EN_ATTENTE)
+  verifiePar    String?
+  motifRejet    String?
+  creeLe        DateTime    @default(now())
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+}
+
+model FacturationAgent {
+  id               String      @id @default(uuid())
+  agentId          String      @unique
+  plan             String      @default("STANDARD")
+  fraisMensuels    Float
+  fraisParClient   Float       @default(10)
+  totalClients     Int         @default(0)
+  actif            Boolean     @default(true)
+  dernierPaiement  DateTime    @default(now())
+  prochainPaiement DateTime
+  creeLe           DateTime    @default(now())
+  cautionMontant   Float       @default(0)
+  agent            Utilisateur @relation(fields: [agentId], references: [id])
+}
+
+model QRCodeCollecteur {
+  id           String      @id @default(uuid())
+  collecteurId String      @unique
+  codeQR       String      @unique
+  expireLe     DateTime
+  actif        Boolean     @default(true)
+  creeLe       DateTime    @default(now())
+  collecteur   Utilisateur @relation(fields: [collecteurId], references: [id])
+}
+
+model CodeOTP {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  telephone     String
+  code          String
+  type          String
+  expireLe      DateTime
+  utilise       Boolean     @default(false)
+  creeLe        DateTime    @default(now())
+  tentatives    Int         @default(0)
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+}
+
+model AppareilBiometrique {
+  id                       String      @id @default(uuid())
+  utilisateurId            String
+  deviceId                 String
+  empreinteHash            String
+  nomAppareil              String?
+  modeleAppareil           String?
+  systemeExploitation      String?
+  actif                    Boolean     @default(true)
+  derniereAuthentification DateTime?
+  creeLe                   DateTime    @default(now())
+  misAJourLe               DateTime    @updatedAt
+  utilisateur              Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@unique([utilisateurId, deviceId])
+  @@index([utilisateurId])
+}
+
+model SessionUtilisateur {
+  id                  String      @id @default(uuid())
+  utilisateurId       String
+  deviceId            String?
+  userAgent           String?
+  adresseIP           String?
+  actif               Boolean     @default(true)
+  derniereUtilisation DateTime    @default(now())
+  expireLe            DateTime
+  revoqueLe           DateTime?
+  creeLe              DateTime    @default(now())
+  refreshTokenHash    String?
+  utilisateur         Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId, actif])
+  @@index([expireLe])
+}
+
+model Tontine {
+  id                      String                @id @default(uuid())
+  nom                     String
+  type                    TypeTontine           @default(PERSONNEL)
+  politique               PolitiqueRetrait      @default(FLEXIBLE)
+  soldeActuel             Float                 @default(0)
+  objectifMontant         Float?
+  dateDeverrouillage      DateTime?
+  montantJournalier       Float                 @default(0)
+  proprietaireId          String
+  creeLe                  DateTime              @default(now())
+  misAJourLe              DateTime              @updatedAt
+  dateFin                 DateTime?
+  dateProchaineCotisation DateTime?
+  description             String?
+  frequence               FrequenceTontine      @default(MENSUEL)
+  jourFixe                Int?
+  statut                  StatutTontine         @default(CREATION)
+  codeInvitation          String?               @unique
+  defaillances            DefaillanceGroupe[]
+  membres                 MembreTontineGroupe[]
+  ordresTirage            OrdreTirage[]
+  retraits                Retrait[]
+  proprietaire            Utilisateur           @relation(fields: [proprietaireId], references: [id])
+  transactions            Transaction[]
+
+  @@index([proprietaireId])
+  @@index([statut])
+}
+
+model MembreTontineGroupe {
+  id                    String              @id @default(uuid())
+  tontineId             String
+  utilisateurId         String
+  statut                StatutMembreGroupe  @default(ACTIF)
+  montantCaution        Float               @default(0)
+  cautionBloquee        Boolean             @default(true)
+  rejointLe             DateTime            @default(now())
+  excluLe               DateTime?
+  motifExclusion        String?
+  nombreDefaillances    Int                 @default(0)
+  derniereDefaillanceLe DateTime?
+  defaillances          DefaillanceGroupe[]
+  tontine               Tontine             @relation(fields: [tontineId], references: [id])
+  utilisateur           Utilisateur         @relation(fields: [utilisateurId], references: [id])
+
+  @@unique([tontineId, utilisateurId])
+}
+
+model OrdreTirage {
+  id            String      @id @default(uuid())
+  tontineId     String
+  utilisateurId String
+  position      Int
+  aRecu         Boolean     @default(false)
+  recuLe        DateTime?
+  montantRecu   Float?
+  creeLe        DateTime    @default(now())
+  tontine       Tontine     @relation(fields: [tontineId], references: [id])
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+}
+
+model DefaillanceGroupe {
+  id              String              @id @default(uuid())
+  tontineId       String
+  membreId        String
+  montantManquant Float
+  cautionUtilisee Float               @default(0)
+  statut          String              @default("EN_COURS")
+  detecteLe       DateTime            @default(now())
+  resoluLe        DateTime?
+  membre          MembreTontineGroupe @relation(fields: [membreId], references: [id])
+  tontine         Tontine             @relation(fields: [tontineId], references: [id])
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  reference       String            @unique @default(uuid())
+  montant         Float
+  montantNet      Float
+  type            TypeTransaction
+  statut          StatutTransaction @default(EN_ATTENTE)
+  refKKiaPay      String?
+  operateur       String?
+  fraisPlateforme Float             @default(0)
+  fraisAgent      Float             @default(0)
+  hashPrecedent   String?
+  hashActuel      String?
+  tontineId       String?
+  utilisateurId   String
+  tentatives      Int               @default(0)
+  motifEchec      String?
+  creeLe          DateTime          @default(now())
+  commissions     Commission[]
+  litiges         Litige[]
+  tontine         Tontine?          @relation(fields: [tontineId], references: [id])
+  utilisateur     Utilisateur       @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId])
+  @@index([statut])
+  @@index([creeLe])
+}
+
+model Retrait {
+  id            String        @id @default(uuid())
+  utilisateurId String
+  montant       Float
+  statut        StatutRetrait @default(EN_ATTENTE)
+  validePar     String?
+  motifRejet    String?
+  refKKiaPay    String?
+  creeLe        DateTime      @default(now())
+  executeLe     DateTime?
+  tontineId     String
+  tontine       Tontine       @relation(fields: [tontineId], references: [id])
+  utilisateur   Utilisateur   @relation(fields: [utilisateurId], references: [id])
+}
+
+model Commission {
+  id            String      @id @default(uuid())
+  agentId       String
+  transactionId String
+  montant       Float
+  type          String
+  creeLe        DateTime    @default(now())
+  agent         Utilisateur @relation(fields: [agentId], references: [id])
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model MicroCredit {
+  id                   String                @id @default(uuid())
+  clientId             String
+  montantPrincipal     Float
+  tauxInteret          Float
+  montantTotal         Float
+  paiementJournalier   Float
+  totalJours           Int
+  joursPayes           Int                   @default(0)
+  montantRestant       Float
+  statut               StatutCredit          @default(EN_ATTENTE)
+  scoreAuMoment        Int
+  initiePar            String
+  methodeConsentement  String?
+  consentementObtenu   Boolean               @default(false)
+  consentementObtenuLe DateTime?
+  decaisseLE           DateTime?
+  dateEcheance         DateTime
+  termineLe            DateTime?
+  creeLe               DateTime              @default(now())
+  misAJourLe           DateTime              @updatedAt
+  client               Utilisateur           @relation(fields: [clientId], references: [id])
+  remboursements       RemboursementCredit[]
+
+  @@index([clientId])
+  @@index([statut])
+}
+
+model RemboursementCredit {
+  id            String      @id @default(uuid())
+  microCreditId String
+  montant       Float
+  statut        String      @default("EN_ATTENTE")
+  refKKiaPay    String?
+  payeLe        DateTime    @default(now())
+  microCredit   MicroCredit @relation(fields: [microCreditId], references: [id])
+}
+
+model Litige {
+  id            String              @id @default(uuid())
+  transactionId String
+  clientId      String
+  motif         String
+  statut        StatutLitige        @default(OUVERT)
+  resoluPar     String?
+  resolution    String?
+  creeLe        DateTime            @default(now())
+  resoluLe      DateTime?
+  commentaires  CommentaireLitige[]
+  client        Utilisateur         @relation(fields: [clientId], references: [id])
+  transaction   Transaction         @relation(fields: [transactionId], references: [id])
+}
+
+model PresenceCollecteur {
+  id        String      @id @default(uuid())
+  agentId   String
+  clientId  String
+  latitude  Float
+  longitude Float
+  distance  Float
+  estValide Boolean
+  creeLe    DateTime    @default(now())
+  agent     Utilisateur @relation("PresenceAgent", fields: [agentId], references: [id])
+  client    Utilisateur @relation("PresenceClient", fields: [clientId], references: [id])
+}
+
+model JournalAudit {
+  id            String      @id @default(uuid())
+  utilisateurId String
+  action        String
+  details       String
+  adresseIP     String?
+  appareil      String?
+  creeLe        DateTime    @default(now())
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId])
+  @@index([creeLe])
+}
+
+model AlerteSysteme {
+  id           String    @id @default(uuid())
+  type         String
+  severite     String
+  statut       String    @default("OUVERTE")
+  titre        String
+  message      String
+  resourceType String?
+  resourceId   String?
+  metadata     String?
+  detecteeLe   DateTime  @default(now())
+  resolueLe    DateTime?
+  creeLe       DateTime  @default(now())
+  misAJourLe   DateTime  @updatedAt
+
+  @@index([statut, severite])
+  @@index([resourceType, resourceId])
+  @@index([type])
+}
+
+model ScoreCredit {
+  id                  String            @id @default(uuid())
+  utilisateurId       String            @unique
+  score               Int               @default(0)
+  totalDepots         Int               @default(0)
+  tauxRegularite      Float             @default(0)
+  totalMois           Int               @default(0)
+  scoreRemboursement  Float             @default(0)
+  eligiblePADME       Boolean           @default(false)
+  eligibleMicroCredit Boolean           @default(false)
+  dernierCalcul       DateTime          @default(now())
+  dossiersPADME       DossierPADME[]
+  historique          HistoriqueScore[]
+  utilisateur         Utilisateur       @relation(fields: [utilisateurId], references: [id])
+}
+
+model DossierPADME {
+  id                String             @id @default(uuid())
+  clientId          String
+  scoreCreditId     String
+  scoreAuMoment     Int
+  totalEpargne      Float
+  tauxRegularite    Float
+  creditsRembourses Int                @default(0)
+  urlPDF            String?
+  statut            StatutDossierPADME @default(GENERE)
+  genereePar        String             @default("SYSTEME")
+  soumisLe          DateTime?
+  examineLE         DateTime?
+  creeLe            DateTime           @default(now())
+  client            Utilisateur        @relation(fields: [clientId], references: [id])
+  scoreCredit       ScoreCredit        @relation(fields: [scoreCreditId], references: [id])
+
+  @@index([clientId])
+  @@index([statut])
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  utilisateurId String
+  type          TypeNotification
+  titre         String
+  message       String
+  canal         Canal
+  lu            Boolean          @default(false)
+  creeLe        DateTime         @default(now())
+  utilisateur   Utilisateur      @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId, lu])
+}
+
+model PreferenceNotification {
+  id            String      @id @default(uuid())
+  utilisateurId String      @unique
+  smsActif      Boolean     @default(true)
+  pushActif     Boolean     @default(true)
+  creeLe        DateTime    @default(now())
+  misAJourLe    DateTime    @updatedAt
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+}
+
+model BadgeClient {
+  id       String      @id @default(uuid())
+  clientId String
+  niveau   NiveauBadge
+  obtenuLe DateTime    @default(now())
+  client   Utilisateur @relation(fields: [clientId], references: [id])
+}
+
+model HistoriqueScore {
+  id                 String      @id @default(uuid())
+  scoreCreditId      String
+  score              Int
+  tauxRegularite     Float
+  scoreRemboursement Float
+  calculeLe          DateTime    @default(now())
+  scoreCredit        ScoreCredit @relation(fields: [scoreCreditId], references: [id])
+
+  @@index([scoreCreditId, calculeLe])
+}
+
+model ParametreSysteme {
+  id          String   @id @default(uuid())
+  cle         String   @unique
+  valeur      String
+  description String?
+  modifiePar  String?
+  creeLe      DateTime @default(now())
+  misAJourLe  DateTime @updatedAt
+
+  @@index([cle])
+}
+
+model ArticleFAQ {
+  id         String   @id @default(uuid())
+  categorie  String
+  question   String
+  reponse    String
+  ordre      Int      @default(0)
+  actif      Boolean  @default(true)
+  creePar    String?
+  creeLe     DateTime @default(now())
+  misAJourLe DateTime @updatedAt
+
+  @@index([categorie, actif])
+}
+
+model CommentaireLitige {
+  id             String   @id @default(uuid())
+  litigeId       String
+  auteurId       String
+  message        String
+  pieceJointeUrl String?
+  creeLe         DateTime @default(now())
+  litige         Litige   @relation(fields: [litigeId], references: [id])
+
+  @@index([litigeId, creeLe])
+}
 
 enum Role {
   CLIENT
@@ -43,6 +535,21 @@ enum PolitiqueRetrait {
 enum TypeTontine {
   PERSONNEL
   GROUPE
+  PROJET
+}
+
+enum StatutTontine {
+  CREATION
+  ACTIVE
+  SUSPENDUE
+  TERMINEE
+}
+
+enum FrequenceTontine {
+  JOURNALIER
+  HEBDOMADAIRE
+  MENSUEL
+  DATE_FIXE
 }
 
 enum StatutTransaction {
@@ -131,519 +638,4 @@ enum NiveauBadge {
   ARGENT
   OR
   DIAMANT
-}
-
-// ─────────────────────────────────────────────────────
-// UTILISATEURS
-// ─────────────────────────────────────────────────────
-
-model Utilisateur {
-  id                 String          @id @default(uuid())
-  telephone          String          @unique
-  nom                String
-  photo              String?
-  role               Role            @default(CLIENT)
-  typeCollecteur     TypeCollecteur?
-  statut             StatutCompte    @default(EN_ATTENTE)
-  pinHash            String?
-  deviceId           String?
-  tokenPush          String?
-  empreinteActive    Boolean         @default(false)
-  kycVerifie         Boolean         @default(false)
-  tentativesEchouees Int             @default(0)
-  bloqueLe           DateTime?
-  collecteurId       String?
-  collecteur         Utilisateur?    @relation("CollecteurClients", fields: [collecteurId], references: [id])
-  clients            Utilisateur[]   @relation("CollecteurClients")
-  superviseurId      String?
-  superviseur        Utilisateur?    @relation("SuperviseurAgents", fields: [superviseurId], references: [id])
-  agents             Utilisateur[]   @relation("SuperviseurAgents")
-  zoneId             String?
-  zone               Zone?           @relation(fields: [zoneId], references: [id])
-  soldeCommission    Float           @default(0)
-  montantCaution     Float           @default(0)
-  creeLe             DateTime        @default(now())
-  misAJourLe         DateTime        @updatedAt
-
-  documentsKYC   DocumentKYC[]
-  facturation    FacturationAgent?
-  tontines       Tontine[]
-  transactions   Transaction[]
-  retraits       Retrait[]
-  commissions    Commission[]
-  microCredits   MicroCredit[]
-  litiges        Litige[]
-  ordresTirage   OrdreTirage[]
-  notifications  Notification[]
-  journalAudit   JournalAudit[]
-  presences      PresenceCollecteur[]
-  scoreCredit    ScoreCredit?
-  dossiersPADME  DossierPADME[]
-  codesOTP       CodeOTP[]
-  badges         BadgeClient[]
-  membresGroupe  MembreTontineGroupe[]
-  qrCode         QRCodeCollecteur?
-  sessions       SessionUtilisateur[]
-  preferenceNotification PreferenceNotification?
-  appareilsBiometriques AppareilBiometrique[]
-
-  @@index([telephone])
-  @@index([role])
-  @@index([collecteurId])
-  @@index([zoneId])
-}
-
-model Zone {
-  id            String        @id @default(uuid())
-  nom           String
-  ville         String
-  description   String?
-  superviseurId String?
-  agents        Utilisateur[]
-  creeLe        DateTime      @default(now())
-}
-
-model DocumentKYC {
-  id            String      @id @default(uuid())
-  utilisateurId String
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
-  typeDocument  String
-  urlDocument   String
-  statut        StatutKYC   @default(EN_ATTENTE)
-  verifiePar    String?
-  motifRejet    String?
-  creeLe        DateTime    @default(now())
-}
-
-model FacturationAgent {
-  id               String      @id @default(uuid())
-  agentId          String      @unique
-  agent            Utilisateur @relation(fields: [agentId], references: [id])
-  plan             String      @default("STANDARD")
-  fraisMensuels    Float
-  fraisParClient   Float       @default(10)
-  totalClients     Int         @default(0)
-  actif            Boolean     @default(true)
-  cautionMontant   Float       @default(0)   // Caution déposée (INDEPENDANT uniquement)
-  dernierPaiement  DateTime    @default(now())
-  prochainPaiement DateTime
-  creeLe           DateTime    @default(now())
-}
-
-model QRCodeCollecteur {
-  id           String      @id @default(uuid())
-  collecteurId String      @unique
-  collecteur   Utilisateur @relation(fields: [collecteurId], references: [id])
-  codeQR       String      @unique
-  expireLe     DateTime
-  actif        Boolean     @default(true)
-  creeLe       DateTime    @default(now())
-}
-
-model CodeOTP {
-  id            String      @id @default(uuid())
-  utilisateurId String
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
-  telephone     String
-  code          String
-  type          String
-  expireLe      DateTime
-  utilise       Boolean     @default(false)
-  creeLe        DateTime    @default(now())
-}
-
-model AppareilBiometrique {
-  id            String      @id @default(uuid())
-  utilisateurId String
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
-  deviceId      String
-  empreinteHash String
-  nomAppareil   String?
-  modeleAppareil String?
-  systemeExploitation String?
-  actif         Boolean     @default(true)
-  derniereAuthentification DateTime?
-  creeLe        DateTime    @default(now())
-  misAJourLe    DateTime    @updatedAt
-
-  @@unique([utilisateurId, deviceId])
-  @@index([utilisateurId])
-}
-
-model SessionUtilisateur {
-  id                  String      @id @default(uuid())
-  utilisateurId       String
-  utilisateur         Utilisateur @relation(fields: [utilisateurId], references: [id])
-  deviceId            String?
-  userAgent           String?
-  adresseIP           String?
-  actif               Boolean     @default(true)
-  derniereUtilisation DateTime    @default(now())
-  expireLe            DateTime
-  revoqueLe           DateTime?
-  refreshTokenHash    String?
-  creeLe              DateTime    @default(now())
-
-  @@index([utilisateurId, actif])
-  @@index([expireLe])
-}
-
-// ─────────────────────────────────────────────────────
-// TONTINES
-// ─────────────────────────────────────────────────────
-
-model Tontine {
-  id                 String              @id @default(uuid())
-  nom                String
-  type               TypeTontine         @default(PERSONNEL)
-  politique          PolitiqueRetrait    @default(FLEXIBLE)
-  soldeActuel        Float               @default(0)
-  objectifMontant    Float?
-  dateDeverrouillage DateTime?
-  montantJournalier  Float               @default(0)
-  proprietaireId     String
-  proprietaire       Utilisateur         @relation(fields: [proprietaireId], references: [id])
-  transactions       Transaction[]
-  retraits           Retrait[]
-  membres            MembreTontineGroupe[]
-  ordresTirage       OrdreTirage[]
-  creeLe             DateTime            @default(now())
-  misAJourLe         DateTime            @updatedAt
-
-  @@index([proprietaireId])
-}
-
-model MembreTontineGroupe {
-  id             String             @id @default(uuid())
-  tontineId      String
-  tontine        Tontine            @relation(fields: [tontineId], references: [id])
-  utilisateurId  String
-  utilisateur    Utilisateur        @relation(fields: [utilisateurId], references: [id])
-  statut         StatutMembreGroupe @default(ACTIF)
-  montantCaution Float              @default(0)
-  cautionBloquee Boolean            @default(true)
-  nombreDefaillances Int            @default(0)
-  derniereDefaillanceLe DateTime?
-  rejointLe      DateTime           @default(now())
-  excluLe        DateTime?
-  motifExclusion String?
-
-  @@unique([tontineId, utilisateurId])
-}
-
-model OrdreTirage {
-  id            String      @id @default(uuid())
-  tontineId     String
-  tontine       Tontine     @relation(fields: [tontineId], references: [id])
-  utilisateurId String
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
-  position      Int
-  aRecu         Boolean     @default(false)
-  recuLe        DateTime?
-  montantRecu   Float?
-  creeLe        DateTime    @default(now())
-}
-
-model DefaillanceGroupe {
-  id              String    @id @default(uuid())
-  tontineId       String
-  membreId        String
-  montantManquant Float
-  cautionUtilisee Float     @default(0)
-  statut          String    @default("EN_COURS")
-  detecteLe       DateTime  @default(now())
-  resoluLe        DateTime?
-}
-
-// ─────────────────────────────────────────────────────
-// TRANSACTIONS
-// ─────────────────────────────────────────────────────
-
-model Transaction {
-  id              String           @id @default(uuid())
-  reference       String           @unique @default(uuid())
-  montant         Float
-  montantNet      Float
-  type            TypeTransaction
-  statut          StatutTransaction @default(EN_ATTENTE)
-  refKKiaPay      String?
-  operateur       String?
-  fraisPlateforme Float            @default(0)
-  fraisAgent      Float            @default(0)
-  hashPrecedent   String?
-  hashActuel      String?
-  tontineId       String?
-  tontine         Tontine?         @relation(fields: [tontineId], references: [id])
-  utilisateurId   String
-  utilisateur     Utilisateur      @relation(fields: [utilisateurId], references: [id])
-  tentatives      Int              @default(0)
-  motifEchec      String?
-  creeLe          DateTime         @default(now())
-
-  litiges     Litige[]
-  commissions Commission[]
-
-  @@index([utilisateurId])
-  @@index([statut])
-  @@index([creeLe])
-}
-
-model Retrait {
-  id            String        @id @default(uuid())
-  utilisateurId String
-  utilisateur   Utilisateur   @relation(fields: [utilisateurId], references: [id])
-  tontineId     String
-  tontine       Tontine       @relation(fields: [tontineId], references: [id])
-  montant       Float
-  statut        StatutRetrait @default(EN_ATTENTE)
-  validePar     String?
-  motifRejet    String?
-  refKKiaPay    String?
-  creeLe        DateTime      @default(now())
-  executeLe     DateTime?
-}
-
-model Commission {
-  id            String      @id @default(uuid())
-  agentId       String
-  agent         Utilisateur @relation(fields: [agentId], references: [id])
-  transactionId String
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
-  montant       Float
-  type          String
-  creeLe        DateTime    @default(now())
-}
-
-// ─────────────────────────────────────────────────────
-// MICRO-CRÉDIT
-// ─────────────────────────────────────────────────────
-
-model MicroCredit {
-  id                   String               @id @default(uuid())
-  clientId             String
-  client               Utilisateur          @relation(fields: [clientId], references: [id])
-  montantPrincipal     Float
-  tauxInteret          Float
-  montantTotal         Float
-  paiementJournalier   Float
-  totalJours           Int
-  joursPayes           Int                  @default(0)
-  montantRestant       Float
-  statut               StatutCredit         @default(EN_ATTENTE)
-  scoreAuMoment        Int
-  initiePar            String
-  methodeConsentement  String?
-  consentementObtenu   Boolean              @default(false)
-  consentementObtenuLe DateTime?
-  decaisseLE           DateTime?
-  dateEcheance         DateTime
-  termineLe            DateTime?
-  remboursements       RemboursementCredit[]
-  creeLe               DateTime             @default(now())
-  misAJourLe           DateTime             @updatedAt
-
-  @@index([clientId])
-  @@index([statut])
-}
-
-model RemboursementCredit {
-  id            String      @id @default(uuid())
-  microCreditId String
-  microCredit   MicroCredit @relation(fields: [microCreditId], references: [id])
-  montant       Float
-  statut        String      @default("EN_ATTENTE")
-  refKKiaPay    String?
-  payeLe        DateTime    @default(now())
-}
-
-// ─────────────────────────────────────────────────────
-// SÉCURITÉ & LITIGES
-// ─────────────────────────────────────────────────────
-
-model Litige {
-  id            String             @id @default(uuid())
-  transactionId String
-  transaction   Transaction        @relation(fields: [transactionId], references: [id])
-  clientId      String
-  client        Utilisateur        @relation(fields: [clientId], references: [id])
-  motif         String
-  statut        StatutLitige       @default(OUVERT)
-  resoluPar     String?
-  resolution    String?
-  creeLe        DateTime           @default(now())
-  resoluLe      DateTime?
-  commentaires  CommentaireLitige[]
-}
-
-model PresenceCollecteur {
-  id        String      @id @default(uuid())
-  agentId   String
-  agent     Utilisateur @relation(fields: [agentId], references: [id])
-  clientId  String
-  latitude  Float
-  longitude Float
-  distance  Float
-  estValide Boolean
-  creeLe    DateTime    @default(now())
-}
-
-model JournalAudit {
-  id            String      @id @default(uuid())
-  utilisateurId String
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
-  action        String
-  details       String
-  adresseIP     String?
-  appareil      String?
-  creeLe        DateTime    @default(now())
-
-  @@index([utilisateurId])
-  @@index([creeLe])
-}
-
-model AlerteSysteme {
-  id           String    @id @default(uuid())
-  type         String
-  severite     String
-  statut       String    @default("OUVERTE")
-  titre        String
-  message      String
-  resourceType String?
-  resourceId   String?
-  metadata     String?
-  detecteeLe   DateTime  @default(now())
-  resolueLe    DateTime?
-  creeLe       DateTime  @default(now())
-  misAJourLe   DateTime  @updatedAt
-
-  @@index([statut, severite])
-  @@index([resourceType, resourceId])
-  @@index([type])
-}
-
-// ─────────────────────────────────────────────────────
-// ANALYTIQUE & PADME
-// ─────────────────────────────────────────────────────
-
-model ScoreCredit {
-  id                  String           @id @default(uuid())
-  utilisateurId       String           @unique
-  utilisateur         Utilisateur      @relation(fields: [utilisateurId], references: [id])
-  score               Int              @default(0)
-  totalDepots         Int              @default(0)
-  tauxRegularite      Float            @default(0)
-  totalMois           Int              @default(0)
-  scoreRemboursement  Float            @default(0)
-  eligiblePADME       Boolean          @default(false)
-  eligibleMicroCredit Boolean          @default(false)
-  dernierCalcul       DateTime         @default(now())
-  dossiersPADME       DossierPADME[]
-  historique          HistoriqueScore[]
-}
-
-model DossierPADME {
-  id                String             @id @default(uuid())
-  clientId          String
-  client            Utilisateur        @relation(fields: [clientId], references: [id])
-  scoreCreditId     String
-  scoreCredit       ScoreCredit        @relation(fields: [scoreCreditId], references: [id])
-  scoreAuMoment     Int
-  totalEpargne      Float
-  tauxRegularite    Float
-  creditsRembourses Int                @default(0)
-  urlPDF            String?
-  statut            StatutDossierPADME @default(GENERE)
-  genereePar        String             @default("SYSTEME")
-  soumisLe          DateTime?
-  examineLE         DateTime?
-  creeLe            DateTime           @default(now())
-
-  @@index([clientId])
-  @@index([statut])
-}
-
-model Notification {
-  id            String           @id @default(uuid())
-  utilisateurId String
-  utilisateur   Utilisateur      @relation(fields: [utilisateurId], references: [id])
-  type          TypeNotification
-  titre         String
-  message       String
-  canal         Canal
-  lu            Boolean          @default(false)
-  creeLe        DateTime         @default(now())
-
-  @@index([utilisateurId, lu])
-}
-
-model PreferenceNotification {
-  id            String      @id @default(uuid())
-  utilisateurId String      @unique
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
-  smsActif      Boolean     @default(true)
-  pushActif     Boolean     @default(true)
-  creeLe        DateTime    @default(now())
-  misAJourLe    DateTime    @updatedAt
-}
-
-model BadgeClient {
-  id       String      @id @default(uuid())
-  clientId String
-  client   Utilisateur @relation(fields: [clientId], references: [id])
-  niveau   NiveauBadge
-  obtenuLe DateTime    @default(now())
-}
-
-// ─────────────────────────────────────────────────────
-// NOUVELLES TABLES
-// ─────────────────────────────────────────────────────
-
-model HistoriqueScore {
-  id            String      @id @default(uuid())
-  scoreCreditId String
-  scoreCredit   ScoreCredit @relation(fields: [scoreCreditId], references: [id])
-  score         Int
-  tauxRegularite Float
-  scoreRemboursement Float
-  calculeLe     DateTime    @default(now())
-
-  @@index([scoreCreditId, calculeLe])
-}
-
-model ParametreSysteme {
-  id         String   @id @default(uuid())
-  cle        String   @unique
-  valeur     String
-  description String?
-  modifiePar String?
-  creeLe     DateTime @default(now())
-  misAJourLe DateTime @updatedAt
-
-  @@index([cle])
-}
-
-model ArticleFAQ {
-  id        String   @id @default(uuid())
-  categorie String
-  question  String
-  reponse   String
-  ordre     Int      @default(0)
-  actif     Boolean  @default(true)
-  creePar   String?
-  creeLe    DateTime @default(now())
-  misAJourLe DateTime @updatedAt
-
-  @@index([categorie, actif])
-}
-
-model CommentaireLitige {
-  id          String   @id @default(uuid())
-  litigeId    String
-  litige      Litige   @relation(fields: [litigeId], references: [id])
-  auteurId    String
-  message     String
-  pieceJointeUrl String?
-  creeLe      DateTime @default(now())
-
-  @@index([litigeId, creeLe])
 }

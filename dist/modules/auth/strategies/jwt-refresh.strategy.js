@@ -29,10 +29,11 @@ let JwtRefreshStrategy = class JwtRefreshStrategy extends (0, passport_1.Passpor
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromBodyField('refreshToken'),
             ignoreExpiration: false,
             secretOrKey: secretRefreshJwt(config),
+            passReqToCallback: true,
         });
         this.prisma = prisma;
     }
-    async validate(payload) {
+    async validate(req, payload) {
         if (!payload?.sub)
             throw new common_1.UnauthorizedException('Refresh token invalide');
         if (!payload.sid)
@@ -48,7 +49,14 @@ let JwtRefreshStrategy = class JwtRefreshStrategy extends (0, passport_1.Passpor
         });
         if (!session)
             throw new common_1.UnauthorizedException('Session expirée ou révoquée');
-        return { id: payload.sub, telephone: payload.telephone, role: payload.role, sessionId: payload.sid };
+        const refreshTokenBrut = req.body?.refreshToken ?? null;
+        return {
+            id: payload.sub,
+            telephone: payload.telephone,
+            role: payload.role,
+            sessionId: payload.sid,
+            refreshTokenBrut,
+        };
     }
 };
 exports.JwtRefreshStrategy = JwtRefreshStrategy;

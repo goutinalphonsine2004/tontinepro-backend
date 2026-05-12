@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -28,13 +28,17 @@ import { RapportsModule } from './modules/rapports/rapports.module';
 import { CollecteurTerrainModule } from './modules/collecteur-terrain/collecteur-terrain.module';
 import { ParametresModule } from './modules/parametres/parametres.module';
 import { SupportModule } from './modules/support/support.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60000, limit: 60 },
+      { name: 'strict', ttl: 60000, limit: 5 },
+    ]),
     PrismaModule,
     AuthModule,
     UtilisateursModule,
@@ -59,8 +63,12 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     CollecteurTerrainModule,
     ParametresModule,
     SupportModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [{ provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

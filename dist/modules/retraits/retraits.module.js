@@ -11,14 +11,16 @@ const common_1 = require("@nestjs/common");
 const retraits_controller_1 = require("./retraits.controller");
 const retraits_service_1 = require("./retraits.service");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
-const sms_service_1 = require("../notifications/sms.service");
+const notifications_module_1 = require("../notifications/notifications.module");
 let RetraitsModule = class RetraitsModule {
 };
 exports.RetraitsModule = RetraitsModule;
 exports.RetraitsModule = RetraitsModule = __decorate([
     (0, common_1.Module)({
+        imports: [(0, common_1.forwardRef)(() => notifications_module_1.NotificationsModule)],
         controllers: [retraits_controller_1.RetraitsController],
-        providers: [retraits_service_1.RetraitsService, kkiapay_service_1.KkiapayService, sms_service_1.SmsService],
+        providers: [retraits_service_1.RetraitsService, kkiapay_service_1.KkiapayService],
+        exports: [retraits_service_1.RetraitsService],
     })
 ], RetraitsModule);
 //# sourceMappingURL=retraits.module.js.map

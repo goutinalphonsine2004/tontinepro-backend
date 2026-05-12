@@ -16,6 +16,7 @@ export declare class AuthService {
     private jwt;
     private config;
     private sms;
+    private readonly logger;
     constructor(prisma: PrismaService, jwt: JwtService, config: ConfigService, sms: SmsService);
     inscription(dto: InscriptionDto): Promise<{
         succes: boolean;
@@ -65,7 +66,7 @@ export declare class AuthService {
         succes: boolean;
         message: string;
     }>;
-    rafraichirToken(utilisateurId: string, telephone: string, role: Role, sessionId: string): Promise<{
+    rafraichirToken(utilisateurId: string, telephone: string, role: Role, sessionId: string, refreshTokenRecu?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -90,9 +91,9 @@ export declare class AuthService {
         message: string;
         donnees: {
             sessionCourante: boolean;
-            deviceId: string | null;
             id: string;
             creeLe: Date;
+            deviceId: string | null;
             expireLe: Date;
             userAgent: string | null;
             adresseIP: string | null;
@@ -150,9 +151,9 @@ export declare class AuthService {
         succes: boolean;
         message: string;
         donnees: {
-            deviceId: string;
             id: string;
             creeLe: Date;
+            deviceId: string;
             nomAppareil: string | null;
             modeleAppareil: string | null;
             systemeExploitation: string | null;

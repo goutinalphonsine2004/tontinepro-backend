@@ -1,11 +1,27 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { PolitiqueRetrait, TypeTontine } from '@prisma/client';
+import { FrequenceTontine, PolitiqueRetrait, TypeTontine } from '@prisma/client';
 
 export class CreerTontineDto {
   @IsString()
   @IsNotEmpty({ message: 'Le nom est obligatoire' })
   nom!: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
 
   @IsEnum(TypeTontine)
   @IsOptional()
@@ -15,18 +31,38 @@ export class CreerTontineDto {
   @IsOptional()
   politique?: PolitiqueRetrait = PolitiqueRetrait.FLEXIBLE;
 
+  @IsEnum(FrequenceTontine)
+  @IsOptional()
+  frequence?: FrequenceTontine = FrequenceTontine.MENSUEL;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(28, { message: 'jourFixe doit être entre 1 et 28 (garanti dans tous les mois)' })
+  @IsOptional()
+  jourFixe?: number;
+
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
+  @IsPositive()
   @IsOptional()
   objectifMontant?: number;
 
   @Type(() => Number)
   @IsNumber()
-  @Min(100, { message: 'Le montant journalier minimum est 100 FCFA' })
+  @Min(100, { message: 'Le montant minimum est 100 FCFA' })
   @IsOptional()
   montantJournalier?: number = 500;
 
+  @IsDateString()
   @IsOptional()
   dateDeverrouillage?: Date;
+
+  @IsDateString()
+  @IsOptional()
+  dateFin?: Date;
+
+  @IsUUID()
+  @IsOptional()
+  clientId?: string;
 }

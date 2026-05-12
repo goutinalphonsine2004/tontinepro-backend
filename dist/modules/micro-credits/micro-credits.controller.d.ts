@@ -58,15 +58,15 @@ export declare class MicroCreditsController {
         donnees: ({
             client: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
                 kycVerifie: boolean;
             };
         } & {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutCredit;
             creeLe: Date;
             misAJourLe: Date;
+            statut: import("@prisma/client").$Enums.StatutCredit;
             clientId: string;
             montantPrincipal: number;
             tauxInteret: number;
@@ -113,9 +113,9 @@ export declare class MicroCreditsController {
             };
         } & {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutCredit;
             creeLe: Date;
             misAJourLe: Date;
+            statut: import("@prisma/client").$Enums.StatutCredit;
             clientId: string;
             montantPrincipal: number;
             tauxInteret: number;
@@ -149,10 +149,10 @@ export declare class MicroCreditsController {
                 statut: import("@prisma/client").$Enums.StatutCredit;
             };
             remboursements: {
+                refKKiaPay: string | null;
+                montant: number;
                 id: string;
                 statut: string;
-                montant: number;
-                refKKiaPay: string | null;
                 microCreditId: string;
                 payeLe: Date;
             }[];

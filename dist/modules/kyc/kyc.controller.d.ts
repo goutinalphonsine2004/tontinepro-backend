@@ -11,12 +11,12 @@ export declare class KycController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutKYC;
-            creeLe: Date;
             utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            motifRejet: string | null;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
         };
     }>;
@@ -27,12 +27,12 @@ export declare class KycController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutKYC;
-            creeLe: Date;
             utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            motifRejet: string | null;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
         }[];
     }>;
@@ -42,18 +42,18 @@ export declare class KycController {
         donnees: ({
             utilisateur: {
                 telephone: string;
+                id: string;
                 nom: string;
                 role: import("@prisma/client").$Enums.Role;
-                id: string;
             };
         } & {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutKYC;
-            creeLe: Date;
             utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            motifRejet: string | null;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
         })[];
     }>;
@@ -64,12 +64,12 @@ export declare class KycController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutKYC;
-            creeLe: Date;
             utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            motifRejet: string | null;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
         };
     }>;
@@ -80,12 +80,12 @@ export declare class KycController {
         message: string;
         donnees: {
             id: string;
-            statut: import("@prisma/client").$Enums.StatutKYC;
-            creeLe: Date;
             utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            motifRejet: string | null;
             typeDocument: string;
             urlDocument: string;
-            motifRejet: string | null;
             verifiePar: string | null;
         };
     }>;

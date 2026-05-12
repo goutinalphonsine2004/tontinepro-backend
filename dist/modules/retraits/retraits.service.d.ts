@@ -4,11 +4,13 @@ import { SmsService } from '../notifications/sms.service';
 import { DemanderRetraitDto } from './dto/demander-retrait.dto';
 import { ConfirmerRetraitDto } from './dto/confirmer-retrait.dto';
 import { RejeterRetraitDto } from './dto/rejeter-retrait.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 export declare class RetraitsService {
     private prisma;
     private kkiapay;
     private sms;
-    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService);
+    private notifications;
+    constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService, notifications: NotificationsService);
     demanderOtp(utilisateurId: string, dto: DemanderRetraitDto): Promise<{
         succes: boolean;
         message: string;
@@ -23,15 +25,15 @@ export declare class RetraitsService {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         };
     }>;
@@ -39,15 +41,15 @@ export declare class RetraitsService {
         succes: boolean;
         message: string;
         donnees: {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         };
     }>;
@@ -59,19 +61,19 @@ export declare class RetraitsService {
         message: string;
         donnees: ({
             tontine: {
-                nom: string;
                 id: string;
+                nom: string;
             };
         } & {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         })[];
     }>;
@@ -81,24 +83,24 @@ export declare class RetraitsService {
         donnees: ({
             utilisateur: {
                 telephone: string;
-                nom: string;
                 id: string;
+                nom: string;
             };
             tontine: {
-                nom: string;
                 id: string;
+                nom: string;
                 soldeActuel: number;
             };
         } & {
-            id: string;
-            statut: import("@prisma/client").$Enums.StatutRetrait;
-            creeLe: Date;
-            utilisateurId: string;
-            montant: number;
             refKKiaPay: string | null;
             tontineId: string;
-            motifRejet: string | null;
+            montant: number;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
             validePar: string | null;
+            motifRejet: string | null;
             executeLe: Date | null;
         })[];
     }>;

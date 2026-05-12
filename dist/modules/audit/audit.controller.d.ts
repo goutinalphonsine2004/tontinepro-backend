@@ -10,14 +10,14 @@ export declare class AuditController {
             journaux: ({
                 utilisateur: {
                     telephone: string;
+                    id: string;
                     nom: string;
                     role: import("@prisma/client").$Enums.Role;
-                    id: string;
                 };
             } & {
                 id: string;
-                creeLe: Date;
                 utilisateurId: string;
+                creeLe: Date;
                 adresseIP: string | null;
                 action: string;
                 details: string;

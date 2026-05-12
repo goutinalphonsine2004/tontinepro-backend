@@ -28,16 +28,16 @@ export declare class CommissionsController {
                 utilisateur: {
                     nom: string;
                 };
+                montant: number;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
                 reference: string;
-                montant: number;
             };
         } & {
+            montant: number;
             id: string;
             creeLe: Date;
             type: string;
-            montant: number;
             agentId: string;
             transactionId: string;
         })[];

@@ -21,9 +21,9 @@ export declare class UtilisateursController {
             };
             soldeTotal: number;
             tontines: {
-                nom: string;
                 id: string;
                 type: import("@prisma/client").$Enums.TypeTontine;
+                nom: string;
                 soldeActuel: number;
                 objectifMontant: number | null;
                 dateDeverrouillage: Date | null;
@@ -56,17 +56,17 @@ export declare class UtilisateursController {
             };
             prochaineDistribution: {
                 tontine: {
-                    nom: string;
                     id: string;
+                    nom: string;
                     montantJournalier: number;
                 };
             } & {
-                id: string;
-                creeLe: Date;
-                utilisateurId: string;
                 tontineId: string;
-                position: number;
+                id: string;
+                utilisateurId: string;
+                creeLe: Date;
                 aRecu: boolean;
+                position: number;
                 recuLe: Date | null;
                 montantRecu: number | null;
             };
@@ -75,22 +75,22 @@ export declare class UtilisateursController {
                     nom: string;
                 } | null;
             } & {
+                refKKiaPay: string | null;
+                tontineId: string | null;
+                montant: number;
                 id: string;
-                statut: import("@prisma/client").$Enums.StatutTransaction;
+                utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
-                utilisateurId: string;
+                statut: import("@prisma/client").$Enums.StatutTransaction;
+                tentatives: number;
                 reference: string;
-                montant: number;
                 montantNet: number;
-                refKKiaPay: string | null;
                 operateur: string | null;
                 fraisPlateforme: number;
                 fraisAgent: number;
                 hashPrecedent: string | null;
                 hashActuel: string | null;
-                tontineId: string | null;
-                tentatives: number;
                 motifEchec: string | null;
             })[];
         };
@@ -102,10 +102,12 @@ export declare class UtilisateursController {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -114,8 +116,6 @@ export declare class UtilisateursController {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     modifierProfil(u: {
@@ -125,10 +125,12 @@ export declare class UtilisateursController {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -137,8 +139,6 @@ export declare class UtilisateursController {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     changerPin(u: {
@@ -154,10 +154,12 @@ export declare class UtilisateursController {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -166,8 +168,6 @@ export declare class UtilisateursController {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     supprimerMonCompte(u: {
@@ -184,10 +184,12 @@ export declare class UtilisateursController {
         donnees: {
             utilisateurs: {
                 telephone: string;
-                nom: string;
-                role: import("@prisma/client").$Enums.Role;
                 id: string;
+                creeLe: Date;
+                misAJourLe: Date;
+                nom: string;
                 photo: string | null;
+                role: import("@prisma/client").$Enums.Role;
                 typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
                 statut: import("@prisma/client").$Enums.StatutCompte;
                 empreinteActive: boolean;
@@ -196,8 +198,6 @@ export declare class UtilisateursController {
                 zoneId: string | null;
                 soldeCommission: number;
                 montantCaution: number;
-                creeLe: Date;
-                misAJourLe: Date;
             }[];
             total: number;
             page: number;
@@ -225,10 +225,12 @@ export declare class UtilisateursController {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -237,8 +239,6 @@ export declare class UtilisateursController {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
     }>;
     changerRole(u: {
@@ -248,10 +248,12 @@ export declare class UtilisateursController {
         message: string;
         donnees: {
             telephone: string;
-            nom: string;
-            role: import("@prisma/client").$Enums.Role;
             id: string;
+            creeLe: Date;
+            misAJourLe: Date;
+            nom: string;
             photo: string | null;
+            role: import("@prisma/client").$Enums.Role;
             typeCollecteur: import("@prisma/client").$Enums.TypeCollecteur | null;
             statut: import("@prisma/client").$Enums.StatutCompte;
             empreinteActive: boolean;
@@ -260,9 +262,15 @@ export declare class UtilisateursController {
             zoneId: string | null;
             soldeCommission: number;
             montantCaution: number;
-            creeLe: Date;
-            misAJourLe: Date;
         };
+    }>;
+    assignerSuperviseur(u: {
+        id: string;
+    }, id: string, body: {
+        superviseurId: string | null;
+    }): Promise<{
+        succes: boolean;
+        message: string;
     }>;
     supprimer(u: {
         id: string;

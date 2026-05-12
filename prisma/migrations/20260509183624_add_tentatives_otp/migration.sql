@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "CodeOTP" ADD COLUMN     "tentatives" INTEGER NOT NULL DEFAULT 0;

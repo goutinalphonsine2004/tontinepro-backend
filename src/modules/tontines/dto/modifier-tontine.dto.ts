@@ -1,11 +1,39 @@
-import { IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { PolitiqueRetrait } from '@prisma/client';
+import { FrequenceTontine, PolitiqueRetrait } from '@prisma/client';
 
 export class ModifierTontineDto {
+  @IsString()
+  @IsOptional()
+  nom?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
   @IsEnum(PolitiqueRetrait)
   @IsOptional()
   politique?: PolitiqueRetrait;
+
+  @IsEnum(FrequenceTontine)
+  @IsOptional()
+  frequence?: FrequenceTontine;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  @IsOptional()
+  jourFixe?: number;
 
   @Type(() => Number)
   @IsNumber()
@@ -19,6 +47,11 @@ export class ModifierTontineDto {
   @IsOptional()
   montantJournalier?: number;
 
+  @IsDateString()
   @IsOptional()
   dateDeverrouillage?: Date;
+
+  @IsDateString()
+  @IsOptional()
+  dateFin?: Date;
 }

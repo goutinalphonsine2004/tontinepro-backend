@@ -7,36 +7,36 @@ export declare class ZonesService {
         succes: boolean;
         message: string;
         donnees: {
-            nom: string;
             id: string;
             creeLe: Date;
-            ville: string;
+            nom: string;
             description: string | null;
+            ville: string;
         };
     }>;
     lister(): Promise<{
         succes: boolean;
         message: string;
         donnees: {
-            nom: string;
             id: string;
             creeLe: Date;
+            nom: string;
             _count: {
                 agents: number;
             };
-            ville: string;
             description: string | null;
+            ville: string;
         }[];
     }>;
     modifier(zoneId: string, dto: Partial<CreerZoneDto>): Promise<{
         succes: boolean;
         message: string;
         donnees: {
-            nom: string;
             id: string;
             creeLe: Date;
-            ville: string;
+            nom: string;
             description: string | null;
+            ville: string;
         };
     }>;
     agentsDeLaZone(zoneId: string): Promise<{
@@ -50,9 +50,9 @@ export declare class ZonesService {
             };
             agents: {
                 telephone: string;
+                id: string;
                 nom: string;
                 role: import("@prisma/client").$Enums.Role;
-                id: string;
                 statut: import("@prisma/client").$Enums.StatutCompte;
                 kycVerifie: boolean;
             }[];
@@ -82,9 +82,9 @@ export declare class ZonesService {
             volumeCeMois: number;
             transactionsCeMois: number;
             agents: {
+                id: string;
                 nom: string;
                 role: import("@prisma/client").$Enums.Role;
-                id: string;
                 statut: import("@prisma/client").$Enums.StatutCompte;
             }[];
         };

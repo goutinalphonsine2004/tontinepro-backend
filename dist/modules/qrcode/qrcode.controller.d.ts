@@ -14,8 +14,8 @@ export declare class QrcodeController {
         message: string;
         donnees: {
             id: string;
-            collecteurId: string;
             creeLe: Date;
+            collecteurId: string;
             expireLe: Date;
             actif: boolean;
             codeQR: string;
@@ -27,9 +27,9 @@ export declare class QrcodeController {
         donnees: {
             collecteur: {
                 telephone: string;
+                id: string;
                 nom: string;
                 role: import("@prisma/client").$Enums.Role;
-                id: string;
                 statut: import("@prisma/client").$Enums.StatutCompte;
                 kycVerifie: boolean;
             };
@@ -41,8 +41,8 @@ export declare class QrcodeController {
         message: string;
         donnees: {
             id: string;
-            collecteurId: string;
             creeLe: Date;
+            collecteurId: string;
             expireLe: Date;
             actif: boolean;
             codeQR: string;

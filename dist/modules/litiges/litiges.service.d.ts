@@ -13,16 +13,16 @@ export declare class LitigesService {
         donnees: {
             litige: {
                 transaction: {
+                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
-                    montant: number;
                 };
             } & {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
@@ -37,16 +37,16 @@ export declare class LitigesService {
         donnees: {
             litiges: ({
                 transaction: {
+                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
-                    montant: number;
                 };
             } & {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
@@ -61,21 +61,21 @@ export declare class LitigesService {
         donnees: {
             litiges: ({
                 transaction: {
+                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
-                    montant: number;
                 };
                 client: {
                     telephone: string;
-                    nom: string;
                     id: string;
+                    nom: string;
                 };
             } & {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
@@ -92,10 +92,10 @@ export declare class LitigesService {
         message: string;
         donnees: {
             litige: {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
@@ -109,10 +109,10 @@ export declare class LitigesService {
         message: string;
         donnees: {
             litige: {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
@@ -126,10 +126,10 @@ export declare class LitigesService {
         message: string;
         donnees: {
             litige: {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
@@ -144,15 +144,15 @@ export declare class LitigesService {
         donnees: {
             litige: {
                 transaction: {
+                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
-                    montant: number;
                 };
                 client: {
                     telephone: string;
-                    nom: string;
                     id: string;
+                    nom: string;
                 };
                 commentaires: {
                     message: string;
@@ -163,10 +163,10 @@ export declare class LitigesService {
                     litigeId: string;
                 }[];
             } & {
-                id: string;
-                statut: import("@prisma/client").$Enums.StatutLitige;
-                creeLe: Date;
                 motif: string;
+                id: string;
+                creeLe: Date;
+                statut: import("@prisma/client").$Enums.StatutLitige;
                 clientId: string;
                 transactionId: string;
                 resoluLe: Date | null;
