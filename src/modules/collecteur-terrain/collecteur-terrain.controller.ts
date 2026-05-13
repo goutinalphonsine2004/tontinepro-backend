@@ -66,4 +66,9 @@ export class CollecteurTerrainController {
   ) {
     return this.service.contactWhatsApp(u.id, clientId);
   }
+
+  @Get('mon-collecteur')
+  monCollecteur(@UtilisateurCourant() u: { id: string }) {
+    return this.service.monCollecteur(u.id);
+  }
 }

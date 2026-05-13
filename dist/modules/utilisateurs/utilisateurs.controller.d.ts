@@ -118,6 +118,30 @@ export declare class UtilisateursController {
             montantCaution: number;
         };
     }>;
+    monQrCode(u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            codeQR: string;
+            expireLe: Date;
+            actif: boolean;
+        };
+    }>;
+    mesStats(u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            totalTontines: number;
+            totalCotisations: number;
+            totalRetraits: number;
+            soldeTotal: number;
+            tauxRegularite: number;
+        };
+    }>;
     modifierProfil(u: {
         id: string;
     }, dto: ModifierProfilDto): Promise<{

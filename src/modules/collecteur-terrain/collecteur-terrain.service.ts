@@ -365,4 +365,54 @@ export class CollecteurTerrainService {
       },
     };
   }
+
+  // ─── GET /collecteur/mon-collecteur ────────────────
+  async monCollecteur(clientId: string) {
+    const client = await this.prisma.utilisateur.findUnique({
+      where: { id: clientId },
+      select: { 
+        id: true, 
+        collecteurId: true, 
+      },
+    });
+
+    if (!client) throw new NotFoundException('Client introuvable');
+    if (!client.collecteurId) {
+      return {
+        succes: true,
+        message: 'Aucun collecteur lié',
+        donnees: null,
+      };
+    }
+
+    // Récupérer le collecteur lié
+    const collecteur = await this.prisma.utilisateur.findUnique({
+      where: { id: client.collecteurId },
+      select: {
+        id: true,
+        nom: true,
+        telephone: true,
+        zone: {
+          select: { nom: true },
+        },
+        kycVerifie: true,
+        soldeCommission: true,
+      },
+    });
+
+    return {
+      succes: true,
+      message: 'Collecteur récupéré avec succès',
+      donnees: collecteur
+        ? {
+            id: collecteur.id,
+            nom: collecteur.nom,
+            telephone: collecteur.telephone,
+            region: collecteur.zone?.nom || null,
+            kycVerifie: collecteur.kycVerifie,
+            commissionPercent: 3, // À récupérer d'une config
+          }
+        : null,
+    };
+  }
 }

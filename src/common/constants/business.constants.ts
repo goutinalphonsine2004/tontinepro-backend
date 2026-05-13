@@ -19,13 +19,13 @@ export const BUSINESS = {
   // ═══════════════════════════════════════════════════════
 
   // ─── Taux commissions ────────────────────────────────
-  TAUX_COMMISSION_BASE: 0.03,      // 3% standard sur cotisation
-  TAUX_COMMISSION_DIAMANT: 0.02,   // 2% pour les clients fidèles (Badge Diamant)
-  TAUX_COMMISSION_RETRAIT: 0.02,   // 2% sur retraits ET distributions GROUPE
+  TAUX_COMMISSION_BASE: 0.03, // 3% standard sur cotisation
+  TAUX_COMMISSION_DIAMANT: 0.02, // 2% pour les clients fidèles (Badge Diamant)
+  TAUX_COMMISSION_RETRAIT: 0.02, // 2% sur retraits ET distributions GROUPE
   TAUX_COMMISSION_COTISATION: 0.03, // Alias pour compatibilité
 
-  TAUX_INTERET_MICRO_CREDIT: 0.1,  // 10% d'intérêt sur micro-crédit (100% plateforme)
-  TAUX_COMMISSION_PADME: 0.03,     // 3% sur crédit PADME accordé (100% plateforme)
+  TAUX_INTERET_MICRO_CREDIT: 0.1, // 10% d'intérêt sur micro-crédit (100% plateforme)
+  TAUX_COMMISSION_PADME: 0.03, // 3% sur crédit PADME accordé (100% plateforme)
 
   // ─── Abonnements collecteurs (FCFA) ───────────────────
   ABONNEMENT_STANDARD: 2500,

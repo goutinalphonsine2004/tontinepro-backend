@@ -47,6 +47,29 @@ export class UtilisateursService {
     return { succes: true, message: 'Profil récupéré.', donnees: u };
   }
 
+  // ─── GET /utilisateurs/mon-qr-code ─────────────────
+  async monQrCode(utilisateurId: string) {
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { id: true, nom: true, telephone: true },
+    });
+    if (!u) throw new NotFoundException('Utilisateur introuvable');
+
+    // Générer un code QR basé sur l'ID utilisateur
+    const codeQR = `TONTINEPRO-CLIENT-${u.id}`;
+    const expireLe = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+    return {
+      succes: true,
+      message: 'QR code personnel généré.',
+      donnees: {
+        codeQR,
+        expireLe,
+        actif: true,
+      },
+    };
+  }
+
   // ─── PUT /utilisateurs/profil ──────────────────────
   async modifierProfil(utilisateurId: string, dto: ModifierProfilDto) {
     if (!dto.nom && !dto.photo) {
@@ -579,5 +602,63 @@ export class UtilisateursService {
 
     await this.prisma.utilisateur.delete({ where: { id: clientId } });
     return { succes: true, message: 'Compte supprimé définitivement.' };
+  }
+
+  // ─── GET /utilisateurs/mes-stats ──────────────────
+  async mesStats(clientId: string) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({
+      where: { id: clientId },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            tontines: true,
+            transactions: true,
+            retraits: true,
+          },
+        },
+      },
+    });
+
+    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
+
+    // Calculer solde total et régularité
+    const transactions = await this.prisma.transaction.findMany({
+      where: { utilisateurId: clientId },
+      select: { montant: true, creeLe: true },
+    });
+
+    const retraits = await this.prisma.retrait.findMany({
+      where: { utilisateurId: clientId },
+      select: { montant: true, statut: true },
+    });
+
+    const soldeTotal = transactions.reduce((acc, t) => acc + t.montant, 0) -
+      retraits.reduce((acc, r) => acc + r.montant, 0);
+
+    // Régularité = % de mois avec au moins 1 cotisation
+    const moisActifs = new Set<string>();
+    for (const t of transactions) {
+      const mois = `${t.creeLe.getFullYear()}-${t.creeLe.getMonth()}`;
+      moisActifs.add(mois);
+    }
+    
+    // Derniers 12 mois
+    const tauxRegularite = Math.min(
+      100,
+      Math.round((moisActifs.size / 12) * 100),
+    );
+
+    return {
+      succes: true,
+      message: 'Statistiques récupérées',
+      donnees: {
+        totalTontines: utilisateur._count.tontines,
+        totalCotisations: utilisateur._count.transactions,
+        totalRetraits: utilisateur._count.retraits,
+        soldeTotal,
+        tauxRegularite,
+      },
+    };
   }
 }

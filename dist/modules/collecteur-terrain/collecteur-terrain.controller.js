@@ -44,6 +44,9 @@ let CollecteurTerrainController = class CollecteurTerrainController {
     contactWhatsApp(u, clientId) {
         return this.service.contactWhatsApp(u.id, clientId);
     }
+    monCollecteur(u) {
+        return this.service.monCollecteur(u.id);
+    }
 };
 exports.CollecteurTerrainController = CollecteurTerrainController;
 __decorate([
@@ -98,6 +101,13 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], CollecteurTerrainController.prototype, "contactWhatsApp", null);
+__decorate([
+    (0, common_1.Get)('mon-collecteur'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CollecteurTerrainController.prototype, "monCollecteur", null);
 exports.CollecteurTerrainController = CollecteurTerrainController = __decorate([
     (0, common_1.Controller)('collecteur'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

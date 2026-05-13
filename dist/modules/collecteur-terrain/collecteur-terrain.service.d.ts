@@ -103,4 +103,16 @@ export declare class CollecteurTerrainService {
             lienWhatsApp: string;
         };
     }>;
+    monCollecteur(clientId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            nom: string;
+            telephone: string;
+            region: string | null;
+            kycVerifie: boolean;
+            commissionPercent: number;
+        } | null;
+    }>;
 }

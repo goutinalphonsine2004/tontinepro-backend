@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UtilisateursController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const client_1 = require("@prisma/client");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
@@ -36,6 +37,12 @@ let UtilisateursController = class UtilisateursController {
     }
     getProfil(u) {
         return this.service.getProfil(u.id);
+    }
+    monQrCode(u) {
+        return this.service.monQrCode(u.id);
+    }
+    mesStats(u) {
+        return this.service.mesStats(u.id);
     }
     modifierProfil(u, dto) {
         return this.service.modifierProfil(u.id, dto);
@@ -70,6 +77,7 @@ let UtilisateursController = class UtilisateursController {
 };
 exports.UtilisateursController = UtilisateursController;
 __decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 300, ttl: 60000 } }),
     (0, common_1.Get)('mon-dashboard'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __metadata("design:type", Function),
@@ -83,6 +91,20 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], UtilisateursController.prototype, "getProfil", null);
+__decorate([
+    (0, common_1.Get)('mon-qr-code'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "monQrCode", null);
+__decorate([
+    (0, common_1.Get)('mes-stats'),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UtilisateursController.prototype, "mesStats", null);
 __decorate([
     (0, common_1.Put)('profil'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),

@@ -29,6 +29,15 @@ export declare class UtilisateursService {
             montantCaution: number;
         };
     }>;
+    monQrCode(utilisateurId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            codeQR: string;
+            expireLe: Date;
+            actif: boolean;
+        };
+    }>;
     modifierProfil(utilisateurId: string, dto: ModifierProfilDto): Promise<{
         succes: boolean;
         message: string;
@@ -252,5 +261,16 @@ export declare class UtilisateursService {
     supprimerMonCompte(clientId: string, pin: string): Promise<{
         succes: boolean;
         message: string;
+    }>;
+    mesStats(clientId: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            totalTontines: number;
+            totalCotisations: number;
+            totalRetraits: number;
+            soldeTotal: number;
+            tauxRegularite: number;
+        };
     }>;
 }

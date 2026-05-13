@@ -912,7 +912,8 @@ export class TontinesService {
 
     const montantDistribution = t.soldeActuel;
     // Distribution GROUPE = sortie de fonds → taux retrait 2% (pas taux cotisation)
-    const fraisDistribution = BUSINESS.calculerFraisRetrait(montantDistribution);
+    const fraisDistribution =
+      BUSINESS.calculerFraisRetrait(montantDistribution);
     const montantNet = montantDistribution - fraisDistribution;
 
     const transfert = await this.kkiapay.initierTransfert({

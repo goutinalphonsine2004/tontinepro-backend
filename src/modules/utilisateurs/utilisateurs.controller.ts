@@ -4,11 +4,11 @@ import {
   Delete,
   Get,
   Param,
-  Post,
   Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -27,6 +27,7 @@ import { ConfigurerEmpreinteDto } from './dto/configurer-empreinte.dto';
 export class UtilisateursController {
   constructor(private service: UtilisateursService) {}
 
+  @Throttle({ default: { limit: 300, ttl: 60000 } })
   @Get('mon-dashboard')
   monDashboard(@UtilisateurCourant() u: { id: string }) {
     return this.service.monDashboard(u.id);
@@ -35,6 +36,16 @@ export class UtilisateursController {
   @Get('profil')
   getProfil(@UtilisateurCourant() u: { id: string }) {
     return this.service.getProfil(u.id);
+  }
+
+  @Get('mon-qr-code')
+  monQrCode(@UtilisateurCourant() u: { id: string }) {
+    return this.service.monQrCode(u.id);
+  }
+
+  @Get('mes-stats')
+  mesStats(@UtilisateurCourant() u: { id: string }) {
+    return this.service.mesStats(u.id);
   }
 
   @Put('profil')
