@@ -25,20 +25,33 @@ let SmsService = SmsService_1 = class SmsService {
     retraitsService;
     tontinesService;
     logger = new common_1.Logger(SmsService_1.name);
-    sms;
+    sms = null;
+    smsEnabled = false;
     constructor(config, prisma, retraitsService, tontinesService) {
         this.config = config;
         this.prisma = prisma;
         this.retraitsService = retraitsService;
         this.tontinesService = tontinesService;
+        const apiKey = config.get('AT_API_KEY', '').trim();
+        if (!apiKey) {
+            this.logger.warn('[SMS] AfricasTalking non configuré — SMS désactivés');
+            this.smsEnabled = false;
+            this.sms = null;
+            return;
+        }
         const AfricasTalking = require('africastalking');
         const at = AfricasTalking({
             username: config.get('AT_USERNAME', 'sandbox'),
-            apiKey: config.get('AT_API_KEY', ''),
+            apiKey,
         });
+        this.smsEnabled = true;
         this.sms = at.SMS;
     }
     async envoyer(telephone, message) {
+        if (!this.smsEnabled || !this.sms) {
+            this.logger.warn(`[SMS] Non configuré — message non envoyé à ${telephone}`);
+            return;
+        }
         try {
             await this.sms.send({
                 to: [telephone],
@@ -48,7 +61,8 @@ let SmsService = SmsService_1 = class SmsService {
             this.logger.log(`SMS envoyé à ${telephone}`);
         }
         catch (error) {
-            this.logger.error(`Échec envoi SMS à ${telephone}: ${error.message}`);
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Échec envoi SMS à ${telephone}: ${message}`);
         }
     }
     async traiterCommande(from, text) {
@@ -76,8 +90,9 @@ let SmsService = SmsService_1 = class SmsService {
             }
         }
         catch (error) {
-            this.logger.error(`Erreur traitement commande SMS: ${error.message}`);
-            await this.envoyer(from, `TontineBénin: Erreur - ${error.message}`);
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Erreur traitement commande SMS: ${message}`);
+            await this.envoyer(from, `TontineBénin: Erreur - ${message}`);
         }
     }
     async gererCommandeRejoindre(utilisateur, code) {
@@ -97,7 +112,8 @@ let SmsService = SmsService_1 = class SmsService {
             await this.envoyer(utilisateur.telephone, `TontineBénin: Félicitations ! Vous avez rejoint le groupe '${tontine.nom}'.`);
         }
         catch (err) {
-            await this.envoyer(utilisateur.telephone, `TontineBénin: Impossible de rejoindre : ${err.message}`);
+            const message = err instanceof Error ? err.message : 'erreur inconnue';
+            await this.envoyer(utilisateur.telephone, `TontineBénin: Impossible de rejoindre : ${message}`);
         }
     }
     async gererCommandeSolde(utilisateur) {

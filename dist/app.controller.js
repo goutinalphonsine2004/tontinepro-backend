@@ -14,9 +14,12 @@ const common_1 = require("@nestjs/common");
 let AppController = class AppController {
     health() {
         return {
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            version: '1.0.0',
+            succes: true,
+            donnees: {
+                statut: 'ok',
+                version: '1.0.0',
+                timestamp: new Date().toISOString(),
+            },
         };
     }
     version() {

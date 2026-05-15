@@ -8,7 +8,8 @@ import { TontinesService } from '../tontines/tontines.service';
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
 
-  private sms: any;
+  private sms: any | null = null;
+  private smsEnabled = false;
 
   constructor(
     private config: ConfigService,
@@ -18,16 +19,35 @@ export class SmsService {
     @Inject(forwardRef(() => TontinesService))
     private tontinesService: TontinesService,
   ) {
+    const apiKey = config.get<string>('AT_API_KEY', '').trim();
+
+    // Render (and other envs) may leave AT_API_KEY unset when SMS is not used.
+    // AfricasTalking validates apiKey at init time and would crash the whole Nest app.
+    if (!apiKey) {
+      this.logger.warn('[SMS] AfricasTalking non configuré — SMS désactivés');
+      this.smsEnabled = false;
+      this.sms = null;
+      return;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const AfricasTalking = require('africastalking');
     const at = AfricasTalking({
       username: config.get<string>('AT_USERNAME', 'sandbox'),
-      apiKey: config.get<string>('AT_API_KEY', ''),
+      apiKey,
     });
+
+    this.smsEnabled = true;
     this.sms = at.SMS;
   }
 
   async envoyer(telephone: string, message: string): Promise<void> {
+    if (!this.smsEnabled || !this.sms) {
+      // Don’t throw: keep app booting / running even if SMS credentials are missing.
+      this.logger.warn(`[SMS] Non configuré — message non envoyé à ${telephone}`);
+      return;
+    }
+
     try {
       await this.sms.send({
         to: [telephone],
@@ -35,8 +55,9 @@ export class SmsService {
         from: this.config.get<string>('AT_SENDER', 'TontineBénin'),
       });
       this.logger.log(`SMS envoyé à ${telephone}`);
-    } catch (error) {
-      this.logger.error(`Échec envoi SMS à ${telephone}: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Échec envoi SMS à ${telephone}: ${message}`);
     }
   }
 
@@ -72,9 +93,10 @@ export class SmsService {
             'TontineBénin: Commandes valides: SOLDE, RETRAIT [Montant], REJOINDRE [Code], AIDE.',
           );
       }
-    } catch (error) {
-      this.logger.error(`Erreur traitement commande SMS: ${error.message}`);
-      await this.envoyer(from, `TontineBénin: Erreur - ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Erreur traitement commande SMS: ${message}`);
+      await this.envoyer(from, `TontineBénin: Erreur - ${message}`);
     }
   }
 
@@ -105,10 +127,11 @@ export class SmsService {
         utilisateur.telephone,
         `TontineBénin: Félicitations ! Vous avez rejoint le groupe '${tontine.nom}'.`,
       );
-    } catch (err) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'erreur inconnue';
       await this.envoyer(
         utilisateur.telephone,
-        `TontineBénin: Impossible de rejoindre : ${err.message}`,
+        `TontineBénin: Impossible de rejoindre : ${message}`,
       );
     }
   }

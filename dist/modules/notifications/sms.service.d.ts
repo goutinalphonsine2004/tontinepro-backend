@@ -9,6 +9,7 @@ export declare class SmsService {
     private tontinesService;
     private readonly logger;
     private sms;
+    private smsEnabled;
     constructor(config: ConfigService, prisma: PrismaService, retraitsService: RetraitsService, tontinesService: TontinesService);
     envoyer(telephone: string, message: string): Promise<void>;
     traiterCommande(from: string, text: string): Promise<void>;
