@@ -23,6 +23,13 @@ export declare class AuthService {
         message: string;
         donnees: Record<string, unknown>;
     }>;
+    renvoyerOtpInscription(telephone: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: Record<string, unknown>;
+    }>;
+    private tenterRepriseInscription;
+    private envoyerOtpInscription;
     verifierOtp(dto: VerifierOtpDto): Promise<{
         succes: boolean;
         message: string;

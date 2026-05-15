@@ -21,6 +21,7 @@ const creer_pin_dto_1 = require("./dto/creer-pin.dto");
 const connexion_dto_1 = require("./dto/connexion.dto");
 const rafraichir_token_dto_1 = require("./dto/rafraichir-token.dto");
 const demander_reset_pin_dto_1 = require("./dto/demander-reset-pin.dto");
+const renvoyer_otp_inscription_dto_1 = require("./dto/renvoyer-otp-inscription.dto");
 const verifier_otp_reset_pin_dto_1 = require("./dto/verifier-otp-reset-pin.dto");
 const reinitialiser_pin_dto_1 = require("./dto/reinitialiser-pin.dto");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
@@ -36,6 +37,9 @@ let AuthController = class AuthController {
     }
     inscription(dto) {
         return this.authService.inscription(dto);
+    }
+    renvoyerOtpInscription(dto) {
+        return this.authService.renvoyerOtpInscription(dto.telephone);
     }
     verifierOtp(dto) {
         return this.authService.verifierOtp(dto);
@@ -94,6 +98,13 @@ __decorate([
     __metadata("design:paramtypes", [inscription_dto_1.InscriptionDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "inscription", null);
+__decorate([
+    (0, common_1.Post)('renvoyer-otp-inscription'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [renvoyer_otp_inscription_dto_1.RenvoyerOtpInscriptionDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "renvoyerOtpInscription", null);
 __decorate([
     (0, common_1.Post)('verifier-otp'),
     __param(0, (0, common_1.Body)()),

@@ -71,14 +71,19 @@ let AuthService = AuthService_1 = class AuthService {
         const existant = await this.prisma.utilisateur.findUnique({
             where: { telephone: dto.telephone },
         });
+        const roleAutorise = [client_1.Role.CLIENT, client_1.Role.INDEPENDANT, client_1.Role.AGENT];
+        const role = dto.role && roleAutorise.includes(dto.role) ? dto.role : client_1.Role.CLIENT;
         if (existant) {
+            const reprise = await this.tenterRepriseInscription(existant, dto.telephone, dto.nom?.trim(), role);
+            if (reprise)
+                return reprise;
             throw new common_1.ConflictException({
-                message: 'Ce numéro de téléphone est déjà inscrit',
+                message: existant.pinHash
+                    ? 'Ce numéro est déjà actif. Connectez-vous avec votre PIN.'
+                    : 'Ce numéro de téléphone est déjà inscrit',
                 code: 'TELEPHONE_EXISTANT',
             });
         }
-        const roleAutorise = [client_1.Role.CLIENT, client_1.Role.INDEPENDANT, client_1.Role.AGENT];
-        const role = dto.role && roleAutorise.includes(dto.role) ? dto.role : client_1.Role.CLIENT;
         const utilisateur = await this.prisma.utilisateur.create({
             data: {
                 telephone: dto.telephone,
@@ -87,18 +92,68 @@ let AuthService = AuthService_1 = class AuthService {
                 statut: client_1.StatutCompte.EN_ATTENTE,
             },
         });
-        const { id: otpId, code } = await this.creerOTP(utilisateur.id, dto.telephone, OTP_TYPE_INSCRIPTION);
-        await this.sms.envoyer(dto.telephone, `TontineBénin: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`);
+        return this.envoyerOtpInscription(utilisateur.id, dto.telephone, false, dto.nom, role);
+    }
+    async renvoyerOtpInscription(telephone) {
+        const utilisateur = await this.prisma.utilisateur.findUnique({
+            where: { telephone },
+        });
+        if (!utilisateur) {
+            throw new common_1.NotFoundException({
+                message: 'Aucun compte trouvé pour ce numéro. Faites une inscription.',
+                code: 'COMPTE_INTROUVABLE',
+            });
+        }
+        const reprise = await this.tenterRepriseInscription(utilisateur, telephone);
+        if (reprise)
+            return reprise;
+        throw new common_1.ConflictException({
+            message: 'Ce numéro a déjà un PIN. Utilisez la connexion ou « PIN oublié ».',
+            code: 'COMPTE_DEJA_ACTIF',
+        });
+    }
+    async tenterRepriseInscription(utilisateur, telephone, nom, role) {
+        if (utilisateur.statut === client_1.StatutCompte.SUSPENDU ||
+            utilisateur.statut === client_1.StatutCompte.BANNI) {
+            throw new common_1.ForbiddenException({
+                message: 'Ce compte est suspendu ou banni. Contactez le support.',
+                code: 'COMPTE_SUSPENDU',
+            });
+        }
+        if (utilisateur.pinHash) {
+            return null;
+        }
+        const roleFinal = role ?? utilisateur.role;
+        if (nom) {
+            await this.prisma.utilisateur.update({
+                where: { id: utilisateur.id },
+                data: { nom, role: roleFinal },
+            });
+        }
+        return this.envoyerOtpInscription(utilisateur.id, telephone, true, nom || utilisateur.nom, roleFinal);
+    }
+    async envoyerOtpInscription(utilisateurId, telephone, reprise, nom, role) {
+        const { id: otpId, code } = await this.creerOTP(utilisateurId, telephone, OTP_TYPE_INSCRIPTION);
+        await this.sms.envoyer(telephone, `TontineBénin: Votre code de vérification est ${code}. Valable ${this.config.get('DUREE_OTP_MINUTES', 10)} min.`);
         const donnees = {
             otpId,
-            telephone: dto.telephone,
+            telephone,
+            reprise,
+            nom,
+            role,
         };
         if (this.config.get('NODE_ENV') === 'development') {
             donnees.otpTest = code;
             donnees.messageTest =
                 '⚠️ Mode test - En production ce code ne sera pas visible';
         }
-        return { succes: true, message: 'Code OTP envoyé par SMS', donnees };
+        return {
+            succes: true,
+            message: reprise
+                ? 'Nouveau code OTP envoyé. Terminez la création de votre PIN.'
+                : 'Code OTP envoyé par SMS',
+            donnees,
+        };
     }
     async verifierOtp(dto) {
         const MAX_TENTATIVES_OTP = 3;

@@ -6,12 +6,18 @@ import { CreerPinDto } from './dto/creer-pin.dto';
 import { ConnexionDto } from './dto/connexion.dto';
 import { RafraichirTokenDto } from './dto/rafraichir-token.dto';
 import { DemanderResetPinDto } from './dto/demander-reset-pin.dto';
+import { RenvoyerOtpInscriptionDto } from './dto/renvoyer-otp-inscription.dto';
 import { VerifierOtpResetPinDto } from './dto/verifier-otp-reset-pin.dto';
 import { ReinitialiserPinDto } from './dto/reinitialiser-pin.dto';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
     inscription(dto: InscriptionDto): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: Record<string, unknown>;
+    }>;
+    renvoyerOtpInscription(dto: RenvoyerOtpInscriptionDto): Promise<{
         succes: boolean;
         message: string;
         donnees: Record<string, unknown>;
@@ -102,9 +108,9 @@ export declare class AuthController {
         donnees: {
             sessionCourante: boolean;
             id: string;
-            expireLe: Date;
             creeLe: Date;
             deviceId: string | null;
+            expireLe: Date;
             userAgent: string | null;
             adresseIP: string | null;
             actif: boolean;
