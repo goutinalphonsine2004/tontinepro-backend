@@ -17,7 +17,7 @@ export class ScoreService {
         where: { id: clientId },
         select: {
           creeLe: true,
-          tontines: { select: { soldeActuel: true, objectifMontant: true } },
+          tontines: { select: { soldeActuelFcfa: true, objectifMontantFcfa: true } },
         },
       }),
     ]);
@@ -26,7 +26,7 @@ export class ScoreService {
     const plafond = BUSINESS.getPlafondMicroCredit(score);
     const ancienneteEnMois = scoreCredit?.totalMois ?? 0;
     const bonusObjectif = utilisateur?.tontines.some(
-      (t) => t.objectifMontant && t.soldeActuel >= t.objectifMontant,
+      (t) => t.objectifMontantFcfa && t.soldeActuelFcfa >= t.objectifMontantFcfa,
     )
       ? 1
       : 0;
@@ -120,7 +120,7 @@ export class ScoreService {
       titre = 'Score faible — Commencez à épargner régulièrement';
       conseils.push('Faites au moins 1 cotisation par jour pendant 30 jours.');
       conseils.push(
-        'Même un petit montant (500 FCFA) compte pour votre régularité.',
+        'Même un petit montantFcfa (500 FCFA) compte pour votre régularité.',
       );
       conseils.push(
         `Il vous faut encore ${BUSINESS.SEUIL_SCORE_MICRO_CREDIT - score} points pour accéder au micro-crédit.`,
@@ -285,22 +285,22 @@ export class ScoreService {
         statut: 'SUCCES' as any,
         creeLe: { gte: sixMoisDate },
       },
-      select: { creeLe: true, montant: true },
+      select: { creeLe: true, montantFcfa: true },
       orderBy: { creeLe: 'asc' },
     });
 
-    // Construire une map jour → montant
+    // Construire une map jour → montantFcfa
     const parJour = new Map<string, number>();
     for (const tx of cotisations) {
       const clé = tx.creeLe.toISOString().split('T')[0]; // "2025-03-07"
-      parJour.set(clé, (parJour.get(clé) ?? 0) + tx.montant);
+      parJour.set(clé, (parJour.get(clé) ?? 0) + tx.montantFcfa);
     }
 
     // Construire le calendrier mois par mois
     const calendrier: {
       mois: string;
       label: string;
-      jours: { date: string; cotise: boolean; montant: number }[];
+      jours: { date: string; cotise: boolean; montantFcfa: number }[];
       nbJoursCotises: number;
       nbJoursOuvres: number;
       tauxMois: number;
@@ -322,15 +322,15 @@ export class ScoreService {
         mois === maintenant.getMonth() && annee === maintenant.getFullYear();
       const jourMax = estMoisCourant ? maintenant.getDate() : nbJoursDansMois;
 
-      const jours: { date: string; cotise: boolean; montant: number }[] = [];
+      const jours: { date: string; cotise: boolean; montantFcfa: number }[] = [];
       let nbCotises = 0;
 
       for (let j = 1; j <= jourMax; j++) {
         const dateStr = `${annee}-${String(mois + 1).padStart(2, '0')}-${String(j).padStart(2, '0')}`;
-        const montant = parJour.get(dateStr) ?? 0;
-        const cotise = montant > 0;
+        const montantFcfa = parJour.get(dateStr) ?? 0;
+        const cotise = montantFcfa > 0;
         if (cotise) nbCotises++;
-        jours.push({ date: dateStr, cotise, montant });
+        jours.push({ date: dateStr, cotise, montantFcfa });
       }
 
       calendrier.push({

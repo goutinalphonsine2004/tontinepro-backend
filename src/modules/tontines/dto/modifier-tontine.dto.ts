@@ -44,13 +44,13 @@ export class ModifierTontineDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  objectifMontant?: number;
+  objectifMontantFcfa?: number;
 
   @Type(() => Number)
   @IsNumber()
   @Min(100)
   @IsOptional()
-  montantJournalier?: number;
+  montantJournalierFcfa?: number;
 
   @IsDateString()
   @IsOptional()
@@ -71,7 +71,7 @@ export class ModifierTontineDto {
   @IsNumber()
   @Min(100)
   @IsOptional()
-  montantParMembre?: number;
+  montantParMembreFcfa?: number;
 
   @IsBoolean()
   @IsOptional()
@@ -81,7 +81,7 @@ export class ModifierTontineDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  montantCautionObligatoire?: number;
+  montantCautionFcfaObligatoireFcfa?: number;
 
   @IsBoolean()
   @IsOptional()
@@ -91,7 +91,7 @@ export class ModifierTontineDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  montantPenaliteRetard?: number;
+  montantPenaliteRetardFcfa?: number;
 
   @IsEnum(ModeTirageGroupe)
   @IsOptional()

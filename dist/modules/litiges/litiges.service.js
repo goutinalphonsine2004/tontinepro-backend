@@ -24,7 +24,7 @@ let LitigesService = class LitigesService {
     async ouvrirLitige(clientId, dto) {
         const transaction = await this.prisma.transaction.findUnique({
             where: { id: dto.transactionId },
-            select: { id: true, utilisateurId: true, montant: true },
+            select: { id: true, utilisateurId: true, montantFcfa: true },
         });
         if (!transaction)
             throw new common_1.NotFoundException('Transaction introuvable');
@@ -50,7 +50,7 @@ let LitigesService = class LitigesService {
             },
             include: {
                 transaction: {
-                    select: { id: true, montant: true, type: true, creeLe: true },
+                    select: { id: true, montantFcfa: true, type: true, creeLe: true },
                 },
             },
         });
@@ -65,7 +65,7 @@ let LitigesService = class LitigesService {
             where: { clientId },
             include: {
                 transaction: {
-                    select: { id: true, montant: true, type: true, creeLe: true },
+                    select: { id: true, montantFcfa: true, type: true, creeLe: true },
                 },
             },
             orderBy: { creeLe: 'desc' },
@@ -82,7 +82,7 @@ let LitigesService = class LitigesService {
                 include: {
                     client: { select: { id: true, nom: true, telephone: true } },
                     transaction: {
-                        select: { id: true, montant: true, type: true, creeLe: true },
+                        select: { id: true, montantFcfa: true, type: true, creeLe: true },
                     },
                 },
                 orderBy: { creeLe: 'asc' },
@@ -182,7 +182,7 @@ let LitigesService = class LitigesService {
             include: {
                 client: { select: { id: true, nom: true, telephone: true } },
                 transaction: {
-                    select: { id: true, montant: true, type: true, creeLe: true },
+                    select: { id: true, montantFcfa: true, type: true, creeLe: true },
                 },
                 commentaires: { orderBy: { creeLe: 'asc' } },
             },

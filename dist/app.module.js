@@ -38,6 +38,7 @@ const collecteur_terrain_module_1 = require("./modules/collecteur-terrain/collec
 const parametres_module_1 = require("./modules/parametres/parametres.module");
 const support_module_1 = require("./modules/support/support.module");
 const notifications_module_1 = require("./modules/notifications/notifications.module");
+const operations_assistees_module_1 = require("./modules/operations-assistees/operations-assistees.module");
 const audit_interceptor_1 = require("./common/interceptors/audit.interceptor");
 let AppModule = class AppModule {
 };
@@ -76,6 +77,7 @@ exports.AppModule = AppModule = __decorate([
             parametres_module_1.ParametresModule,
             support_module_1.SupportModule,
             notifications_module_1.NotificationsModule,
+            operations_assistees_module_1.OperationsAssisteesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

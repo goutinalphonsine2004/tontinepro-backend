@@ -88,7 +88,7 @@ export declare class ScoreService {
                 jours: {
                     date: string;
                     cotise: boolean;
-                    montant: number;
+                    montantFcfa: number;
                 }[];
                 nbJoursCotises: number;
                 nbJoursOuvres: number;

@@ -126,7 +126,7 @@ export declare class AnalyticsController {
                 tauxRegularite: number;
                 scoreAuMoment: number;
                 scoreCreditId: string;
-                totalEpargne: number;
+                totalEpargneFcfa: number;
                 creditsRembourses: number;
                 urlPDF: string | null;
                 genereePar: string;

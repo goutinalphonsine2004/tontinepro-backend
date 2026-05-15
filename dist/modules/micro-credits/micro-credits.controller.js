@@ -20,20 +20,39 @@ const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const utilisateur_courant_decorator_1 = require("../../common/decorators/utilisateur-courant.decorator");
 const micro_credits_service_1 = require("./micro-credits.service");
+const prisma_service_1 = require("../../prisma/prisma.service");
 const demander_credit_dto_1 = require("./dto/demander-credit.dto");
 const confirmer_pin_dto_1 = require("./dto/confirmer-pin.dto");
 const consentement_sms_dto_1 = require("./dto/consentement-sms.dto");
 const refuser_credit_dto_1 = require("./dto/refuser-credit.dto");
 let MicroCreditsController = class MicroCreditsController {
     service;
-    constructor(service) {
+    prisma;
+    constructor(service, prisma) {
         this.service = service;
+        this.prisma = prisma;
     }
-    monEligibilite(u) {
-        return this.service.monEligibilite(u.id);
+    async verifierAccesClient(collecteurId, clientId) {
+        const client = await this.prisma.utilisateur.findFirst({
+            where: { id: clientId, collecteurId },
+        });
+        if (!client)
+            throw new common_1.ForbiddenException('Ce client ne fait pas partie de votre portefeuille.');
+        return clientId;
     }
-    demander(u, dto) {
-        return this.service.demander(u.id, dto);
+    async monEligibilite(u, clientId) {
+        const estCollecteur = u.role === client_1.Role.AGENT || u.role === client_1.Role.INDEPENDANT;
+        const id = estCollecteur && clientId
+            ? await this.verifierAccesClient(u.id, clientId)
+            : u.id;
+        return this.service.monEligibilite(id);
+    }
+    async demander(u, dto, clientId) {
+        const estCollecteur = u.role === client_1.Role.AGENT || u.role === client_1.Role.INDEPENDANT;
+        const id = estCollecteur && clientId
+            ? await this.verifierAccesClient(u.id, clientId)
+            : u.id;
+        return this.service.demander(id, dto);
     }
     consentementSms(dto) {
         return this.service.consentementSms(dto);
@@ -50,8 +69,12 @@ let MicroCreditsController = class MicroCreditsController {
     refuser(id, u, dto) {
         return this.service.refuser(id, u.id, dto);
     }
-    mesCredits(u) {
-        return this.service.mesCredits(u.id);
+    async mesCredits(u, clientId) {
+        const estCollecteur = u.role === client_1.Role.AGENT || u.role === client_1.Role.INDEPENDANT;
+        const id = estCollecteur && clientId
+            ? await this.verifierAccesClient(u.id, clientId)
+            : u.id;
+        return this.service.mesCredits(id);
     }
     remboursements(id, u) {
         return this.service.remboursements(id, u.id);
@@ -62,18 +85,20 @@ __decorate([
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
     (0, common_1.Get)('mon-eligibilite'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Query)('clientId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
 ], MicroCreditsController.prototype, "monEligibilite", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
     (0, common_1.Post)('demander'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Query)('clientId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, demander_credit_dto_1.DemanderCreditDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, demander_credit_dto_1.DemanderCreditDto, String]),
+    __metadata("design:returntype", Promise)
 ], MicroCreditsController.prototype, "demander", null);
 __decorate([
     (0, common_1.Post)('consentement-sms'),
@@ -125,9 +150,10 @@ __decorate([
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
     (0, common_1.Get)('mes-credits'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.Query)('clientId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
 ], MicroCreditsController.prototype, "mesCredits", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
@@ -140,6 +166,7 @@ __decorate([
 ], MicroCreditsController.prototype, "remboursements", null);
 exports.MicroCreditsController = MicroCreditsController = __decorate([
     (0, common_1.Controller)('micro-credits'),
-    __metadata("design:paramtypes", [micro_credits_service_1.MicroCreditsService])
+    __metadata("design:paramtypes", [micro_credits_service_1.MicroCreditsService,
+        prisma_service_1.PrismaService])
 ], MicroCreditsController);
 //# sourceMappingURL=micro-credits.controller.js.map

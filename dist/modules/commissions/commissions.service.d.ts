@@ -10,36 +10,75 @@ export declare class CommissionsService {
         succes: boolean;
         message: string;
         donnees: {
-            nom: string | undefined;
+            type: string;
+            peutRetirer: boolean;
+            modePaiement: string;
+            libellePrincipal: string;
+            nom?: string;
             soldeDisponible: number;
             totalGagne: number;
             nombreTransactions: number;
             tauxCommission: string;
+            primeEstimee?: undefined;
+            paiementAdministration?: undefined;
+            prochainePaieEstimee?: undefined;
+            messagePaie?: undefined;
+            bonusEstime?: undefined;
+        } | {
+            nom: string | undefined;
+            type: string;
+            peutRetirer: boolean;
+            soldeDisponible: number;
+            primeEstimee: number;
+            totalGagne: number;
+            nombreTransactions: number;
+            paiementAdministration: boolean;
+            prochainePaieEstimee: Date;
+            libellePrincipal: string;
+            messagePaie: string;
+            bonusEstime?: undefined;
+        } | {
+            nom: string | undefined;
+            type: string;
+            peutRetirer: boolean;
+            soldeDisponible: number;
+            bonusEstime: number;
+            totalGagne: number;
+            nombreTransactions: number;
+            paiementAdministration: boolean;
+            prochainePaieEstimee: Date;
+            libellePrincipal: string;
+            messagePaie: string;
+            primeEstimee?: undefined;
         };
     }>;
-    historique(utilisateurId: string): Promise<{
+    historique(utilisateurId: string, role: Role): Promise<{
         succes: boolean;
         message: string;
-        donnees: ({
-            transaction: {
-                utilisateur: {
-                    nom: string;
+        donnees: {
+            peutRetirer: boolean;
+            libelle: string;
+            commissions: ({
+                transaction: {
+                    utilisateur: {
+                        nom: string;
+                    };
+                    creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
+                    montantFcfa: number;
+                    reference: string;
                 };
-                montant: number;
+            } & {
+                id: string;
                 creeLe: Date;
-                type: import("@prisma/client").$Enums.TypeTransaction;
-                reference: string;
-            };
-        } & {
-            montant: number;
-            id: string;
-            creeLe: Date;
-            type: string;
-            agentId: string;
-            transactionId: string;
-        })[];
+                type: string;
+                montantFcfa: number;
+                agentId: string;
+                transactionId: string;
+            })[];
+        };
     }>;
-    retirer(utilisateurId: string, dto: RetirerCommissionDto): Promise<{
+    retirer(utilisateurId: string, role: Role, dto: RetirerCommissionDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -49,4 +88,7 @@ export declare class CommissionsService {
             soldeRestant: number;
         };
     }>;
+    private verifierRoleFinanceTerrain;
+    private prochainePaieEstimee;
+    private presenterFinancesParRole;
 }

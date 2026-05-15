@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { CommissionsService } from './commissions.service';
@@ -16,15 +17,16 @@ export class CommissionsController {
   }
 
   @Get('historique')
-  historique(@UtilisateurCourant() u: { id: string }) {
-    return this.service.historique(u.id);
+  historique(@UtilisateurCourant() u: { id: string; role: Role }) {
+    return this.service.historique(u.id, u.role);
   }
 
   @Post('retirer')
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   retirer(
-    @UtilisateurCourant() u: { id: string },
+    @UtilisateurCourant() u: { id: string; role: Role },
     @Body() dto: RetirerCommissionDto,
   ) {
-    return this.service.retirer(u.id, dto);
+    return this.service.retirer(u.id, u.role, dto);
   }
 }

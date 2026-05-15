@@ -13,10 +13,10 @@ export declare class LitigesService {
         donnees: {
             litige: {
                 transaction: {
-                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
+                    montantFcfa: number;
                 };
             } & {
                 motif: string;
@@ -37,10 +37,10 @@ export declare class LitigesService {
         donnees: {
             litiges: ({
                 transaction: {
-                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
+                    montantFcfa: number;
                 };
             } & {
                 motif: string;
@@ -61,10 +61,10 @@ export declare class LitigesService {
         donnees: {
             litiges: ({
                 transaction: {
-                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
+                    montantFcfa: number;
                 };
                 client: {
                     telephone: string;
@@ -144,10 +144,10 @@ export declare class LitigesService {
         donnees: {
             litige: {
                 transaction: {
-                    montant: number;
                     id: string;
                     creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
+                    montantFcfa: number;
                 };
                 client: {
                     telephone: string;

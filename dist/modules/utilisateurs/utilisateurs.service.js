@@ -57,8 +57,8 @@ const SELECT_PROFIL = {
     statut: true,
     empreinteActive: true,
     kycVerifie: true,
-    soldeCommission: true,
-    montantCaution: true,
+    soldeCommissionFcfa: true,
+    montantCautionFcfa: true,
     zoneId: true,
     collecteurId: true,
     creeLe: true,
@@ -294,9 +294,9 @@ let UtilisateursService = class UtilisateursService {
                         select: {
                             id: true,
                             nom: true,
-                            soldeActuel: true,
-                            objectifMontant: true,
-                            montantJournalier: true,
+                            soldeActuelFcfa: true,
+                            objectifMontantFcfa: true,
+                            montantJournalierFcfa: true,
                             type: true,
                             dateDeverrouillage: true,
                         },
@@ -320,8 +320,8 @@ let UtilisateursService = class UtilisateursService {
                 where: { clientId, statut: { in: ['ACTIF'] } },
                 select: {
                     id: true,
-                    montantRestant: true,
-                    paiementJournalier: true,
+                    montantRestantFcfa: true,
+                    paiementJournalierFcfa: true,
                     joursPayes: true,
                     totalJours: true,
                 },
@@ -329,7 +329,7 @@ let UtilisateursService = class UtilisateursService {
             this.prisma.ordreTirage.findMany({
                 where: { utilisateurId: clientId, aRecu: false },
                 include: {
-                    tontine: { select: { id: true, nom: true, montantJournalier: true } },
+                    tontine: { select: { id: true, nom: true, montantJournalierFcfa: true } },
                 },
                 orderBy: { position: 'asc' },
                 take: 1,
@@ -344,7 +344,7 @@ let UtilisateursService = class UtilisateursService {
                 statut: 'SUCCES',
                 creeLe: { gte: sixMoisDate },
             },
-            select: { montantNet: true, creeLe: true },
+            select: { montantNetFcfa: true, creeLe: true },
         });
         const graphique = {};
         for (let i = 5; i >= 0; i--) {
@@ -355,9 +355,9 @@ let UtilisateursService = class UtilisateursService {
         for (const tx of cotisations6mois) {
             const key = `${tx.creeLe.getFullYear()}-${String(tx.creeLe.getMonth() + 1).padStart(2, '0')}`;
             if (graphique[key] !== undefined)
-                graphique[key] += tx.montantNet;
+                graphique[key] += tx.montantNetFcfa;
         }
-        const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+        const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuelFcfa, 0);
         const score = scoreCredit?.score ?? 0;
         const eligibleMicroCredit = scoreCredit?.eligibleMicroCredit ?? false;
         const eligiblePADME = scoreCredit?.eligiblePADME ?? false;
@@ -372,9 +372,9 @@ let UtilisateursService = class UtilisateursService {
                 },
                 soldeTotal,
                 tontines: utilisateur.tontines,
-                graphiqueEpargne: Object.entries(graphique).map(([mois, montant]) => ({
+                graphiqueEpargne: Object.entries(graphique).map(([mois, montantFcfa]) => ({
                     mois,
-                    montant: Math.round(montant),
+                    montantFcfa: Math.round(montantFcfa),
                 })),
                 badge: badge
                     ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe }
@@ -498,7 +498,7 @@ let UtilisateursService = class UtilisateursService {
             where: { id: clientId },
             include: {
                 _count: { select: { microCredits: true } },
-                tontines: { select: { soldeActuel: true } },
+                tontines: { select: { soldeActuelFcfa: true } },
             },
         });
         if (!utilisateur)
@@ -510,7 +510,7 @@ let UtilisateursService = class UtilisateursService {
                 code: 'PIN_INVALIDE',
             });
         }
-        const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+        const soldeTotal = utilisateur.tontines.reduce((s, t) => s + t.soldeActuelFcfa, 0);
         if (soldeTotal > 0) {
             throw new common_1.BadRequestException({
                 message: `Impossible de supprimer votre compte : vous avez ${soldeTotal} FCFA de solde. Faites d'abord un retrait.`,
@@ -562,14 +562,14 @@ let UtilisateursService = class UtilisateursService {
             throw new common_1.NotFoundException('Utilisateur introuvable');
         const transactions = await this.prisma.transaction.findMany({
             where: { utilisateurId: clientId },
-            select: { montant: true, creeLe: true },
+            select: { montantFcfa: true, creeLe: true },
         });
         const retraits = await this.prisma.retrait.findMany({
             where: { utilisateurId: clientId },
-            select: { montant: true, statut: true },
+            select: { montantFcfa: true, statut: true },
         });
-        const soldeTotal = transactions.reduce((acc, t) => acc + t.montant, 0) -
-            retraits.reduce((acc, r) => acc + r.montant, 0);
+        const soldeTotal = transactions.reduce((acc, t) => acc + t.montantFcfa, 0) -
+            retraits.reduce((acc, r) => acc + r.montantFcfa, 0);
         const moisActifs = new Set();
         for (const t of transactions) {
             const mois = `${t.creeLe.getFullYear()}-${t.creeLe.getMonth()}`;

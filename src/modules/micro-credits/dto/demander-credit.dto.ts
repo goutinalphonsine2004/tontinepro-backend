@@ -12,7 +12,7 @@ export class DemanderCreditDto {
   @Type(() => Number)
   @IsNumber()
   @Min(500, { message: 'Montant minimum 500 FCFA' })
-  montantPrincipal!: number;
+  montantPrincipalFcfa!: number;
 
   @IsString()
   @IsIn(['SMARTPHONE', 'SMS'], {

@@ -26,5 +26,6 @@ export declare class KkiapayService {
         succes: boolean;
         refKKiaPay: string;
     }>;
+    get estSandbox(): boolean;
     verifierSignature(rawBody: string, signatureRecue: string): boolean;
 }

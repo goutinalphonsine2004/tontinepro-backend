@@ -20,17 +20,17 @@ class CreerTontineDto {
     politique = client_1.PolitiqueRetrait.FLEXIBLE;
     frequence = client_1.FrequenceTontine.MENSUEL;
     jourFixe;
-    objectifMontant;
-    montantJournalier = 500;
+    objectifMontantFcfa;
+    montantJournalierFcfa = 500;
     dateDeverrouillage;
     dateFin;
     clientId;
     nbMembresMax;
-    montantParMembre;
+    montantParMembreFcfa;
     cautionObligatoire = false;
-    montantCautionObligatoire = 0;
+    montantCautionFcfaObligatoireFcfa = 0;
     penaliteRetardActive = false;
-    montantPenaliteRetard = 0;
+    montantPenaliteRetardFcfa = 0;
     modeTirage = client_1.ModeTirageGroupe.MANUEL;
 }
 exports.CreerTontineDto = CreerTontineDto;
@@ -75,14 +75,14 @@ __decorate([
     (0, class_validator_1.IsPositive)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], CreerTontineDto.prototype, "objectifMontant", void 0);
+], CreerTontineDto.prototype, "objectifMontantFcfa", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(100, { message: 'Le montant minimum est 100 FCFA' }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], CreerTontineDto.prototype, "montantJournalier", void 0);
+], CreerTontineDto.prototype, "montantJournalierFcfa", void 0);
 __decorate([
     (0, class_validator_1.IsDateString)(),
     (0, class_validator_1.IsOptional)(),
@@ -112,7 +112,7 @@ __decorate([
     (0, class_validator_1.Min)(100),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], CreerTontineDto.prototype, "montantParMembre", void 0);
+], CreerTontineDto.prototype, "montantParMembreFcfa", void 0);
 __decorate([
     (0, class_validator_1.IsBoolean)(),
     (0, class_validator_1.IsOptional)(),
@@ -124,7 +124,7 @@ __decorate([
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], CreerTontineDto.prototype, "montantCautionObligatoire", void 0);
+], CreerTontineDto.prototype, "montantCautionFcfaObligatoireFcfa", void 0);
 __decorate([
     (0, class_validator_1.IsBoolean)(),
     (0, class_validator_1.IsOptional)(),
@@ -136,7 +136,7 @@ __decorate([
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], CreerTontineDto.prototype, "montantPenaliteRetard", void 0);
+], CreerTontineDto.prototype, "montantPenaliteRetardFcfa", void 0);
 __decorate([
     (0, class_validator_1.IsEnum)(client_1.ModeTirageGroupe),
     (0, class_validator_1.IsOptional)(),

@@ -1,13 +1,24 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class RetirerCommissionDto {
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(500, { message: 'Le montant minimum de retrait est 500 FCFA' })
+  @Max(10000000, { message: 'Le montant maximum est 10 000 000 FCFA' })
   montant!: number;
 
   @IsString()
+  @Matches(/^(\+229|229)\d{8}$/, {
+    message: 'Téléphone invalide. Format attendu: +229XXXXXXXX ou 229XXXXXXXX',
+  })
   @IsOptional()
   telephone?: string;
 }

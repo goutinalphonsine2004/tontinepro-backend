@@ -48,6 +48,9 @@ let KkiapayService = KkiapayService_1 = class KkiapayService {
         this.logger.log(`[PROD] Transfert KKiaPay: ${params.montant} FCFA → ${params.telephone}`);
         return { succes: true, refKKiaPay };
     }
+    get estSandbox() {
+        return this.sandbox;
+    }
     verifierSignature(rawBody, signatureRecue) {
         if (!this.secretKey) {
             const production = this.config.get('NODE_ENV') === 'production';

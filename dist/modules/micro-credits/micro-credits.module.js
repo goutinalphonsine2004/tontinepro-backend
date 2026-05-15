@@ -12,12 +12,13 @@ const micro_credits_controller_1 = require("./micro-credits.controller");
 const micro_credits_service_1 = require("./micro-credits.service");
 const kkiapay_service_1 = require("../../common/services/kkiapay.service");
 const notifications_module_1 = require("../notifications/notifications.module");
+const prisma_module_1 = require("../../prisma/prisma.module");
 let MicroCreditsModule = class MicroCreditsModule {
 };
 exports.MicroCreditsModule = MicroCreditsModule;
 exports.MicroCreditsModule = MicroCreditsModule = __decorate([
     (0, common_1.Module)({
-        imports: [notifications_module_1.NotificationsModule],
+        imports: [notifications_module_1.NotificationsModule, prisma_module_1.PrismaModule],
         controllers: [micro_credits_controller_1.MicroCreditsController],
         providers: [micro_credits_service_1.MicroCreditsService, kkiapay_service_1.KkiapayService],
         exports: [micro_credits_service_1.MicroCreditsService],

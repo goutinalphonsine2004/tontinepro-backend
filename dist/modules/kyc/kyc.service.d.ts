@@ -1,9 +1,25 @@
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SoumettreKycDto } from './dto/soumettre-kyc.dto';
 import { RejeterKycDto } from './dto/rejeter-kyc.dto';
 export declare class KycService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private config;
+    private readonly logger;
+    constructor(prisma: PrismaService, config: ConfigService);
+    uploadEtSoumettre(utilisateurId: string, typeDocument: string, fichier: Express.Multer.File): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            typeDocument: string;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            creeLe: Date;
+        };
+    }>;
+    private uploaderFichier;
+    private uploadCloudinary;
+    private creerDataUrl;
     soumettre(utilisateurId: string, dto: SoumettreKycDto): Promise<{
         succes: boolean;
         message: string;
@@ -23,13 +39,10 @@ export declare class KycService {
         message: string;
         donnees: {
             id: string;
-            utilisateurId: string;
             creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutKYC;
             motifRejet: string | null;
             typeDocument: string;
-            urlDocument: string;
-            verifiePar: string | null;
         }[];
     }>;
     enAttente(): Promise<{

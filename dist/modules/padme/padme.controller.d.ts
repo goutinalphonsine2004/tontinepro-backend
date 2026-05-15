@@ -23,7 +23,7 @@ export declare class PadmeController {
             tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
-            totalEpargne: number;
+            totalEpargneFcfa: number;
             creditsRembourses: number;
             urlPDF: string | null;
             genereePar: string;
@@ -54,7 +54,7 @@ export declare class PadmeController {
                 tauxRegularite: number;
                 scoreAuMoment: number;
                 scoreCreditId: string;
-                totalEpargne: number;
+                totalEpargneFcfa: number;
                 creditsRembourses: number;
                 urlPDF: string | null;
                 genereePar: string;
@@ -101,7 +101,7 @@ export declare class PadmeController {
             tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
-            totalEpargne: number;
+            totalEpargneFcfa: number;
             creditsRembourses: number;
             urlPDF: string | null;
             genereePar: string;
@@ -122,7 +122,7 @@ export declare class PadmeController {
             tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
-            totalEpargne: number;
+            totalEpargneFcfa: number;
             creditsRembourses: number;
             urlPDF: string | null;
             genereePar: string;
@@ -143,7 +143,7 @@ export declare class PadmeController {
             tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
-            totalEpargne: number;
+            totalEpargneFcfa: number;
             creditsRembourses: number;
             urlPDF: string | null;
             genereePar: string;
@@ -164,7 +164,7 @@ export declare class PadmeController {
             tauxRegularite: number;
             scoreAuMoment: number;
             scoreCreditId: string;
-            totalEpargne: number;
+            totalEpargneFcfa: number;
             creditsRembourses: number;
             urlPDF: string | null;
             genereePar: string;

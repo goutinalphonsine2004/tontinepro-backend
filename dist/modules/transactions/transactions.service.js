@@ -41,6 +41,18 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         this.notifications = notifications;
     }
     async cotiser(requesterId, dto) {
+        if (dto.idempotencyKey) {
+            const existante = await this.prisma.transaction.findUnique({
+                where: { idempotencyKey: dto.idempotencyKey },
+            });
+            if (existante) {
+                return {
+                    succes: true,
+                    message: 'Transaction déjà initiée.',
+                    donnees: existante,
+                };
+            }
+        }
         const requester = await this.prisma.utilisateur.findUnique({
             where: { id: requesterId },
         });
@@ -72,12 +84,22 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         if (tontine.proprietaireId !== targetUserId) {
             throw new common_1.ForbiddenException("La tontine spécifiée n'appartient pas au client.");
         }
+        if (tontine.montantJournalierFcfa && Number(tontine.montantJournalierFcfa) > 0) {
+            const requis = Number(tontine.montantJournalierFcfa);
+            if (Math.abs(dto.montant - requis) > 0.01) {
+                throw new common_1.BadRequestException({
+                    message: `Cette tontine exige exactement ${requis.toLocaleString('fr-FR')} FCFA par cotisation.`,
+                    code: 'MONTANT_INCORRECT',
+                    donnees: { montantFcfaRequis: requis },
+                });
+            }
+        }
         const telephone = dto.telephone ?? targetUser.telephone;
         const badgeDiamant = await this.prisma.badgeClient.findFirst({
             where: { clientId: targetUserId, niveau: 'DIAMANT' },
         });
-        const fraisPlateforme = business_constants_1.BUSINESS.calculerFraisPlateforme(dto.montant, !!badgeDiamant);
-        const montantNet = dto.montant - fraisPlateforme;
+        const fraisPlateformeFcfa = business_constants_1.BUSINESS.calculerFraisPlateforme(dto.montant, !!badgeDiamant);
+        const montantNetFcfa = dto.montant - fraisPlateformeFcfa;
         let estIndependant = false;
         if (targetUser.collecteurId) {
             const collecteur = await this.prisma.utilisateur.findUnique({
@@ -86,7 +108,7 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             });
             estIndependant = collecteur?.role === 'INDEPENDANT';
         }
-        const fraisAgent = business_constants_1.BUSINESS.calculerCommissionAgent(dto.montant, estIndependant);
+        const fraisAgentFcfa = business_constants_1.BUSINESS.calculerCommissionAgent(dto.montant, estIndependant);
         if (targetUser.collecteurId) {
             const collecteur = await this.prisma.utilisateur.findUnique({
                 where: { id: targetUser.collecteurId },
@@ -96,7 +118,7 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                 const facturation = await this.prisma.facturationAgent.findFirst({
                     where: { agentId: collecteur.id },
                 });
-                const caution = facturation?.cautionMontant ?? 0;
+                const caution = facturation?.cautionMontantFcfa ?? 0;
                 if (caution > 0) {
                     const debutMois = new Date();
                     debutMois.setDate(1);
@@ -108,9 +130,9 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                             statut: client_1.StatutTransaction.SUCCES,
                             creeLe: { gte: debutMois },
                         },
-                        _sum: { montant: true },
+                        _sum: { montantFcfa: true },
                     });
-                    const collecteMois = (totalMois._sum.montant ?? 0) + dto.montant;
+                    const collecteMois = (totalMois._sum.montantFcfa ?? 0) + dto.montant;
                     const pourcentage = (collecteMois / caution) * 100;
                     if (collecteMois >= caution) {
                         throw new common_1.ForbiddenException({
@@ -161,15 +183,16 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         });
         const transaction = await this.prisma.transaction.create({
             data: {
-                montant: dto.montant,
-                montantNet,
+                montantFcfa: dto.montant,
+                montantNetFcfa,
                 type: client_1.TypeTransaction.COTISATION,
                 statut: client_1.StatutTransaction.EN_ATTENTE,
-                fraisPlateforme,
-                fraisAgent,
+                fraisPlateformeFcfa,
+                fraisAgentFcfa,
                 operateur: dto.operateur,
                 tontineId: dto.tontineId,
                 utilisateurId: targetUserId,
+                idempotencyKey: dto.idempotencyKey,
                 hashPrecedent: lastTransaction?.hashActuel || 'GENESIS',
             },
         });
@@ -184,17 +207,57 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             where: { id: transaction.id },
             data: { refKKiaPay: paiement.refKKiaPay },
         });
+        if (this.kkiapay.estSandbox) {
+            const txComplete = await this.prisma.transaction.findUnique({
+                where: { id: transaction.id },
+                include: {
+                    tontine: true,
+                    utilisateur: {
+                        include: {
+                            badges: { where: { niveau: 'DIAMANT' }, take: 1 },
+                            collecteur: { select: { role: true } },
+                        },
+                    },
+                },
+            });
+            if (txComplete) {
+                try {
+                    await this.traiterSucces(txComplete);
+                }
+                catch (err) {
+                    this.logger.warn(`[SANDBOX] Auto-confirm partiel: ${err.message}`);
+                }
+            }
+        }
         return {
             succes: true,
-            message: 'Paiement initié. Complétez sur votre téléphone.',
+            message: this.kkiapay.estSandbox
+                ? 'Cotisation validée (mode développement).'
+                : 'Paiement initié. Complétez sur votre téléphone.',
             donnees: {
                 transactionId: transaction.id,
                 reference: transaction.reference,
                 refKKiaPay: paiement.refKKiaPay,
                 paymentUrl: paiement.paymentUrl,
                 montant: dto.montant,
+                fraisPlateformeFcfa,
+                montantNetFcfa,
+                confirme: this.kkiapay.estSandbox,
+            },
+        };
+    }
+    simuler(dto) {
+        const fraisOperateur = Math.ceil(dto.montant * 0.01);
+        const fraisPlateforme = business_constants_1.BUSINESS.calculerFraisPlateforme(dto.montant);
+        return {
+            succes: true,
+            message: 'Simulation calculée.',
+            donnees: {
+                montantBrut: dto.montant,
+                fraisOperateur,
                 fraisPlateforme,
-                montantNet,
+                montantNet: dto.montant - fraisOperateur - fraisPlateforme,
+                canal: dto.canal,
             },
         };
     }
@@ -284,10 +347,10 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
     }
     async traiterSucces(transaction) {
         const estDiamant = transaction.utilisateur.badges.length > 0;
-        const fraisPlateforme = business_constants_1.BUSINESS.calculerFraisPlateforme(transaction.montant, estDiamant);
-        const montantNet = transaction.montant - fraisPlateforme;
+        const fraisPlateformeFcfa = business_constants_1.BUSINESS.calculerFraisPlateforme(transaction.montantFcfa, estDiamant);
+        const montantNetFcfa = transaction.montantFcfa - fraisPlateformeFcfa;
         const estIndependant = transaction.utilisateur.collecteur?.role === 'INDEPENDANT';
-        const fraisAgent = business_constants_1.BUSINESS.calculerCommissionAgent(transaction.montant, estIndependant);
+        const fraisAgentFcfa = business_constants_1.BUSINESS.calculerCommissionAgent(transaction.montantFcfa, estIndependant);
         const collecteurId = transaction.utilisateur.collecteurId;
         const derniereTx = await this.prisma.transaction.findFirst({
             where: {
@@ -299,16 +362,16 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         });
         const hashPrecedent = derniereTx?.hashActuel ?? null;
         const hashActuel = (0, crypto_1.createHash)('sha256')
-            .update(`${transaction.id}|${transaction.montant}|${transaction.type}|${Date.now()}|${hashPrecedent}`)
+            .update(`${transaction.id}|${transaction.montantFcfa}|${transaction.type}|${Date.now()}|${hashPrecedent}`)
             .digest('hex');
         await this.prisma.$transaction([
             this.prisma.transaction.update({
                 where: { id: transaction.id },
                 data: {
                     statut: client_1.StatutTransaction.SUCCES,
-                    montantNet,
-                    fraisPlateforme,
-                    fraisAgent,
+                    montantNetFcfa,
+                    fraisPlateformeFcfa,
+                    fraisAgentFcfa,
                     hashPrecedent,
                     hashActuel,
                 },
@@ -317,32 +380,32 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                 ? [
                     this.prisma.tontine.update({
                         where: { id: transaction.tontineId },
-                        data: { soldeActuel: { increment: montantNet } },
+                        data: { soldeActuelFcfa: { increment: montantNetFcfa } },
                     }),
                 ]
                 : []),
-            ...(collecteurId && fraisAgent > 0
+            ...(collecteurId && fraisAgentFcfa > 0
                 ? [
                     this.prisma.commission.create({
                         data: {
                             agentId: collecteurId,
                             transactionId: transaction.id,
-                            montant: fraisAgent,
+                            montantFcfa: fraisAgentFcfa,
                             type: 'COTISATION',
                         },
                     }),
                     this.prisma.utilisateur.update({
                         where: { id: collecteurId },
-                        data: { soldeCommission: { increment: fraisAgent } },
+                        data: { soldeCommissionFcfa: { increment: fraisAgentFcfa } },
                     }),
                 ]
                 : []),
         ]);
-        await this.sms.envoyer(transaction.utilisateur.telephone, `TontineBénin: Cotisation de ${transaction.montant} FCFA reçue ✅. Frais: ${fraisPlateforme} FCFA. Net crédité: ${montantNet} FCFA.`);
+        await this.sms.envoyer(transaction.utilisateur.telephone, `TontineBénin: Cotisation de ${transaction.montantFcfa} FCFA reçue ✅. Frais: ${fraisPlateformeFcfa} FCFA. Net crédité: ${montantNetFcfa} FCFA.`);
         if (collecteurId) {
-            await this.notifications.envoyerAEquipe(collecteurId, 'Cotisation reçue', `Votre client ${transaction.utilisateur.nom} a cotisé ${transaction.montant} F sur ${transaction.tontine.nom}.`);
+            await this.notifications.envoyerAEquipe(collecteurId, 'Cotisation reçue', `Votre client ${transaction.utilisateur.nom} a cotisé ${transaction.montantFcfa} F sur ${transaction.tontine.nom}.`);
         }
-        this.logger.log(`Cotisation traitée: ${transaction.montant} FCFA pour ${transaction.utilisateur.nom}`);
+        this.logger.log(`Cotisation traitée: ${transaction.montantFcfa} FCFA pour ${transaction.utilisateur.nom}`);
     }
     async traiterWebhookRemboursement(body) {
         const remboursement = await this.prisma.remboursementCredit.findFirst({
@@ -377,9 +440,9 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
     }
     async confirmerRemboursementSucces(remboursement) {
         const credit = remboursement.microCredit;
-        const montantRestant = Math.max(0, credit.montantRestant - remboursement.montant);
+        const montantRestantFcfa = Math.max(0, credit.montantRestantFcfa - remboursement.montantFcfa);
         const joursPayes = credit.joursPayes + 1;
-        const termine = montantRestant <= 0;
+        const termine = montantRestantFcfa <= 0;
         await this.prisma.$transaction([
             this.prisma.remboursementCredit.update({
                 where: { id: remboursement.id },
@@ -389,18 +452,18 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
                 where: { id: credit.id },
                 data: {
                     joursPayes,
-                    montantRestant,
+                    montantRestantFcfa,
                     statut: termine ? client_1.StatutCredit.TERMINE : client_1.StatutCredit.ACTIF,
                     ...(termine && { termineLe: new Date() }),
                 },
             }),
         ]);
         if (termine) {
-            await this.sms.envoyer(credit.client.telephone, `TontineBénin: Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipal} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`);
+            await this.sms.envoyer(credit.client.telephone, `TontineBénin: Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipalFcfa} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`);
             this.logger.log(`[Webhook remboursement] Crédit terminé: ${credit.id} — ${credit.client.nom}`);
             return;
         }
-        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement ${remboursement.montant} FCFA confirmé. Restant: ${montantRestant} FCFA (${joursPayes}/${credit.totalJours} jours).`);
+        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement ${remboursement.montantFcfa} FCFA confirmé. Restant: ${montantRestantFcfa} FCFA (${joursPayes}/${credit.totalJours} jours).`);
     }
     async confirmerRemboursementEchec(remboursement, motif) {
         const credit = remboursement.microCredit;
@@ -420,7 +483,7 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             });
             this.logger.warn(`[Webhook remboursement] Crédit en défaut: ${credit.id} — ${credit.client.nom}`);
         }
-        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement micro-crédit échoué (${motif}). Assurez-vous d'avoir ${remboursement.montant} FCFA sur votre compte Mobile Money.`);
+        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement micro-crédit échoué (${motif}). Assurez-vous d'avoir ${remboursement.montantFcfa} FCFA sur votre compte Mobile Money.`);
         if (!credit.client.collecteurId)
             return;
         const collecteur = await this.prisma.utilisateur.findUnique({
@@ -428,10 +491,17 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             select: { telephone: true },
         });
         if (collecteur) {
-            await this.sms.envoyer(collecteur.telephone, `TontineBénin: Alerte remboursement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipal} FCFA.`);
+            await this.sms.envoyer(collecteur.telephone, `TontineBénin: Alerte remboursement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipalFcfa} FCFA.`);
         }
     }
-    async historique(utilisateurId, filtres) {
+    async historique(utilisateurId, filtres, collecteurId) {
+        if (collecteurId) {
+            const client = await this.prisma.utilisateur.findFirst({
+                where: { id: utilisateurId, collecteurId },
+            });
+            if (!client)
+                throw new common_1.ForbiddenException('Ce client ne fait pas partie de votre portefeuille.');
+        }
         const page = filtres.page ?? 1;
         const limite = Math.min(filtres.limite ?? 20, 100);
         const skip = (page - 1) * limite;
@@ -487,16 +557,16 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         const recu = await this.donneesRecu(transactionId, utilisateurId);
         const destinataire = telephone ?? recu.telephone;
         const message = [
-            'TontineBenin - Recu de transaction',
+            'TontineBénin - Recu de transaction',
             `Reference: ${recu.reference}`,
             `Date: ${recu.date.toLocaleString('fr-FR')}`,
             `Client: ${recu.client}`,
             `Tontine: ${recu.tontine}`,
             `Type: ${recu.type}`,
             `Statut: ${recu.statut}`,
-            `Montant: ${recu.montant.toLocaleString('fr-FR')} FCFA`,
-            `Frais: ${recu.fraisPlateforme.toLocaleString('fr-FR')} FCFA`,
-            `Net: ${recu.montantNet.toLocaleString('fr-FR')} FCFA`,
+            `Montant: ${recu.montantNetFcfa.toLocaleString('fr-FR')} FCFA`,
+            `Frais: ${recu.fraisPlateformeFcfa.toLocaleString('fr-FR')} FCFA`,
+            `Net: ${recu.montantNetFcfa.toLocaleString('fr-FR')} FCFA`,
             `Ref KKiaPay: ${recu.refKKiaPay}`,
         ].join('\n');
         const resultat = await this.whatsapp.envoyerMessage(destinataire, message);
@@ -528,9 +598,9 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
             client: tx.utilisateur.nom,
             telephone: tx.utilisateur.telephone,
             tontine: tx.tontine?.nom ?? 'N/A',
-            montant: tx.montant,
-            fraisPlateforme: tx.fraisPlateforme,
-            montantNet: tx.montantNet,
+            montant: tx.montantFcfa,
+            fraisPlateformeFcfa: tx.fraisPlateformeFcfa,
+            montantNetFcfa: tx.montantNetFcfa,
             operateur: tx.operateur ?? 'N/A',
             refKKiaPay: tx.refKKiaPay ?? 'N/A',
             hashIntegrite: tx.hashActuel ?? 'En attente',

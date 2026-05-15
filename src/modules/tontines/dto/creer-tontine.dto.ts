@@ -54,13 +54,13 @@ export class CreerTontineDto {
   @IsNumber()
   @IsPositive()
   @IsOptional()
-  objectifMontant?: number;
+  objectifMontantFcfa?: number;
 
   @Type(() => Number)
   @IsNumber()
   @Min(100, { message: 'Le montant minimum est 100 FCFA' })
   @IsOptional()
-  montantJournalier?: number = 500;
+  montantJournalierFcfa?: number = 500;
 
   @IsDateString()
   @IsOptional()
@@ -85,7 +85,7 @@ export class CreerTontineDto {
   @IsNumber()
   @Min(100)
   @IsOptional()
-  montantParMembre?: number;
+  montantParMembreFcfa?: number;
 
   @IsBoolean()
   @IsOptional()
@@ -95,7 +95,7 @@ export class CreerTontineDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  montantCautionObligatoire?: number = 0;
+  montantCautionFcfaObligatoireFcfa?: number = 0;
 
   @IsBoolean()
   @IsOptional()
@@ -105,7 +105,7 @@ export class CreerTontineDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  montantPenaliteRetard?: number = 0;
+  montantPenaliteRetardFcfa?: number = 0;
 
   @IsEnum(ModeTirageGroupe)
   @IsOptional()

@@ -3,7 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Utilisateur {
@@ -23,8 +25,9 @@ model Utilisateur {
   collecteurId           String?
   superviseurId          String?
   zoneId                 String?
-  soldeCommission        Float                   @default(0)
-  montantCaution         Float                   @default(0)
+  enroleParId            String?
+  soldeCommissionFcfa    Int                     @default(0) @map("soldeCommission")
+  montantCautionFcfa     Int                     @default(0) @map("montantCaution")
   creeLe                 DateTime                @default(now())
   misAJourLe             DateTime                @updatedAt
   tokenPush              String?
@@ -37,6 +40,8 @@ model Utilisateur {
   facturation            FacturationAgent?
   journalAudit           JournalAudit[]
   litiges                Litige[]
+  operationsInitiees     OperationAssistee[]     @relation("OperationInitiateur")
+  operationsClient       OperationAssistee[]     @relation("OperationClient")
   membresGroupe          MembreTontineGroupe[]
   microCredits           MicroCredit[]
   notifications          Notification[]
@@ -52,14 +57,58 @@ model Utilisateur {
   transactions           Transaction[]
   collecteur             Utilisateur?            @relation("CollecteurClients", fields: [collecteurId], references: [id])
   clients                Utilisateur[]           @relation("CollecteurClients")
+  enrolePar              Utilisateur?            @relation("ClientEnrolePar", fields: [enroleParId], references: [id])
+  clientsEnroles         Utilisateur[]           @relation("ClientEnrolePar")
   superviseur            Utilisateur?            @relation("SuperviseurAgents", fields: [superviseurId], references: [id])
   agents                 Utilisateur[]           @relation("SuperviseurAgents")
   zone                   Zone?                   @relation(fields: [zoneId], references: [id])
+  terrainProfile         ClientTerrainProfile?
+  qrPapierClient         QrPapierClient?
 
   @@index([telephone])
   @@index([role])
   @@index([collecteurId])
+  @@index([enroleParId])
   @@index([zoneId])
+}
+
+model ClientTerrainProfile {
+  id                  String          @id @default(uuid())
+  clientId            String          @unique
+  identifiantTerrain  String          @unique
+  cip                 String?
+  npi                 String?
+  quartier            String?
+  adresse             String?
+  telephoneSecondaire String?
+  photoUrl            String?
+  signatureUrl        String?
+  kycMinimalValide    Boolean         @default(false)
+  modeAcces           ModeAccesClient @default(SANS_SMARTPHONE)
+  latitudeEnrolement  Float?
+  longitudeEnrolement Float?
+  enroleParId         String
+  creeLe              DateTime        @default(now())
+  misAJourLe          DateTime        @updatedAt
+  client              Utilisateur     @relation(fields: [clientId], references: [id])
+
+  @@index([identifiantTerrain])
+  @@index([enroleParId])
+}
+
+model QrPapierClient {
+  id          String      @id @default(uuid())
+  clientId    String      @unique
+  code        String      @unique
+  actif       Boolean     @default(true)
+  imprimeLe   DateTime?
+  expireLe    DateTime?
+  genereParId String
+  creeLe      DateTime    @default(now())
+  client      Utilisateur @relation(fields: [clientId], references: [id])
+
+  @@index([code])
+  @@index([genereParId])
 }
 
 model Zone {
@@ -88,14 +137,14 @@ model FacturationAgent {
   id               String      @id @default(uuid())
   agentId          String      @unique
   plan             String      @default("STANDARD")
-  fraisMensuels    Float
-  fraisParClient   Float       @default(10)
+  fraisMensuelsFcfa Int         @map("fraisMensuels")
+  fraisParClientFcfa Int         @default(10) @map("fraisParClient")
   totalClients     Int         @default(0)
   actif            Boolean     @default(true)
   dernierPaiement  DateTime    @default(now())
   prochainPaiement DateTime
   creeLe           DateTime    @default(now())
-  cautionMontant   Float       @default(0)
+  cautionMontantFcfa Int         @default(0) @map("cautionMontant")
   agent            Utilisateur @relation(fields: [agentId], references: [id])
 }
 
@@ -159,39 +208,39 @@ model SessionUtilisateur {
 }
 
 model Tontine {
-  id                      String                @id @default(uuid())
-  nom                     String
-  type                    TypeTontine           @default(PERSONNEL)
-  politique               PolitiqueRetrait      @default(FLEXIBLE)
-  soldeActuel             Float                 @default(0)
-  objectifMontant         Float?
-  dateDeverrouillage      DateTime?
-  montantJournalier       Float                 @default(0)
-  proprietaireId          String
-  creeLe                  DateTime              @default(now())
-  misAJourLe              DateTime              @updatedAt
-  dateFin                 DateTime?
-  dateProchaineCotisation DateTime?
-  description             String?
-  frequence               FrequenceTontine      @default(MENSUEL)
-  jourFixe                Int?
-  statut                  StatutTontine         @default(CREATION)
-  codeInvitation          String?               @unique
-  qrInvitation            String?
-  nbMembresMax            Int?
-  montantParMembre        Float?
-  cautionObligatoire      Boolean               @default(false)
-  montantCautionObligatoire Float               @default(0)
-  penaliteRetardActive    Boolean               @default(false)
-  montantPenaliteRetard   Float                 @default(0)
-  modeTirage              ModeTirageGroupe      @default(MANUEL)
-  tourActuel              Int                   @default(1)
-  defaillances            DefaillanceGroupe[]
-  membres                 MembreTontineGroupe[]
-  ordresTirage            OrdreTirage[]
-  retraits                Retrait[]
-  proprietaire            Utilisateur           @relation(fields: [proprietaireId], references: [id])
-  transactions            Transaction[]
+  id                        String                @id @default(uuid())
+  nom                       String
+  type                      TypeTontine           @default(PERSONNEL)
+  politique                 PolitiqueRetrait      @default(FLEXIBLE)
+  soldeActuelFcfa           Int                   @default(0) @map("soldeActuel")
+  objectifMontantFcfa       Int?                  @map("objectifMontant")
+  dateDeverrouillage        DateTime?
+  montantJournalierFcfa     Int                   @default(0) @map("montantJournalier")
+  proprietaireId            String
+  creeLe                    DateTime              @default(now())
+  misAJourLe                DateTime              @updatedAt
+  dateFin                   DateTime?
+  dateProchaineCotisation   DateTime?
+  description               String?
+  frequence                 FrequenceTontine      @default(MENSUEL)
+  jourFixe                  Int?
+  statut                    StatutTontine         @default(CREATION)
+  codeInvitation            String?               @unique
+  qrInvitation              String?
+  nbMembresMax              Int?
+  montantParMembreFcfa      Int?                  @map("montantParMembre")
+  cautionObligatoire        Boolean               @default(false)
+  montantCautionObligatoireFcfa Int               @default(0) @map("montantCautionObligatoire")
+  penaliteRetardActive      Boolean               @default(false)
+  montantPenaliteRetardFcfa Int                   @default(0) @map("montantPenaliteRetard")
+  modeTirage                ModeTirageGroupe      @default(MANUEL)
+  tourActuel                Int                   @default(1)
+  defaillances              DefaillanceGroupe[]
+  membres                   MembreTontineGroupe[]
+  ordresTirage              OrdreTirage[]
+  retraits                  Retrait[]
+  proprietaire              Utilisateur           @relation(fields: [proprietaireId], references: [id])
+  transactions              Transaction[]
 
   @@index([proprietaireId])
   @@index([statut])
@@ -202,7 +251,7 @@ model MembreTontineGroupe {
   tontineId             String
   utilisateurId         String
   statut                StatutMembreGroupe  @default(ACTIF)
-  montantCaution        Float               @default(0)
+  montantCautionFcfa    Int                 @default(0) @map("montantCaution")
   cautionBloquee        Boolean             @default(true)
   rejointLe             DateTime            @default(now())
   excluLe               DateTime?
@@ -223,7 +272,7 @@ model OrdreTirage {
   position      Int
   aRecu         Boolean     @default(false)
   recuLe        DateTime?
-  montantRecu   Float?
+  montantRecuFcfa Int?        @map("montantRecu")
   creeLe        DateTime    @default(now())
   tontine       Tontine     @relation(fields: [tontineId], references: [id])
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
@@ -233,8 +282,8 @@ model DefaillanceGroupe {
   id              String              @id @default(uuid())
   tontineId       String
   membreId        String
-  montantManquant Float
-  cautionUtilisee Float               @default(0)
+  montantManquantFcfa Int                 @map("montantManquant")
+  cautionUtiliseeFcfa Int                 @default(0) @map("cautionUtilisee")
   statut          String              @default("EN_COURS")
   detecteLe       DateTime            @default(now())
   resoluLe        DateTime?
@@ -245,14 +294,15 @@ model DefaillanceGroupe {
 model Transaction {
   id              String            @id @default(uuid())
   reference       String            @unique @default(uuid())
-  montant         Float
-  montantNet      Float
+  montantFcfa     Int               @map("montant")
+  montantNetFcfa  Int               @map("montantNet")
   type            TypeTransaction
   statut          StatutTransaction @default(EN_ATTENTE)
   refKKiaPay      String?
   operateur       String?
-  fraisPlateforme Float             @default(0)
-  fraisAgent      Float             @default(0)
+  fraisPlateformeFcfa Int           @default(0) @map("fraisPlateforme")
+  fraisAgentFcfa  Int               @default(0) @map("fraisAgent")
+  idempotencyKey  String?           @unique
   hashPrecedent   String?
   hashActuel      String?
   tontineId       String?
@@ -273,7 +323,8 @@ model Transaction {
 model Retrait {
   id            String        @id @default(uuid())
   utilisateurId String
-  montant       Float
+  montantFcfa   Int           @map("montant")
+  idempotencyKey String?      @unique
   statut        StatutRetrait @default(EN_ATTENTE)
   validePar     String?
   motifRejet    String?
@@ -289,23 +340,57 @@ model Commission {
   id            String      @id @default(uuid())
   agentId       String
   transactionId String
-  montant       Float
+  montantFcfa   Int         @map("montant")
   type          String
   creeLe        DateTime    @default(now())
   agent         Utilisateur @relation(fields: [agentId], references: [id])
   transaction   Transaction @relation(fields: [transactionId], references: [id])
 }
 
+model OperationAssistee {
+  id                  String                  @id @default(uuid())
+  type                TypeOperationAssistee
+  statut              StatutOperationAssistee @default(INITIEE)
+  clientId            String
+  initiateurId        String
+  tontineId           String?
+  transactionId       String?
+  retraitId           String?
+  montantFcfa         Int                     @map("montant")
+  idempotencyKey      String?                 @unique
+  operateur           String?
+  telephone           String
+  refMobileMoney      String?
+  otpHash             String?
+  otpExpireLe         DateTime?
+  otpTentatives       Int                     @default(0)
+  confirmationCanal   CanalConfirmation?
+  confirmeParClientLe DateTime?
+  latitude            Float?
+  longitude           Float?
+  distanceMetres      Float?
+  deviceId            String?
+  metadata            String?
+  creeLe              DateTime                @default(now())
+  misAJourLe          DateTime                @updatedAt
+  client              Utilisateur             @relation("OperationClient", fields: [clientId], references: [id])
+  initiateur          Utilisateur             @relation("OperationInitiateur", fields: [initiateurId], references: [id])
+
+  @@index([clientId, statut])
+  @@index([initiateurId, statut])
+  @@index([type])
+}
+
 model MicroCredit {
   id                   String                @id @default(uuid())
   clientId             String
-  montantPrincipal     Float
+  montantPrincipalFcfa Int                   @map("montantPrincipal")
   tauxInteret          Float
-  montantTotal         Float
-  paiementJournalier   Float
+  montantTotalFcfa     Int                   @map("montantTotal")
+  paiementJournalierFcfa Int                 @map("paiementJournalier")
   totalJours           Int
   joursPayes           Int                   @default(0)
-  montantRestant       Float
+  montantRestantFcfa   Int                   @map("montantRestant")
   statut               StatutCredit          @default(EN_ATTENTE)
   scoreAuMoment        Int
   initiePar            String
@@ -327,7 +412,7 @@ model MicroCredit {
 model RemboursementCredit {
   id            String      @id @default(uuid())
   microCreditId String
-  montant       Float
+  montantFcfa   Int         @map("montant")
   statut        String      @default("EN_ATTENTE")
   refKKiaPay    String?
   payeLe        DateTime    @default(now())
@@ -417,7 +502,7 @@ model DossierPADME {
   clientId          String
   scoreCreditId     String
   scoreAuMoment     Int
-  totalEpargne      Float
+  totalEpargneFcfa  Int                @map("totalEpargne")
   tauxRegularite    Float
   creditsRembourses Int                @default(0)
   urlPDF            String?
@@ -521,6 +606,37 @@ enum Role {
   AGENT
   SUPERVISEUR
   ADMIN
+}
+
+enum ModeAccesClient {
+  SMARTPHONE
+  SANS_SMARTPHONE
+  HYBRIDE
+}
+
+enum TypeOperationAssistee {
+  COTISATION
+  RETRAIT
+  MICRO_CREDIT
+  CONSULTATION
+}
+
+enum StatutOperationAssistee {
+  INITIEE
+  OTP_ENVOYE
+  CONFIRMEE_CLIENT
+  EN_ATTENTE_MOBILE_MONEY
+  SUCCES
+  ECHOUEE
+  EXPIREE
+  ANNULEE
+}
+
+enum CanalConfirmation {
+  OTP_SMS
+  PIN_CLIENT
+  USSD
+  MOBILE_MONEY_PIN
 }
 
 enum StatutCompte {

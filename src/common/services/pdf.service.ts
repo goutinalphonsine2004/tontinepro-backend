@@ -12,8 +12,8 @@ export type RecuTransactionPdf = {
   telephone: string;
   tontine: string;
   montant: number;
-  fraisPlateforme: number;
-  montantNet: number;
+  fraisPlateformeFcfa: number;
+  montantNetFcfa: number;
   operateur: string;
   refKKiaPay: string;
   hashIntegrite: string;
@@ -24,7 +24,7 @@ export type DossierPadmePdf = {
   clientNom: string;
   clientTelephone: string;
   score: number;
-  totalEpargne: number;
+  totalEpargneFcfa: number;
   tauxRegularite: number;
   creditsRembourses: number;
   genereLe: Date;
@@ -44,7 +44,7 @@ export class PdfService {
 
     doc
       .fontSize(20)
-      .text('TontineBenin', { align: 'center' })
+      .text('TontineBénin', { align: 'center' })
       .moveDown(0.4)
       .fontSize(14)
       .text('Recu de transaction', { align: 'center' })
@@ -64,12 +64,12 @@ export class PdfService {
     this.ligne(
       doc,
       'Frais plateforme',
-      `${recu.fraisPlateforme.toLocaleString('fr-FR')} FCFA`,
+      `${recu.fraisPlateformeFcfa.toLocaleString('fr-FR')} FCFA`,
     );
     this.ligne(
       doc,
       'Montant net',
-      `${recu.montantNet.toLocaleString('fr-FR')} FCFA`,
+      `${recu.montantNetFcfa.toLocaleString('fr-FR')} FCFA`,
     );
 
     doc.moveDown(1);
@@ -83,7 +83,7 @@ export class PdfService {
     doc
       .fontSize(9)
       .fillColor('#555')
-      .text('Document genere automatiquement par TontineBenin.');
+      .text('Document genere automatiquement par TontineBénin.');
     doc.end();
 
     return done;
@@ -101,7 +101,7 @@ export class PdfService {
 
     doc
       .fontSize(20)
-      .text('TontineBenin', { align: 'center' })
+      .text('TontineBénin', { align: 'center' })
       .moveDown(0.4)
       .fontSize(14)
       .text('Dossier PADME genere automatiquement', { align: 'center' })
@@ -117,7 +117,7 @@ export class PdfService {
     this.ligne(
       doc,
       'Total epargne',
-      `${dossier.totalEpargne.toLocaleString('fr-FR')} FCFA`,
+      `${dossier.totalEpargneFcfa.toLocaleString('fr-FR')} FCFA`,
     );
     this.ligne(
       doc,
@@ -131,7 +131,7 @@ export class PdfService {
     doc
       .fontSize(10)
       .text(
-        'Ce document synthetise les donnees internes TontineBenin utilisees pour la prequalification PADME.',
+        'Ce document synthetise les donnees internes TontineBénin utilisees pour la prequalification PADME.',
       );
 
     doc.end();

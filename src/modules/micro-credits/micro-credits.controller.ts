@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -13,6 +15,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { MicroCreditsService } from './micro-credits.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { DemanderCreditDto } from './dto/demander-credit.dto';
 import { ConfirmerPinDto } from './dto/confirmer-pin.dto';
 import { ConsentementSmsDto } from './dto/consentement-sms.dto';
@@ -20,21 +23,44 @@ import { RefuserCreditDto } from './dto/refuser-credit.dto';
 
 @Controller('micro-credits')
 export class MicroCreditsController {
-  constructor(private service: MicroCreditsService) {}
+  constructor(
+    private service: MicroCreditsService,
+    private prisma: PrismaService,
+  ) {}
+
+  private async verifierAccesClient(collecteurId: string, clientId: string) {
+    const client = await this.prisma.utilisateur.findFirst({
+      where: { id: clientId, collecteurId },
+    });
+    if (!client) throw new ForbiddenException('Ce client ne fait pas partie de votre portefeuille.');
+    return clientId;
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('mon-eligibilite')
-  monEligibilite(@UtilisateurCourant() u: { id: string }) {
-    return this.service.monEligibilite(u.id);
+  async monEligibilite(
+    @UtilisateurCourant() u: { id: string; role: Role },
+    @Query('clientId') clientId?: string,
+  ) {
+    const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
+    const id = estCollecteur && clientId
+      ? await this.verifierAccesClient(u.id, clientId)
+      : u.id;
+    return this.service.monEligibilite(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('demander')
-  demander(
-    @UtilisateurCourant() u: { id: string },
+  async demander(
+    @UtilisateurCourant() u: { id: string; role: Role },
     @Body() dto: DemanderCreditDto,
+    @Query('clientId') clientId?: string,
   ) {
-    return this.service.demander(u.id, dto);
+    const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
+    const id = estCollecteur && clientId
+      ? await this.verifierAccesClient(u.id, clientId)
+      : u.id;
+    return this.service.demander(id, dto);
   }
 
   // Webhook Africa's Talking — pas de JWT (appelé par AT)
@@ -80,8 +106,15 @@ export class MicroCreditsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('mes-credits')
-  mesCredits(@UtilisateurCourant() u: { id: string }) {
-    return this.service.mesCredits(u.id);
+  async mesCredits(
+    @UtilisateurCourant() u: { id: string; role: Role },
+    @Query('clientId') clientId?: string,
+  ) {
+    const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
+    const id = estCollecteur && clientId
+      ? await this.verifierAccesClient(u.id, clientId)
+      : u.id;
+    return this.service.mesCredits(id);
   }
 
   @UseGuards(JwtAuthGuard)

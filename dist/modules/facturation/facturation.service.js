@@ -40,8 +40,8 @@ let FacturationService = class FacturationService {
                 data: {
                     agentId: utilisateurId,
                     plan: 'STANDARD',
-                    fraisMensuels: business_constants_1.BUSINESS.ABONNEMENT_STANDARD,
-                    fraisParClient: 10,
+                    fraisMensuelsFcfa: business_constants_1.BUSINESS.ABONNEMENT_STANDARD,
+                    fraisParClientFcfa: 10,
                     prochainPaiement,
                     actif: true,
                 },
@@ -59,7 +59,7 @@ let FacturationService = class FacturationService {
         };
     }
     async payerAbonnement(utilisateurId, dto) {
-        const montant = MONTANTS[dto.plan];
+        const montantFcfa = MONTANTS[dto.plan];
         const prochainPaiement = new Date();
         prochainPaiement.setMonth(prochainPaiement.getMonth() + 1);
         const facturation = await this.prisma.facturationAgent.upsert({
@@ -67,15 +67,15 @@ let FacturationService = class FacturationService {
             create: {
                 agentId: utilisateurId,
                 plan: dto.plan,
-                fraisMensuels: montant,
-                fraisParClient: 10,
+                fraisMensuelsFcfa: montantFcfa,
+                fraisParClientFcfa: 10,
                 dernierPaiement: new Date(),
                 prochainPaiement,
                 actif: true,
             },
             update: {
                 plan: dto.plan,
-                fraisMensuels: montant,
+                fraisMensuelsFcfa: montantFcfa,
                 dernierPaiement: new Date(),
                 prochainPaiement,
                 actif: true,
@@ -83,7 +83,7 @@ let FacturationService = class FacturationService {
         });
         return {
             succes: true,
-            message: `Abonnement ${dto.plan} payé — ${montant} FCFA. Prochain paiement: ${prochainPaiement.toLocaleDateString('fr-FR')}.`,
+            message: `Abonnement ${dto.plan} payé — ${montantFcfa} FCFA. Prochain paiement: ${prochainPaiement.toLocaleDateString('fr-FR')}.`,
             donnees: facturation,
         };
     }
@@ -105,7 +105,7 @@ let FacturationService = class FacturationService {
             where: { agentId: utilisateurId },
             data: {
                 plan: 'PRO',
-                fraisMensuels: business_constants_1.BUSINESS.ABONNEMENT_PRO,
+                fraisMensuelsFcfa: business_constants_1.BUSINESS.ABONNEMENT_PRO,
                 dernierPaiement: new Date(),
                 prochainPaiement,
             },
@@ -123,7 +123,7 @@ let FacturationService = class FacturationService {
             },
             orderBy: { prochainPaiement: 'asc' },
         });
-        const totalMensuel = facturations.reduce((s, f) => s + f.fraisMensuels, 0);
+        const totalMensuel = facturations.reduce((s, f) => s + f.fraisMensuelsFcfa, 0);
         return {
             succes: true,
             message: `${facturations.length} facturation(s). Total mensuel: ${totalMensuel} FCFA.`,

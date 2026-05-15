@@ -39,7 +39,7 @@ export class AuthController {
     return this.authService.inscription(dto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('verifier-otp')
   verifierOtp(@Body() dto: VerifierOtpDto) {
     return this.authService.verifierOtp(dto);

@@ -1,10 +1,15 @@
+import { Role } from '@prisma/client';
 import { ScoreService } from './score.service';
+import { PrismaService } from '../../prisma/prisma.service';
 export declare class ScoreController {
     private service;
-    constructor(service: ScoreService);
+    private prisma;
+    constructor(service: ScoreService, prisma: PrismaService);
+    private resoudreClientId;
     monScore(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -29,7 +34,8 @@ export declare class ScoreController {
     }>;
     evolution(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -40,7 +46,8 @@ export declare class ScoreController {
     }>;
     conseils(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -56,7 +63,8 @@ export declare class ScoreController {
     }>;
     projection(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -88,7 +96,8 @@ export declare class ScoreController {
     }>;
     calendrierRegularite(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -98,7 +107,7 @@ export declare class ScoreController {
                 jours: {
                     date: string;
                     cotise: boolean;
-                    montant: number;
+                    montantFcfa: number;
                 }[];
                 nbJoursCotises: number;
                 nbJoursOuvres: number;

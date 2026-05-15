@@ -1,5 +1,5 @@
 export declare class DemanderCreditDto {
-    montantPrincipal: number;
+    montantPrincipalFcfa: number;
     methodeConsentement?: string;
     telephone?: string;
 }

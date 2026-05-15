@@ -3,4 +3,5 @@ export declare class ConfirmerRetraitDto {
     montant: number;
     code: string;
     telephone?: string;
+    idempotencyKey?: string;
 }

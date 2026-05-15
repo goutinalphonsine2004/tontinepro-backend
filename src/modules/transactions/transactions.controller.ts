@@ -13,12 +13,16 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { TransactionsService } from './transactions.service';
 import { CotiserDto } from './dto/cotiser.dto';
 import { WebhookKkiapayDto } from './dto/webhook-kkiapay.dto';
 import { FiltrerTransactionsDto } from './dto/filtrer-transactions.dto';
 import { PartagerRecuWhatsappDto } from './dto/partager-recu-whatsapp.dto';
+import { SimulerTransactionDto } from './dto/simuler-transaction.dto';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -28,6 +32,12 @@ export class TransactionsController {
   @Post('cotiser')
   cotiser(@UtilisateurCourant() u: { id: string }, @Body() dto: CotiserDto) {
     return this.service.cotiser(u.id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('simuler')
+  simuler(@Body() dto: SimulerTransactionDto) {
+    return this.service.simuler(dto);
   }
 
   // Pas de JwtAuthGuard — appelé par le serveur KKiaPay
@@ -44,10 +54,13 @@ export class TransactionsController {
   @UseGuards(JwtAuthGuard)
   @Get('historique')
   historique(
-    @UtilisateurCourant() u: { id: string },
+    @UtilisateurCourant() u: { id: string; role: Role },
     @Query() filtres: FiltrerTransactionsDto,
+    @Query('clientId') clientId?: string,
   ) {
-    return this.service.historique(u.id, filtres);
+    const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
+    const cibleId = estCollecteur && clientId ? clientId : u.id;
+    return this.service.historique(cibleId, filtres, estCollecteur ? u.id : undefined);
   }
 
   @UseGuards(JwtAuthGuard)

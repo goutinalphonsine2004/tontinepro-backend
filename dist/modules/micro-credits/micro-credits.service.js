@@ -68,9 +68,9 @@ let MicroCreditsService = class MicroCreditsService {
         const score = scoreCredit?.score ?? 0;
         const eligible = score >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT;
         const plafond = business_constants_1.BUSINESS.getPlafondMicroCredit(score);
-        const montantTotal = eligible ? business_constants_1.BUSINESS.calculerMontantTotal(plafond) : 0;
-        const paiementJournalier = eligible
-            ? business_constants_1.BUSINESS.calculerPaiementJournalier(montantTotal, DUREE_CREDIT_JOURS)
+        const montantTotalFcfa = eligible ? business_constants_1.BUSINESS.calculerMontantTotal(plafond) : 0;
+        const paiementJournalierFcfa = eligible
+            ? business_constants_1.BUSINESS.calculerPaiementJournalier(montantTotalFcfa, DUREE_CREDIT_JOURS)
             : 0;
         const creditActif = await this.prisma.microCredit.findFirst({
             where: { clientId, statut: client_1.StatutCredit.ACTIF },
@@ -88,10 +88,10 @@ let MicroCreditsService = class MicroCreditsService {
                 dureeJours: DUREE_CREDIT_JOURS,
                 exempleCalcul: eligible
                     ? {
-                        montantPrincipal: plafond,
+                        montantPrincipalFcfa: plafond,
                         interet: business_constants_1.BUSINESS.calculerInteretMicroCredit(plafond),
-                        montantTotal,
-                        paiementJournalier,
+                        montantTotalFcfa,
+                        paiementJournalierFcfa,
                     }
                     : null,
                 scoreRequis: business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT,
@@ -127,26 +127,26 @@ let MicroCreditsService = class MicroCreditsService {
             });
         }
         const plafond = business_constants_1.BUSINESS.getPlafondMicroCredit(score);
-        if (dto.montantPrincipal > plafond) {
+        if (dto.montantPrincipalFcfa > plafond) {
             throw new common_1.BadRequestException({
-                message: `Montant demandé (${dto.montantPrincipal} FCFA) dépasse votre plafond (${plafond} FCFA).`,
+                message: `Montant demandé (${dto.montantPrincipalFcfa} FCFA) dépasse votre plafond (${plafond} FCFA).`,
                 code: 'MONTANT_DEPASSE_PLAFOND',
                 plafond,
             });
         }
-        const montantTotal = business_constants_1.BUSINESS.calculerMontantTotal(dto.montantPrincipal);
-        const paiementJournalier = business_constants_1.BUSINESS.calculerPaiementJournalier(montantTotal, DUREE_CREDIT_JOURS);
+        const montantTotalFcfa = business_constants_1.BUSINESS.calculerMontantTotal(dto.montantPrincipalFcfa);
+        const paiementJournalierFcfa = business_constants_1.BUSINESS.calculerPaiementJournalier(montantTotalFcfa, DUREE_CREDIT_JOURS);
         const dateEcheance = new Date(Date.now() + DUREE_CREDIT_JOURS * 24 * 60 * 60 * 1000);
         const methode = dto.methodeConsentement ?? 'SMARTPHONE';
         const credit = await this.prisma.microCredit.create({
             data: {
                 clientId,
-                montantPrincipal: dto.montantPrincipal,
+                montantPrincipalFcfa: dto.montantPrincipalFcfa,
                 tauxInteret: business_constants_1.BUSINESS.TAUX_INTERET_MICRO_CREDIT,
-                montantTotal,
-                paiementJournalier,
+                montantTotalFcfa,
+                paiementJournalierFcfa,
                 totalJours: DUREE_CREDIT_JOURS,
-                montantRestant: montantTotal,
+                montantRestantFcfa: montantTotalFcfa,
                 scoreAuMoment: score,
                 initiePar: clientId,
                 methodeConsentement: methode,
@@ -156,7 +156,7 @@ let MicroCreditsService = class MicroCreditsService {
         });
         if (methode === 'SMS') {
             const telephone = dto.telephone ?? client.telephone;
-            await this.sms.envoyer(telephone, `TontineBénin: Votre collecteur vous propose un micro-crédit de ${dto.montantPrincipal} FCFA (remb. ${paiementJournalier} FCFA/jour pendant 30j). Répondez 1 pour ACCEPTER ou 2 pour REFUSER. Offre valable ${DUREE_CONSENTEMENT_MIN} minutes.`);
+            await this.sms.envoyer(telephone, `TontineBénin: Votre collecteur vous propose un micro-crédit de ${dto.montantPrincipalFcfa} FCFA (remb. ${paiementJournalierFcfa} FCFA/jour pendant 30j). Répondez 1 pour ACCEPTER ou 2 pour REFUSER. Offre valable ${DUREE_CONSENTEMENT_MIN} minutes.`);
         }
         return {
             succes: true,
@@ -165,9 +165,9 @@ let MicroCreditsService = class MicroCreditsService {
                 : 'Demande créée. Confirmez avec votre PIN.',
             donnees: {
                 creditId: credit.id,
-                montantPrincipal: dto.montantPrincipal,
-                montantTotal,
-                paiementJournalier,
+                montantPrincipalFcfa: dto.montantPrincipalFcfa,
+                montantTotalFcfa,
+                paiementJournalierFcfa,
                 tauxInteret: `${business_constants_1.BUSINESS.TAUX_INTERET_MICRO_CREDIT * 100}%`,
                 methodeConsentement: methode,
                 dateEcheance,
@@ -302,10 +302,10 @@ let MicroCreditsService = class MicroCreditsService {
             });
         }
         const transfert = await this.kkiapay.initierTransfert({
-            montant: credit.montantPrincipal,
+            montant: credit.montantPrincipalFcfa,
             telephone: credit.client.telephone,
             reference: `credit_${creditId}`,
-            motif: `Micro-crédit TontineBénin — ${credit.montantPrincipal} FCFA`,
+            motif: `Micro-crédit TontineBénin — ${credit.montantPrincipalFcfa} FCFA`,
         });
         if (!transfert.succes) {
             throw new common_1.BadRequestException({
@@ -317,14 +317,14 @@ let MicroCreditsService = class MicroCreditsService {
             where: { id: creditId },
             data: { statut: client_1.StatutCredit.ACTIF, decaisseLE: new Date() },
         });
-        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Votre micro-crédit de ${credit.montantPrincipal} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalier} FCFA/jour pendant 30 jours.`);
+        await this.sms.envoyer(credit.client.telephone, `TontineBénin: Votre micro-crédit de ${credit.montantPrincipalFcfa} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalierFcfa} FCFA/jour pendant 30 jours.`);
         return {
             succes: true,
-            message: `Micro-crédit de ${credit.montantPrincipal} FCFA décaissé vers ${credit.client.nom}.`,
+            message: `Micro-crédit de ${credit.montantPrincipalFcfa} FCFA décaissé vers ${credit.client.nom}.`,
             donnees: {
                 creditId,
                 refKKiaPay: transfert.refKKiaPay,
-                montantDecaisse: credit.montantPrincipal,
+                montantFcfaDecaisse: credit.montantPrincipalFcfa,
             },
         };
     }
@@ -374,17 +374,17 @@ let MicroCreditsService = class MicroCreditsService {
         });
         const totalPaye = rembList
             .filter((r) => r.statut === 'SUCCES')
-            .reduce((s, r) => s + r.montant, 0);
+            .reduce((s, r) => s + r.montantFcfa, 0);
         return {
             succes: true,
             message: `${rembList.length} remboursement(s). Total payé: ${totalPaye} FCFA.`,
             donnees: {
                 credit: {
-                    montantTotal: credit.montantTotal,
-                    montantRestant: credit.montantRestant,
+                    montantTotalFcfa: credit.montantTotalFcfa,
+                    montantRestantFcfa: credit.montantRestantFcfa,
                     joursPayes: credit.joursPayes,
                     totalJours: credit.totalJours,
-                    paiementJournalier: credit.paiementJournalier,
+                    paiementJournalierFcfa: credit.paiementJournalierFcfa,
                     statut: credit.statut,
                 },
                 remboursements: rembList,

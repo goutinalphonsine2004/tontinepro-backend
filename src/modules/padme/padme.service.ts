@@ -238,7 +238,7 @@ export class PadmeService {
                   where: { utilisateurId: dossier.client.id },
                 })
               )?.id ?? adminId,
-            montant: commission,
+            montantFcfa: commission,
             type: 'PADME',
           },
         })

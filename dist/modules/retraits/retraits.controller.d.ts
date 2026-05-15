@@ -37,11 +37,12 @@ export declare class RetraitsController {
         donnees: {
             refKKiaPay: string | null;
             tontineId: string;
-            montant: number;
+            idempotencyKey: string | null;
             id: string;
             utilisateurId: string;
             creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutRetrait;
+            montantFcfa: number;
             validePar: string | null;
             motifRejet: string | null;
             executeLe: Date | null;
@@ -60,15 +61,36 @@ export declare class RetraitsController {
         } & {
             refKKiaPay: string | null;
             tontineId: string;
-            montant: number;
+            idempotencyKey: string | null;
             id: string;
             utilisateurId: string;
             creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutRetrait;
+            montantFcfa: number;
             validePar: string | null;
             motifRejet: string | null;
             executeLe: Date | null;
         })[];
+    }>;
+    statut(id: string, u: {
+        id: string;
+    }): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            historique: {
+                statut: string;
+                date: Date;
+            }[];
+            refKKiaPay: string | null;
+            id: string;
+            utilisateurId: string;
+            creeLe: Date;
+            statut: import("@prisma/client").$Enums.StatutRetrait;
+            montantFcfa: number;
+            motifRejet: string | null;
+            executeLe: Date | null;
+        };
     }>;
     enAttente(): Promise<{
         succes: boolean;
@@ -82,16 +104,17 @@ export declare class RetraitsController {
             tontine: {
                 id: string;
                 nom: string;
-                soldeActuel: number;
+                soldeActuelFcfa: number;
             };
         } & {
             refKKiaPay: string | null;
             tontineId: string;
-            montant: number;
+            idempotencyKey: string | null;
             id: string;
             utilisateurId: string;
             creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutRetrait;
+            montantFcfa: number;
             validePar: string | null;
             motifRejet: string | null;
             executeLe: Date | null;

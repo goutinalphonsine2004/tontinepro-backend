@@ -4,6 +4,18 @@ import { RejeterKycDto } from './dto/rejeter-kyc.dto';
 export declare class KycController {
     private service;
     constructor(service: KycService);
+    uploadDocument(u: {
+        id: string;
+    }, fichier: Express.Multer.File, typeDocument: string): Promise<{
+        succes: boolean;
+        message: string;
+        donnees: {
+            id: string;
+            typeDocument: string;
+            statut: import("@prisma/client").$Enums.StatutKYC;
+            creeLe: Date;
+        };
+    }>;
     soumettre(u: {
         id: string;
     }, dto: SoumettreKycDto): Promise<{
@@ -27,13 +39,10 @@ export declare class KycController {
         message: string;
         donnees: {
             id: string;
-            utilisateurId: string;
             creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutKYC;
             motifRejet: string | null;
             typeDocument: string;
-            urlDocument: string;
-            verifiePar: string | null;
         }[];
     }>;
     enAttente(): Promise<{

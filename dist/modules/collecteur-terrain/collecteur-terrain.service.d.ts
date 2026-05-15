@@ -24,7 +24,7 @@ export declare class CollecteurTerrainService {
                 telephone: string;
                 kycVerifie: boolean;
                 solde: number;
-                montantJournalier: number;
+                montantJournalierFcfa: number;
                 score: number;
                 dejaVisite: boolean;
             }[];
@@ -76,14 +76,14 @@ export declare class CollecteurTerrainService {
                 id: string;
                 nom: string;
                 role: import("@prisma/client").$Enums.Role;
-                soldeCommission: number;
+                soldeCommissionFcfa: number;
             };
             clientsActifs: number;
             commissionsCeMois: number;
             tauxCollecteMois: number;
             graphiqueRevenus: {
                 mois: string;
-                montant: number;
+                montantFcfa: number;
             }[];
             revenutsMicroCredits: number;
             abonnement: {

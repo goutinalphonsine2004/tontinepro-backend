@@ -24,14 +24,14 @@ export declare class UtilisateursController {
                 id: string;
                 type: import("@prisma/client").$Enums.TypeTontine;
                 nom: string;
-                soldeActuel: number;
-                objectifMontant: number | null;
+                soldeActuelFcfa: number;
+                objectifMontantFcfa: number | null;
                 dateDeverrouillage: Date | null;
-                montantJournalier: number;
+                montantJournalierFcfa: number;
             }[];
             graphiqueEpargne: {
                 mois: string;
-                montant: number;
+                montantFcfa: number;
             }[];
             badge: {
                 niveau: import("@prisma/client").$Enums.NiveauBadge;
@@ -45,10 +45,10 @@ export declare class UtilisateursController {
             };
             creditActif: {
                 id: string;
-                paiementJournalier: number;
+                paiementJournalierFcfa: number;
                 totalJours: number;
                 joursPayes: number;
-                montantRestant: number;
+                montantRestantFcfa: number;
             } | null;
             alertes: {
                 microCreditDisponible: boolean;
@@ -58,7 +58,7 @@ export declare class UtilisateursController {
                 tontine: {
                     id: string;
                     nom: string;
-                    montantJournalier: number;
+                    montantJournalierFcfa: number;
                 };
             } & {
                 tontineId: string;
@@ -68,7 +68,7 @@ export declare class UtilisateursController {
                 position: number;
                 aRecu: boolean;
                 recuLe: Date | null;
-                montantRecu: number | null;
+                montantRecuFcfa: number | null;
             };
             dernieresTransactions: ({
                 tontine: {
@@ -77,18 +77,19 @@ export declare class UtilisateursController {
             } & {
                 refKKiaPay: string | null;
                 tontineId: string | null;
-                montant: number;
+                idempotencyKey: string | null;
                 id: string;
                 utilisateurId: string;
                 creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
                 statut: import("@prisma/client").$Enums.StatutTransaction;
+                montantFcfa: number;
                 tentatives: number;
                 reference: string;
-                montantNet: number;
+                montantNetFcfa: number;
                 operateur: string | null;
-                fraisPlateforme: number;
-                fraisAgent: number;
+                fraisPlateformeFcfa: number;
+                fraisAgentFcfa: number;
                 hashPrecedent: string | null;
                 hashActuel: string | null;
                 motifEchec: string | null;
@@ -114,8 +115,8 @@ export declare class UtilisateursController {
             kycVerifie: boolean;
             collecteurId: string | null;
             zoneId: string | null;
-            soldeCommission: number;
-            montantCaution: number;
+            soldeCommissionFcfa: number;
+            montantCautionFcfa: number;
         };
     }>;
     monQrCode(u: {
@@ -161,8 +162,8 @@ export declare class UtilisateursController {
             kycVerifie: boolean;
             collecteurId: string | null;
             zoneId: string | null;
-            soldeCommission: number;
-            montantCaution: number;
+            soldeCommissionFcfa: number;
+            montantCautionFcfa: number;
         };
     }>;
     changerPin(u: {
@@ -190,8 +191,8 @@ export declare class UtilisateursController {
             kycVerifie: boolean;
             collecteurId: string | null;
             zoneId: string | null;
-            soldeCommission: number;
-            montantCaution: number;
+            soldeCommissionFcfa: number;
+            montantCautionFcfa: number;
         };
     }>;
     supprimerMonCompte(u: {
@@ -220,8 +221,8 @@ export declare class UtilisateursController {
                 kycVerifie: boolean;
                 collecteurId: string | null;
                 zoneId: string | null;
-                soldeCommission: number;
-                montantCaution: number;
+                soldeCommissionFcfa: number;
+                montantCautionFcfa: number;
             }[];
             total: number;
             page: number;
@@ -261,8 +262,8 @@ export declare class UtilisateursController {
             kycVerifie: boolean;
             collecteurId: string | null;
             zoneId: string | null;
-            soldeCommission: number;
-            montantCaution: number;
+            soldeCommissionFcfa: number;
+            montantCautionFcfa: number;
         };
     }>;
     changerRole(u: {
@@ -284,8 +285,8 @@ export declare class UtilisateursController {
             kycVerifie: boolean;
             collecteurId: string | null;
             zoneId: string | null;
-            soldeCommission: number;
-            montantCaution: number;
+            soldeCommissionFcfa: number;
+            montantCautionFcfa: number;
         };
     }>;
     assignerSuperviseur(u: {

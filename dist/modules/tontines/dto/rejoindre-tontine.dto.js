@@ -13,7 +13,7 @@ exports.RejoindreTonitneDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 class RejoindreTonitneDto {
-    montantCaution = 0;
+    montantCautionFcfa = 0;
 }
 exports.RejoindreTonitneDto = RejoindreTonitneDto;
 __decorate([
@@ -22,5 +22,5 @@ __decorate([
     (0, class_validator_1.Min)(0, { message: 'Le montant de caution doit être positif' }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], RejoindreTonitneDto.prototype, "montantCaution", void 0);
+], RejoindreTonitneDto.prototype, "montantCautionFcfa", void 0);
 //# sourceMappingURL=rejoindre-tontine.dto.js.map

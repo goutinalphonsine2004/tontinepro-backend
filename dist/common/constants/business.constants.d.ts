@@ -21,9 +21,9 @@ export declare const BUSINESS: {
     DUREE_OTP_MINUTES: number;
     calculerFraisPlateforme(montant: number, estDiamant?: boolean): number;
     calculerFraisRetrait(montant: number): number;
-    calculerInteretMicroCredit(montantPrincipal: number): number;
-    calculerMontantTotal(montantPrincipal: number): number;
-    calculerPaiementJournalier(montantTotal: number, jours: number): number;
+    calculerInteretMicroCredit(montantPrincipalFcfa: number): number;
+    calculerMontantTotal(montantPrincipalFcfa: number): number;
+    calculerPaiementJournalier(montantTotalFcfa: number, jours: number): number;
     getPlafondMicroCredit(score: number): number;
     calculerCommissionAgent(montantCotisation: number, estIndependant: boolean): number;
     calculerCommissionPADME(montantCreditAccorde: number): number;

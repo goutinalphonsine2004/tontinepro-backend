@@ -97,7 +97,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "inscription", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }),
     (0, common_1.Post)('verifier-otp'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),

@@ -25,8 +25,8 @@ const SELECT_PROFIL = {
   statut: true,
   empreinteActive: true,
   kycVerifie: true,
-  soldeCommission: true,
-  montantCaution: true,
+  soldeCommissionFcfa: true,
+  montantCautionFcfa: true,
   zoneId: true,
   collecteurId: true,
   creeLe: true,
@@ -309,9 +309,9 @@ export class UtilisateursService {
             select: {
               id: true,
               nom: true,
-              soldeActuel: true,
-              objectifMontant: true,
-              montantJournalier: true,
+              soldeActuelFcfa: true,
+              objectifMontantFcfa: true,
+              montantJournalierFcfa: true,
               type: true,
               dateDeverrouillage: true,
             },
@@ -335,8 +335,8 @@ export class UtilisateursService {
         where: { clientId, statut: { in: ['ACTIF'] as any } },
         select: {
           id: true,
-          montantRestant: true,
-          paiementJournalier: true,
+          montantRestantFcfa: true,
+          paiementJournalierFcfa: true,
           joursPayes: true,
           totalJours: true,
         },
@@ -344,7 +344,7 @@ export class UtilisateursService {
       this.prisma.ordreTirage.findMany({
         where: { utilisateurId: clientId, aRecu: false },
         include: {
-          tontine: { select: { id: true, nom: true, montantJournalier: true } },
+          tontine: { select: { id: true, nom: true, montantJournalierFcfa: true } },
         },
         orderBy: { position: 'asc' },
         take: 1,
@@ -361,7 +361,7 @@ export class UtilisateursService {
         statut: 'SUCCES' as any,
         creeLe: { gte: sixMoisDate },
       },
-      select: { montantNet: true, creeLe: true },
+      select: { montantNetFcfa: true, creeLe: true },
     });
 
     const graphique: Record<string, number> = {};
@@ -374,11 +374,11 @@ export class UtilisateursService {
     }
     for (const tx of cotisations6mois) {
       const key = `${tx.creeLe.getFullYear()}-${String(tx.creeLe.getMonth() + 1).padStart(2, '0')}`;
-      if (graphique[key] !== undefined) graphique[key] += tx.montantNet;
+      if (graphique[key] !== undefined) graphique[key] += tx.montantNetFcfa;
     }
 
     const soldeTotal = utilisateur.tontines.reduce(
-      (s, t) => s + t.soldeActuel,
+      (s, t) => s + t.soldeActuelFcfa,
       0,
     );
     const score = scoreCredit?.score ?? 0;
@@ -396,9 +396,9 @@ export class UtilisateursService {
         },
         soldeTotal,
         tontines: utilisateur.tontines,
-        graphiqueEpargne: Object.entries(graphique).map(([mois, montant]) => ({
+        graphiqueEpargne: Object.entries(graphique).map(([mois, montantFcfa]) => ({
           mois,
-          montant: Math.round(montant),
+          montantFcfa: Math.round(montantFcfa),
         })),
         badge: badge
           ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe }
@@ -545,7 +545,7 @@ export class UtilisateursService {
       where: { id: clientId },
       include: {
         _count: { select: { microCredits: true } },
-        tontines: { select: { soldeActuel: true } },
+        tontines: { select: { soldeActuelFcfa: true } },
       },
     });
     if (!utilisateur) throw new NotFoundException('Utilisateur introuvable');
@@ -561,7 +561,7 @@ export class UtilisateursService {
 
     // Bloquer si solde non nul
     const soldeTotal = utilisateur.tontines.reduce(
-      (s, t) => s + t.soldeActuel,
+      (s, t) => s + t.soldeActuelFcfa,
       0,
     );
     if (soldeTotal > 0) {
@@ -625,16 +625,16 @@ export class UtilisateursService {
     // Calculer solde total et régularité
     const transactions = await this.prisma.transaction.findMany({
       where: { utilisateurId: clientId },
-      select: { montant: true, creeLe: true },
+      select: { montantFcfa: true, creeLe: true },
     });
 
     const retraits = await this.prisma.retrait.findMany({
       where: { utilisateurId: clientId },
-      select: { montant: true, statut: true },
+      select: { montantFcfa: true, statut: true },
     });
 
-    const soldeTotal = transactions.reduce((acc, t) => acc + t.montant, 0) -
-      retraits.reduce((acc, r) => acc + r.montant, 0);
+    const soldeTotal = transactions.reduce((acc, t) => acc + t.montantFcfa, 0) -
+      retraits.reduce((acc, r) => acc + r.montantFcfa, 0);
 
     // Régularité = % de mois avec au moins 1 cotisation
     const moisActifs = new Set<string>();

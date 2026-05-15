@@ -13,12 +13,12 @@ export declare class FacturationService {
             actif: boolean;
             agentId: string;
             plan: string;
-            fraisMensuels: number;
-            fraisParClient: number;
+            fraisMensuelsFcfa: number;
+            fraisParClientFcfa: number;
             totalClients: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
-            cautionMontant: number;
+            cautionMontantFcfa: number;
         };
     }>;
     payerAbonnement(utilisateurId: string, dto: PayerAbonnementDto): Promise<{
@@ -30,12 +30,12 @@ export declare class FacturationService {
             actif: boolean;
             agentId: string;
             plan: string;
-            fraisMensuels: number;
-            fraisParClient: number;
+            fraisMensuelsFcfa: number;
+            fraisParClientFcfa: number;
             totalClients: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
-            cautionMontant: number;
+            cautionMontantFcfa: number;
         };
     }>;
     upgrader(utilisateurId: string): Promise<{
@@ -47,12 +47,12 @@ export declare class FacturationService {
             actif: boolean;
             agentId: string;
             plan: string;
-            fraisMensuels: number;
-            fraisParClient: number;
+            fraisMensuelsFcfa: number;
+            fraisParClientFcfa: number;
             totalClients: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
-            cautionMontant: number;
+            cautionMontantFcfa: number;
         };
     }>;
     tous(): Promise<{
@@ -72,12 +72,12 @@ export declare class FacturationService {
                 actif: boolean;
                 agentId: string;
                 plan: string;
-                fraisMensuels: number;
-                fraisParClient: number;
+                fraisMensuelsFcfa: number;
+                fraisParClientFcfa: number;
                 totalClients: number;
                 dernierPaiement: Date;
                 prochainPaiement: Date;
-                cautionMontant: number;
+                cautionMontantFcfa: number;
             })[];
             totalMensuel: number;
         };

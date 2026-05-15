@@ -10,11 +10,13 @@ exports.ScoreModule = void 0;
 const common_1 = require("@nestjs/common");
 const score_controller_1 = require("./score.controller");
 const score_service_1 = require("./score.service");
+const prisma_module_1 = require("../../prisma/prisma.module");
 let ScoreModule = class ScoreModule {
 };
 exports.ScoreModule = ScoreModule;
 exports.ScoreModule = ScoreModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
         controllers: [score_controller_1.ScoreController],
         providers: [score_service_1.ScoreService],
         exports: [score_service_1.ScoreService],

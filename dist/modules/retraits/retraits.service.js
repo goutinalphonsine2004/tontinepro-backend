@@ -97,6 +97,18 @@ let RetraitsService = class RetraitsService {
         };
     }
     async confirmer(utilisateurId, dto) {
+        if (dto.idempotencyKey) {
+            const existant = await this.prisma.retrait.findUnique({
+                where: { idempotencyKey: dto.idempotencyKey },
+            });
+            if (existant) {
+                return {
+                    succes: true,
+                    message: 'Retrait déjà initié.',
+                    donnees: existant,
+                };
+            }
+        }
         const utilisateur = await this.prisma.utilisateur.findUnique({
             where: { id: utilisateurId },
         });
@@ -141,7 +153,8 @@ let RetraitsService = class RetraitsService {
             data: {
                 utilisateurId,
                 tontineId: tontine.id,
-                montant: dto.montant,
+                montantFcfa: dto.montant,
+                idempotencyKey: dto.idempotencyKey,
                 statut: needsAdmin ? client_1.StatutRetrait.EN_ATTENTE : client_1.StatutRetrait.VALIDE,
             },
         });
@@ -156,7 +169,7 @@ let RetraitsService = class RetraitsService {
             donnees: retrait,
         };
     }
-    async verifierRetraitPossible(utilisateurId, tontine, montant) {
+    async verifierRetraitPossible(utilisateurId, tontine, montantFcfa) {
         await this.verifierAucuneAlerteBloquante(tontine.id);
         if (tontine.proprietaireId !== utilisateurId) {
             throw new common_1.ForbiddenException({
@@ -164,9 +177,9 @@ let RetraitsService = class RetraitsService {
                 code: 'ACCES_REFUSE',
             });
         }
-        if (tontine.soldeActuel < montant) {
+        if (tontine.soldeActuelFcfa < montantFcfa) {
             throw new common_1.BadRequestException({
-                message: `Solde insuffisant. Disponible: ${tontine.soldeActuel} FCFA`,
+                message: `Solde insuffisant. Disponible: ${tontine.soldeActuelFcfa} FCFA`,
                 code: 'SOLDE_INSUFFISANT',
             });
         }
@@ -178,15 +191,15 @@ let RetraitsService = class RetraitsService {
                     code: 'TONTINE_BLOQUEE',
                 });
             }
-            if (!tontine.objectifMontant) {
+            if (!tontine.objectifMontantFcfa) {
                 throw new common_1.BadRequestException({
                     message: 'Objectif requis pour une tontine bloquée.',
                     code: 'OBJECTIF_REQUIS',
                 });
             }
-            if (tontine.soldeActuel < tontine.objectifMontant) {
+            if (tontine.soldeActuelFcfa < tontine.objectifMontantFcfa) {
                 throw new common_1.BadRequestException({
-                    message: `Objectif non atteint. Progression: ${tontine.soldeActuel}/${tontine.objectifMontant} FCFA`,
+                    message: `Objectif non atteint. Progression: ${tontine.soldeActuelFcfa}/${tontine.objectifMontantFcfa} FCFA`,
                     code: 'OBJECTIF_NON_ATTEINT',
                 });
             }
@@ -220,11 +233,11 @@ let RetraitsService = class RetraitsService {
             });
         }
     }
-    async executer(retraitId, telephone, tontineId, montant) {
-        const fraisRetrait = business_constants_1.BUSINESS.calculerFraisRetrait(montant);
-        const montantNet = montant - fraisRetrait;
+    async executer(retraitId, telephone, tontineId, montantFcfa) {
+        const fraisRetrait = business_constants_1.BUSINESS.calculerFraisRetrait(montantFcfa);
+        const montantNetFcfa = montantFcfa - fraisRetrait;
         const transfert = await this.kkiapay.initierTransfert({
-            montant: montantNet,
+            montant: montantNetFcfa,
             telephone,
             reference: `retrait_${retraitId}`,
             motif: 'Retrait tontine',
@@ -247,12 +260,12 @@ let RetraitsService = class RetraitsService {
             }),
             this.prisma.tontine.update({
                 where: { id: tontineId },
-                data: { soldeActuel: { decrement: montant } },
+                data: { soldeActuelFcfa: { decrement: montantFcfa } },
             }),
         ]);
-        await this.sms.envoyer(telephone, `TontineBénin: Retrait de ${montantNet} FCFA (après ${fraisRetrait}F de frais) exécuté avec succès. Réf: ${transfert.refKKiaPay}.`);
+        await this.sms.envoyer(telephone, `TontineBénin: Retrait de ${montantNetFcfa} FCFA (après ${fraisRetrait}F de frais) exécuté avec succès. Réf: ${transfert.refKKiaPay}.`);
         if (retrait?.utilisateur.collecteurId) {
-            await this.notifications.envoyerAEquipe(retrait.utilisateur.collecteurId, 'Retrait effectué', `Le retrait de ${montant} F pour votre client ${retrait.utilisateur.nom} sur ${retrait.tontine.nom} a été payé.`);
+            await this.notifications.envoyerAEquipe(retrait.utilisateur.collecteurId, 'Retrait effectué', `Le retrait de ${montantFcfa} F pour votre client ${retrait.utilisateur.nom} sur ${retrait.tontine.nom} a été payé.`);
         }
     }
     async mesRetraits(utilisateurId) {
@@ -267,16 +280,49 @@ let RetraitsService = class RetraitsService {
             donnees: retraits,
         };
     }
+    async statut(retraitId, utilisateurId) {
+        const retrait = await this.prisma.retrait.findUnique({
+            where: { id: retraitId },
+            select: {
+                id: true,
+                statut: true,
+                montantFcfa: true,
+                refKKiaPay: true,
+                motifRejet: true,
+                creeLe: true,
+                executeLe: true,
+                utilisateurId: true,
+            },
+        });
+        if (!retrait)
+            throw new common_1.NotFoundException('Retrait introuvable');
+        if (retrait.utilisateurId !== utilisateurId) {
+            throw new common_1.ForbiddenException('Accès refusé');
+        }
+        return {
+            succes: true,
+            message: 'Statut du retrait récupéré.',
+            donnees: {
+                ...retrait,
+                historique: [
+                    { statut: 'EN_ATTENTE', date: retrait.creeLe },
+                    ...(retrait.executeLe
+                        ? [{ statut: retrait.statut, date: retrait.executeLe }]
+                        : []),
+                ],
+            },
+        };
+    }
     async enAttente() {
         const retraits = await this.prisma.retrait.findMany({
             where: { statut: client_1.StatutRetrait.EN_ATTENTE },
             include: {
                 utilisateur: { select: { id: true, nom: true, telephone: true } },
-                tontine: { select: { id: true, nom: true, soldeActuel: true } },
+                tontine: { select: { id: true, nom: true, soldeActuelFcfa: true } },
             },
             orderBy: { creeLe: 'asc' },
         });
-        const total = retraits.reduce((s, r) => s + r.montant, 0);
+        const total = retraits.reduce((s, r) => s + r.montantFcfa, 0);
         return {
             succes: true,
             message: `${retraits.length} retrait(s) en attente. Total: ${total} FCFA.`,
@@ -299,7 +345,7 @@ let RetraitsService = class RetraitsService {
         const tontine = await this.prisma.tontine.findUnique({
             where: { id: retrait.tontineId },
         });
-        if (!tontine || tontine.soldeActuel < retrait.montant) {
+        if (!tontine || tontine.soldeActuelFcfa < retrait.montantFcfa) {
             throw new common_1.BadRequestException({
                 message: 'Solde tontine insuffisant',
                 code: 'SOLDE_INSUFFISANT',
@@ -309,10 +355,10 @@ let RetraitsService = class RetraitsService {
             where: { id: retraitId },
             data: { statut: client_1.StatutRetrait.VALIDE, validePar: adminId },
         });
-        await this.executer(retraitId, retrait.utilisateur.telephone, tontine.id, retrait.montant);
+        await this.executer(retraitId, retrait.utilisateur.telephone, tontine.id, retrait.montantFcfa);
         return {
             succes: true,
-            message: `Retrait de ${retrait.montant} FCFA validé et exécuté.`,
+            message: `Retrait de ${retrait.montantFcfa} FCFA validé et exécuté.`,
         };
     }
     async rejeter(retraitId, adminId, dto) {
@@ -337,7 +383,7 @@ let RetraitsService = class RetraitsService {
         });
         return { succes: true, message: 'Retrait rejeté.' };
     }
-    async creerOtpRetrait(utilisateurId, telephone, tontineId, montant) {
+    async creerOtpRetrait(utilisateurId, telephone, tontineId, montantFcfa) {
         await this.prisma.codeOTP.updateMany({
             where: {
                 utilisateurId,
@@ -354,14 +400,14 @@ let RetraitsService = class RetraitsService {
                 utilisateurId,
                 telephone,
                 code: codeHash,
-                type: this.typeOtpRetrait(tontineId, montant),
+                type: this.typeOtpRetrait(tontineId, montantFcfa),
                 expireLe,
             },
         });
         return { code, expireLe };
     }
-    typeOtpRetrait(tontineId, montant) {
-        return `${OTP_TYPE_RETRAIT}:${tontineId}:${montant}`;
+    typeOtpRetrait(tontineId, montantFcfa) {
+        return `${OTP_TYPE_RETRAIT}:${tontineId}:${montantFcfa}`;
     }
     async verifierCodeOtp(codeRecu, codeStocke) {
         if (codeStocke.startsWith('$2')) {

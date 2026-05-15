@@ -64,7 +64,7 @@ let CronService = CronService_1 = class CronService {
     async preleverUnCredit(credit) {
         try {
             const transfert = await this.kkiapay.initierPaiement({
-                montant: credit.paiementJournalier,
+                montant: credit.paiementJournalierFcfa,
                 telephone: credit.client.telephone,
                 reference: `remb_${credit.id}_${Date.now()}`,
                 description: 'Remboursement micro-crédit TontineBénin',
@@ -72,7 +72,7 @@ let CronService = CronService_1 = class CronService {
             await this.prisma.remboursementCredit.create({
                 data: {
                     microCreditId: credit.id,
-                    montant: credit.paiementJournalier,
+                    montantFcfa: credit.paiementJournalierFcfa,
                     statut: 'EN_ATTENTE',
                     refKKiaPay: transfert.refKKiaPay,
                 },
@@ -83,10 +83,10 @@ let CronService = CronService_1 = class CronService {
                     data: { statut: client_1.StatutCredit.ACTIF },
                 });
                 this.logger.log(`[CRON] Crédit réactivé (ACTIF) après paiement réussi: ${credit.id} — ${credit.client.nom}`);
-                await this.sms.envoyer(credit.client.telephone, `TontineBénin: ✅ Votre prélèvement de ${credit.paiementJournalier} FCFA a réussi. Votre micro-crédit est de nouveau actif.`);
+                await this.sms.envoyer(credit.client.telephone, `TontineBénin: ✅ Votre prélèvement de ${credit.paiementJournalierFcfa} FCFA a réussi. Votre micro-crédit est de nouveau actif.`);
             }
             else {
-                await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement de ${credit.paiementJournalier} FCFA initié pour votre micro-crédit. Confirmation en cours.`);
+                await this.sms.envoyer(credit.client.telephone, `TontineBénin: Prélèvement de ${credit.paiementJournalierFcfa} FCFA initié pour votre micro-crédit. Confirmation en cours.`);
             }
         }
         catch {
@@ -97,7 +97,7 @@ let CronService = CronService_1 = class CronService {
         await this.prisma.remboursementCredit.create({
             data: {
                 microCreditId: credit.id,
-                montant: credit.paiementJournalier,
+                montantFcfa: credit.paiementJournalierFcfa,
                 statut: 'ECHEC',
             },
         });
@@ -124,7 +124,7 @@ let CronService = CronService_1 = class CronService {
             await this.sms.envoyer(credit.client.telephone, `TontineBénin: 🚨 Votre micro-crédit est en défaut après ${echecsConsecutifs} échecs consécutifs. Contactez votre collecteur.`);
         }
         else {
-            await this.sms.envoyer(credit.client.telephone, `TontineBénin: ⚠️ Prélèvement échoué (${echecsConsecutifs}/3). Assurez-vous d'avoir ${credit.paiementJournalier} FCFA sur votre compte Mobile Money.`);
+            await this.sms.envoyer(credit.client.telephone, `TontineBénin: ⚠️ Prélèvement échoué (${echecsConsecutifs}/3). Assurez-vous d'avoir ${credit.paiementJournalierFcfa} FCFA sur votre compte Mobile Money.`);
         }
         if (credit.client.collecteurId) {
             const collecteur = await this.prisma.utilisateur.findUnique({
@@ -132,7 +132,7 @@ let CronService = CronService_1 = class CronService {
                 select: { telephone: true },
             });
             if (collecteur) {
-                await this.sms.envoyer(collecteur.telephone, `TontineBénin: Alerte — prélèvement échoué pour ${credit.client.nom} (${echecsConsecutifs}/3 échecs consécutifs). Crédit: ${credit.montantPrincipal} FCFA.`);
+                await this.sms.envoyer(collecteur.telephone, `TontineBénin: Alerte — prélèvement échoué pour ${credit.client.nom} (${echecsConsecutifs}/3 échecs consécutifs). Crédit: ${credit.montantPrincipalFcfa} FCFA.`);
             }
         }
     }
@@ -190,7 +190,7 @@ let CronService = CronService_1 = class CronService {
             if (defauts > 0)
                 scoreRemboursement *= 0.5;
         }
-        const bonusObjectif = utilisateur.tontines.some((t) => t.objectifMontant && t.soldeActuel >= t.objectifMontant)
+        const bonusObjectif = utilisateur.tontines.some((t) => t.objectifMontantFcfa && t.soldeActuelFcfa >= t.objectifMontantFcfa)
             ? 1
             : 0;
         const score = Math.round(tauxRegularite * 40 +
@@ -200,6 +200,14 @@ let CronService = CronService_1 = class CronService {
         const scoreFinal = Math.min(Math.max(score, 0), 100);
         const eligible = scoreFinal >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT;
         const eligiblePADME = scoreFinal >= business_constants_1.BUSINESS.SEUIL_SCORE_PADME;
+        const ancienScore = await this.prisma.scoreCredit.findUnique({
+            where: { utilisateurId: clientId },
+            select: {
+                score: true,
+                eligibleMicroCredit: true,
+                eligiblePADME: true,
+            },
+        });
         await this.prisma.scoreCredit.upsert({
             where: { utilisateurId: clientId },
             create: {
@@ -224,6 +232,7 @@ let CronService = CronService_1 = class CronService {
                 dernierCalcul: new Date(),
             },
         });
+        await this.notifierEvolutionScore(utilisateur, scoreFinal, eligible, eligiblePADME, ancienScore);
         const scoreCreditRecord = await this.prisma.scoreCredit.findUnique({
             where: { utilisateurId: clientId },
         });
@@ -243,6 +252,39 @@ let CronService = CronService_1 = class CronService {
         await this.badges.attribuerBadgesSiEligible(clientId);
         return scoreFinal;
     }
+    async notifierEvolutionScore(utilisateur, nouveauScore, eligibleCredit, eligiblePADME, ancienScore) {
+        const prenom = utilisateur.nom.split(' ')[0];
+        const tel = utilisateur.telephone;
+        const ancien = ancienScore?.score ?? 0;
+        const progression = nouveauScore - ancien;
+        if (eligibleCredit && !ancienScore?.eligibleMicroCredit) {
+            await this.sms.envoyer(tel, `TontineBénin: Félicitations ${prenom} ! 🎉 Votre score est ${nouveauScore}/100. Vous êtes maintenant ÉLIGIBLE au micro-crédit. Demandez jusqu'à ${nouveauScore >= 90 ? '100 000' : nouveauScore >= 80 ? '50 000' : nouveauScore >= 70 ? '25 000' : '10 000'} FCFA via votre collecteur.`);
+            return;
+        }
+        if (eligiblePADME && !ancienScore?.eligiblePADME) {
+            await this.sms.envoyer(tel, `TontineBénin: Bravo ${prenom} ! Score ${nouveauScore}/100. Votre dossier PADME a été généré automatiquement. Vous êtes éligible à un crédit professionnel. Contactez votre collecteur pour plus d'infos.`);
+            return;
+        }
+        if (progression >= 5) {
+            const prochainSeuil = eligibleCredit
+                ? eligiblePADME ? null : 70
+                : 60;
+            const messageProchain = prochainSeuil
+                ? ` Plus que ${prochainSeuil - nouveauScore} points pour ${prochainSeuil === 60 ? 'le micro-crédit' : 'le dossier PADME'}.`
+                : '';
+            await this.sms.envoyer(tel, `TontineBénin: Votre score a progressé de ${progression} points ! Nouveau score : ${nouveauScore}/100.${messageProchain} Continuez à cotiser régulièrement.`);
+            return;
+        }
+        if (progression <= -10) {
+            await this.sms.envoyer(tel, `TontineBénin: Attention ${prenom}, votre score a baissé de ${Math.abs(progression)} points. Score actuel : ${nouveauScore}/100. Cotisez régulièrement pour améliorer votre éligibilité au crédit.`);
+            return;
+        }
+        const estPremierDuMois = new Date().getDate() === 1;
+        if (estPremierDuMois && !eligibleCredit) {
+            const restant = 60 - nouveauScore;
+            await this.sms.envoyer(tel, `TontineBénin: Score du mois : ${nouveauScore}/100. Il vous manque ${restant} points pour accéder au micro-crédit. Cotisez chaque semaine pour progresser.`);
+        }
+    }
     async genererDossierPADME(clientId, score, tauxRegularite) {
         const dossierRecent = await this.prisma.dossierPADME.findFirst({
             where: {
@@ -259,7 +301,7 @@ let CronService = CronService_1 = class CronService {
         });
         if (dossierRecent)
             return;
-        const [scoreCredit, client, totalEpargne, creditsRembourses] = await Promise.all([
+        const [scoreCredit, client, totalEpargneFcfa, creditsRembourses] = await Promise.all([
             this.prisma.scoreCredit.findUnique({
                 where: { utilisateurId: clientId },
             }),
@@ -273,7 +315,7 @@ let CronService = CronService_1 = class CronService {
                     type: client_1.TypeTransaction.COTISATION,
                     statut: client_1.StatutTransaction.SUCCES,
                 },
-                _sum: { montantNet: true },
+                _sum: { montantNetFcfa: true },
             }),
             this.prisma.microCredit.count({
                 where: { clientId, statut: client_1.StatutCredit.TERMINE },
@@ -286,7 +328,7 @@ let CronService = CronService_1 = class CronService {
                 clientId,
                 scoreCreditId: scoreCredit.id,
                 scoreAuMoment: score,
-                totalEpargne: totalEpargne._sum.montantNet ?? 0,
+                totalEpargneFcfa: totalEpargneFcfa._sum.montantNetFcfa ?? 0,
                 tauxRegularite,
                 creditsRembourses,
                 statut: client_1.StatutDossierPADME.GENERE,
@@ -299,7 +341,7 @@ let CronService = CronService_1 = class CronService {
                 clientNom: client.nom,
                 clientTelephone: client.telephone,
                 score,
-                totalEpargne: totalEpargne._sum.montantNet ?? 0,
+                totalEpargneFcfa: totalEpargneFcfa._sum.montantNetFcfa ?? 0,
                 tauxRegularite,
                 creditsRembourses,
                 genereLe: dossier.creeLe,
@@ -399,13 +441,13 @@ let CronService = CronService_1 = class CronService {
                 telephone: true,
                 nom: true,
                 tontines: {
-                    select: { soldeActuel: true },
+                    select: { soldeActuelFcfa: true },
                 },
             },
         });
         let alertesEnvoyees = 0;
         for (const client of clients) {
-            const soldeTotal = client.tontines.reduce((acc, t) => acc + (t.soldeActuel || 0), 0);
+            const soldeTotal = client.tontines.reduce((acc, t) => acc + (t.soldeActuelFcfa || 0), 0);
             if (soldeTotal > 0 && soldeTotal < seuilAlerte) {
                 await this.sms.envoyer(client.telephone, `TontineBénin: ⚠️ ${client.nom}, votre solde actuel est faible (${soldeTotal} FCFA). Cotisez pour rester régulier.`);
                 this.logger.log(`[Alerte solde] ${client.nom} — solde: ${soldeTotal} FCFA`);
@@ -446,7 +488,7 @@ let CronService = CronService_1 = class CronService {
                 continue;
             const msRestants = tontine.dateProchaineCotisation.getTime() - maintenant.getTime();
             const joursRestants = Math.ceil(msRestants / (24 * 60 * 60 * 1000));
-            const suffixeFrequence = this.libelleMontantFrequence(tontine.frequence, tontine.montantJournalier);
+            const suffixeFrequence = this.libelleMontantFrequence(tontine.frequence, tontine.montantJournalierFcfa);
             let message;
             if (joursRestants <= 0) {
                 message = `TontineBénin: Ton Gando "${tontine.nom}" attend ta cotisation ${suffixeFrequence} AUJOURD'HUI.`;
@@ -492,7 +534,7 @@ let CronService = CronService_1 = class CronService {
                                 id: true,
                                 telephone: true,
                                 nom: true,
-                                soldeCommission: true,
+                                soldeCommissionFcfa: true,
                             },
                         },
                     },
@@ -526,15 +568,15 @@ let CronService = CronService_1 = class CronService {
                     continue;
                 }
                 if (!membresAyantCotise.has(membre.utilisateurId) &&
-                    tontine.montantJournalier > 0) {
-                    let cautionUtilisee = 0;
-                    if (membre.montantCaution > 0) {
-                        cautionUtilisee = Math.min(membre.montantCaution, tontine.montantJournalier);
+                    tontine.montantJournalierFcfa > 0) {
+                    let cautionUtiliseeFcfa = 0;
+                    if (membre.montantCautionFcfa > 0) {
+                        cautionUtiliseeFcfa = Math.min(membre.montantCautionFcfa, tontine.montantJournalierFcfa);
                         await this.prisma.membreTontineGroupe.update({
                             where: { id: membre.id },
-                            data: { montantCaution: { decrement: cautionUtilisee } },
+                            data: { montantCautionFcfa: { decrement: cautionUtiliseeFcfa } },
                         });
-                        this.logger.warn(`[Défaillance] Caution prélevée pour ${membre.utilisateur.nom} dans ${tontine.nom}: ${cautionUtilisee} FCFA`);
+                        this.logger.warn(`[Défaillance] Caution prélevée pour ${membre.utilisateur.nom} dans ${tontine.nom}: ${cautionUtiliseeFcfa} FCFA`);
                     }
                     const nombreDefaillances = membre.nombreDefaillances + 1;
                     const nouveauStatut = nombreDefaillances >= 2
@@ -545,8 +587,8 @@ let CronService = CronService_1 = class CronService {
                             data: {
                                 tontineId: tontine.id,
                                 membreId: membre.id,
-                                montantManquant: Math.max(0, tontine.montantJournalier - cautionUtilisee),
-                                cautionUtilisee,
+                                montantManquantFcfa: Math.max(0, tontine.montantJournalierFcfa - cautionUtiliseeFcfa),
+                                cautionUtiliseeFcfa,
                                 statut: nouveauStatut === client_1.StatutMembreGroupe.EXCLU
                                     ? 'EXCLU'
                                     : 'EN_COURS',
@@ -595,13 +637,13 @@ let CronService = CronService_1 = class CronService {
         for (const fact of facturations) {
             const nbClients = fact.agent._count.clients;
             const fraisGestion = nbClients * business_constants_1.BUSINESS.FRAIS_PAR_CLIENT_MENSUEL;
-            const totalAFacturer = fact.fraisMensuels + fraisGestion;
+            const totalAFacturer = fact.fraisMensuelsFcfa + fraisGestion;
             try {
                 await this.kkiapay.initierPaiement({
                     montant: totalAFacturer,
                     telephone: fact.agent.telephone,
                     reference: `abonnement_${fact.agentId}_${new Date().toISOString().slice(0, 7)}`,
-                    description: `Abonnement TontinePro ${fact.plan} (+ ${nbClients} clients) — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
+                    description: `Abonnement TontineBénin ${fact.plan} (+ ${nbClients} clients) — ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`,
                 });
                 await this.prisma.facturationAgent.update({
                     where: { id: fact.id },
@@ -611,12 +653,12 @@ let CronService = CronService_1 = class CronService {
                         totalClients: nbClients,
                     },
                 });
-                await this.sms.envoyer(fact.agent.telephone, `TontinePro: ✅ Abonnement ${fact.plan} prélevé: ${totalAFacturer} FCFA (${fact.fraisMensuels}F base + ${fraisGestion}F pour ${nbClients} clients). Merci !`);
+                await this.sms.envoyer(fact.agent.telephone, `TontineBénin: ✅ Abonnement ${fact.plan} prélevé: ${totalAFacturer} FCFA (${fact.fraisMensuelsFcfa}F base + ${fraisGestion}F pour ${nbClients} clients). Merci !`);
                 succes++;
             }
             catch (err) {
                 this.logger.error(`Erreur facturation agent ${fact.agentId}: ${err.message}`);
-                await this.sms.envoyer(fact.agent.telephone, `TontinePro: ⚠️ Échec prélèvement abonnement ${fact.plan} (${totalAFacturer} FCFA). Vérifiez votre solde Mobile Money pour éviter la suspension.`);
+                await this.sms.envoyer(fact.agent.telephone, `TontineBénin: ⚠️ Échec prélèvement abonnement ${fact.plan} (${totalAFacturer} FCFA). Vérifiez votre solde Mobile Money pour éviter la suspension.`);
                 echecs++;
             }
         }
@@ -645,7 +687,7 @@ let CronService = CronService_1 = class CronService {
     async verifierCoherenceComptable() {
         this.logger.log('[CRON 0h30] Vérification cohérence comptable...');
         const tontines = await this.prisma.tontine.findMany({
-            select: { id: true, nom: true, soldeActuel: true },
+            select: { id: true, nom: true, soldeActuelFcfa: true },
         });
         let anomalies = 0;
         for (const tontine of tontines) {
@@ -655,28 +697,28 @@ let CronService = CronService_1 = class CronService {
                     type: client_1.TypeTransaction.COTISATION,
                     statut: client_1.StatutTransaction.SUCCES,
                 },
-                _sum: { montantNet: true },
+                _sum: { montantNetFcfa: true },
             });
             const totalRetraits = await this.prisma.retrait.aggregate({
                 where: {
                     tontineId: tontine.id,
                     statut: 'EXECUTE',
                 },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
             });
             const totalDistributions = await this.prisma.transaction.aggregate({
                 where: {
                     tontineId: tontine.id,
                     type: client_1.TypeTransaction.DISTRIBUTION_GROUPE,
                 },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
             });
-            const soldeCalcule = (totalTransactions._sum.montantNet ?? 0) -
-                (totalRetraits._sum.montant ?? 0) -
-                (totalDistributions._sum.montant ?? 0);
-            const ecart = Math.abs(soldeCalcule - tontine.soldeActuel);
+            const soldeCalcule = (totalTransactions._sum.montantNetFcfa ?? 0) -
+                (totalRetraits._sum.montantFcfa ?? 0) -
+                (totalDistributions._sum.montantFcfa ?? 0);
+            const ecart = Math.abs(soldeCalcule - tontine.soldeActuelFcfa);
             if (ecart > 1) {
-                this.logger.warn(`[Cohérence] Tontine ${tontine.nom}: solde BD=${tontine.soldeActuel} FCFA, calculé=${soldeCalcule} FCFA, écart=${ecart} FCFA`);
+                this.logger.warn(`[Cohérence] Tontine ${tontine.nom}: solde BD=${tontine.soldeActuelFcfa} FCFA, calculé=${soldeCalcule} FCFA, écart=${ecart} FCFA`);
                 await this.creerOuMettreAJourAlerteCoherence(tontine, soldeCalcule, ecart);
                 anomalies++;
             }
@@ -731,7 +773,7 @@ let CronService = CronService_1 = class CronService {
     }
     async creerOuMettreAJourAlerteCoherence(tontine, soldeCalcule, ecart) {
         const metadata = JSON.stringify({
-            soldeBase: tontine.soldeActuel,
+            soldeBase: tontine.soldeActuelFcfa,
             soldeCalcule,
             ecart,
             detectePar: 'cron.coherence-comptable',
@@ -750,7 +792,7 @@ let CronService = CronService_1 = class CronService {
                 data: {
                     severite: 'CRITIQUE',
                     titre: `Solde incohérent: ${tontine.nom}`,
-                    message: `Solde BD ${tontine.soldeActuel} FCFA, solde calculé ${soldeCalcule} FCFA, écart ${ecart} FCFA.`,
+                    message: `Solde BD ${tontine.soldeActuelFcfa} FCFA, solde calculé ${soldeCalcule} FCFA, écart ${ecart} FCFA.`,
                     metadata,
                 },
             });
@@ -762,7 +804,7 @@ let CronService = CronService_1 = class CronService {
                 severite: 'CRITIQUE',
                 statut: 'OUVERTE',
                 titre: `Solde incohérent: ${tontine.nom}`,
-                message: `Solde BD ${tontine.soldeActuel} FCFA, solde calculé ${soldeCalcule} FCFA, écart ${ecart} FCFA.`,
+                message: `Solde BD ${tontine.soldeActuelFcfa} FCFA, solde calculé ${soldeCalcule} FCFA, écart ${ecart} FCFA.`,
                 resourceType: 'TONTINE',
                 resourceId: tontine.id,
                 metadata,
@@ -859,7 +901,7 @@ let CronService = CronService_1 = class CronService {
                         collecteur: { superviseurId: sup.id },
                     },
                 },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
                 _count: { id: true },
             });
             const nouveauxClients = await this.prisma.utilisateur.count({
@@ -869,7 +911,7 @@ let CronService = CronService_1 = class CronService {
                     collecteur: { superviseurId: sup.id },
                 },
             });
-            const total = stats._sum.montant ?? 0;
+            const total = stats._sum.montantFcfa ?? 0;
             if (total > 0 || nouveauxClients > 0) {
                 await this.notifications.envoyerAUtilisateur(sup.id, 'Rapport Journalier Zone', `Hier, votre zone a collecté ${total.toLocaleString('fr-FR')} F (${stats._count.id} dépôts). Nouveaux clients : ${nouveauxClients}.`, 'PUSH');
             }
@@ -879,8 +921,8 @@ let CronService = CronService_1 = class CronService {
         await this.rapportJournalierSuperviseurs();
         return { succes: true, message: 'Rapport superviseurs déclenché.' };
     }
-    libelleMontantFrequence(frequence, montant) {
-        const fmt = `${montant.toLocaleString('fr-FR')} F`;
+    libelleMontantFrequence(frequence, montantFcfa) {
+        const fmt = `${montantFcfa.toLocaleString('fr-FR')} F`;
         switch (frequence) {
             case client_1.FrequenceTontine.JOURNALIER:
                 return `journalière de ${fmt}`;

@@ -62,16 +62,16 @@ export const BUSINESS = {
     return montant * this.TAUX_COMMISSION_RETRAIT;
   },
 
-  calculerInteretMicroCredit(montantPrincipal: number): number {
-    return montantPrincipal * this.TAUX_INTERET_MICRO_CREDIT;
+  calculerInteretMicroCredit(montantPrincipalFcfa: number): number {
+    return montantPrincipalFcfa * this.TAUX_INTERET_MICRO_CREDIT;
   },
 
-  calculerMontantTotal(montantPrincipal: number): number {
-    return montantPrincipal + this.calculerInteretMicroCredit(montantPrincipal);
+  calculerMontantTotal(montantPrincipalFcfa: number): number {
+    return montantPrincipalFcfa + this.calculerInteretMicroCredit(montantPrincipalFcfa);
   },
 
-  calculerPaiementJournalier(montantTotal: number, jours: number): number {
-    return Math.ceil(montantTotal / jours);
+  calculerPaiementJournalier(montantTotalFcfa: number, jours: number): number {
+    return Math.ceil(montantTotalFcfa / jours);
   },
 
   getPlafondMicroCredit(score: number): number {

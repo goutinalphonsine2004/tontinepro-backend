@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommissionsController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
 const utilisateur_courant_decorator_1 = require("../../common/decorators/utilisateur-courant.decorator");
 const commissions_service_1 = require("./commissions.service");
@@ -27,10 +28,10 @@ let CommissionsController = class CommissionsController {
         return this.service.monSolde(u.id, u.role);
     }
     historique(u) {
-        return this.service.historique(u.id);
+        return this.service.historique(u.id, u.role);
     }
     retirer(u, dto) {
-        return this.service.retirer(u.id, dto);
+        return this.service.retirer(u.id, u.role, dto);
     }
 };
 exports.CommissionsController = CommissionsController;
@@ -50,6 +51,7 @@ __decorate([
 ], CommissionsController.prototype, "historique", null);
 __decorate([
     (0, common_1.Post)('retirer'),
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 3600000 } }),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

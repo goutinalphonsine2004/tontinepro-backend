@@ -38,8 +38,8 @@ export class FacturationService {
         data: {
           agentId: utilisateurId,
           plan: 'STANDARD',
-          fraisMensuels: BUSINESS.ABONNEMENT_STANDARD,
-          fraisParClient: 10,
+          fraisMensuelsFcfa: BUSINESS.ABONNEMENT_STANDARD,
+          fraisParClientFcfa: 10,
           prochainPaiement,
           actif: true,
         },
@@ -60,7 +60,7 @@ export class FacturationService {
 
   // ─── POST /facturation/payer-abonnement ───────────
   async payerAbonnement(utilisateurId: string, dto: PayerAbonnementDto) {
-    const montant = MONTANTS[dto.plan];
+    const montantFcfa = MONTANTS[dto.plan];
     const prochainPaiement = new Date();
     prochainPaiement.setMonth(prochainPaiement.getMonth() + 1);
 
@@ -69,15 +69,15 @@ export class FacturationService {
       create: {
         agentId: utilisateurId,
         plan: dto.plan,
-        fraisMensuels: montant,
-        fraisParClient: 10,
+        fraisMensuelsFcfa: montantFcfa,
+        fraisParClientFcfa: 10,
         dernierPaiement: new Date(),
         prochainPaiement,
         actif: true,
       },
       update: {
         plan: dto.plan,
-        fraisMensuels: montant,
+        fraisMensuelsFcfa: montantFcfa,
         dernierPaiement: new Date(),
         prochainPaiement,
         actif: true,
@@ -86,7 +86,7 @@ export class FacturationService {
 
     return {
       succes: true,
-      message: `Abonnement ${dto.plan} payé — ${montant} FCFA. Prochain paiement: ${prochainPaiement.toLocaleDateString('fr-FR')}.`,
+      message: `Abonnement ${dto.plan} payé — ${montantFcfa} FCFA. Prochain paiement: ${prochainPaiement.toLocaleDateString('fr-FR')}.`,
       donnees: facturation,
     };
   }
@@ -114,7 +114,7 @@ export class FacturationService {
       where: { agentId: utilisateurId },
       data: {
         plan: 'PRO',
-        fraisMensuels: BUSINESS.ABONNEMENT_PRO,
+        fraisMensuelsFcfa: BUSINESS.ABONNEMENT_PRO,
         dernierPaiement: new Date(),
         prochainPaiement,
       },
@@ -135,7 +135,7 @@ export class FacturationService {
       },
       orderBy: { prochainPaiement: 'asc' },
     });
-    const totalMensuel = facturations.reduce((s, f) => s + f.fraisMensuels, 0);
+    const totalMensuel = facturations.reduce((s, f) => s + f.fraisMensuelsFcfa, 0);
     return {
       succes: true,
       message: `${facturations.length} facturation(s). Total mensuel: ${totalMensuel} FCFA.`,

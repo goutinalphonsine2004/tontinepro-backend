@@ -16,12 +16,12 @@ export declare class FacturationController {
             actif: boolean;
             agentId: string;
             plan: string;
-            fraisMensuels: number;
-            fraisParClient: number;
+            fraisMensuelsFcfa: number;
+            fraisParClientFcfa: number;
             totalClients: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
-            cautionMontant: number;
+            cautionMontantFcfa: number;
         };
     }>;
     payerAbonnement(u: {
@@ -35,12 +35,12 @@ export declare class FacturationController {
             actif: boolean;
             agentId: string;
             plan: string;
-            fraisMensuels: number;
-            fraisParClient: number;
+            fraisMensuelsFcfa: number;
+            fraisParClientFcfa: number;
             totalClients: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
-            cautionMontant: number;
+            cautionMontantFcfa: number;
         };
     }>;
     upgrader(u: {
@@ -54,12 +54,12 @@ export declare class FacturationController {
             actif: boolean;
             agentId: string;
             plan: string;
-            fraisMensuels: number;
-            fraisParClient: number;
+            fraisMensuelsFcfa: number;
+            fraisParClientFcfa: number;
             totalClients: number;
             dernierPaiement: Date;
             prochainPaiement: Date;
-            cautionMontant: number;
+            cautionMontantFcfa: number;
         };
     }>;
     tous(): Promise<{
@@ -79,12 +79,12 @@ export declare class FacturationController {
                 actif: boolean;
                 agentId: string;
                 plan: string;
-                fraisMensuels: number;
-                fraisParClient: number;
+                fraisMensuelsFcfa: number;
+                fraisParClientFcfa: number;
                 totalClients: number;
                 dernierPaiement: Date;
                 prochainPaiement: Date;
-                cautionMontant: number;
+                cautionMontantFcfa: number;
             })[];
             totalMensuel: number;
         };

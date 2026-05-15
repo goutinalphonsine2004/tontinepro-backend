@@ -87,9 +87,9 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                 kycVerifie: true,
                 tontines: {
                     select: {
-                        soldeActuel: true,
-                        objectifMontant: true,
-                        montantJournalier: true,
+                        soldeActuelFcfa: true,
+                        objectifMontantFcfa: true,
+                        montantJournalierFcfa: true,
                     },
                     take: 1,
                 },
@@ -113,8 +113,8 @@ let CollecteurTerrainService = class CollecteurTerrainService {
             nom: c.nom,
             telephone: c.telephone,
             kycVerifie: c.kycVerifie,
-            solde: c.tontines[0]?.soldeActuel ?? 0,
-            montantJournalier: c.tontines[0]?.montantJournalier ?? 0,
+            solde: c.tontines[0]?.soldeActuelFcfa ?? 0,
+            montantJournalierFcfa: c.tontines[0]?.montantJournalierFcfa ?? 0,
             score: c.scoreCredit?.score ?? 0,
             dejaVisite: clientsDejaVisites.has(c.id),
         }));
@@ -198,7 +198,7 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                     nom: true,
                     telephone: true,
                     role: true,
-                    soldeCommission: true,
+                    soldeCommissionFcfa: true,
                 },
             }),
             this.prisma.utilisateur.findMany({
@@ -211,13 +211,13 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                             statut: 'SUCCES',
                             creeLe: { gte: debutMois },
                         },
-                        select: { montant: true },
+                        select: { montantFcfa: true },
                     },
                 },
             }),
             this.prisma.commission.aggregate({
                 where: { agentId, creeLe: { gte: debutMois } },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
             }),
             this.prisma.facturationAgent.findFirst({
                 where: { agentId },
@@ -227,9 +227,9 @@ let CollecteurTerrainService = class CollecteurTerrainService {
             this.prisma.microCredit.findMany({
                 where: { clientId: { in: [] } },
                 select: {
-                    montantPrincipal: true,
-                    montantTotal: true,
-                    montantRestant: true,
+                    montantPrincipalFcfa: true,
+                    montantTotalFcfa: true,
+                    montantRestantFcfa: true,
                 },
                 take: 0,
             }),
@@ -238,7 +238,7 @@ let CollecteurTerrainService = class CollecteurTerrainService {
             throw new common_1.NotFoundException('Agent introuvable');
         const commissionsParMois = await this.prisma.commission.findMany({
             where: { agentId, creeLe: { gte: sixMoisDate } },
-            select: { montant: true, creeLe: true },
+            select: { montantFcfa: true, creeLe: true },
         });
         const graphique = {};
         for (let i = 5; i >= 0; i--) {
@@ -249,14 +249,14 @@ let CollecteurTerrainService = class CollecteurTerrainService {
         for (const c of commissionsParMois) {
             const key = `${c.creeLe.getFullYear()}-${String(c.creeLe.getMonth() + 1).padStart(2, '0')}`;
             if (graphique[key] !== undefined)
-                graphique[key] += c.montant;
+                graphique[key] += c.montantFcfa;
         }
         const clientsActifs = clients.length;
         const nbClientsCotiseCeMois = clients.filter((c) => c.transactions.length > 0).length;
         const tauxCollecteMois = clientsActifs > 0
             ? Math.round((nbClientsCotiseCeMois / clientsActifs) * 100)
             : 0;
-        const interetsMicroCredits = creditsClients.reduce((s, c) => s + (c.montantTotal - c.montantPrincipal) * 0.1, 0);
+        const interetsMicroCredits = creditsClients.reduce((s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa) * 0.1, 0);
         return {
             succes: true,
             message: 'Tableau de bord collecteur indépendant.',
@@ -265,14 +265,14 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                     id: agent.id,
                     nom: agent.nom,
                     role: agent.role,
-                    soldeCommission: agent.soldeCommission,
+                    soldeCommissionFcfa: agent.soldeCommissionFcfa,
                 },
                 clientsActifs,
-                commissionsCeMois: commissionsMois._sum.montant ?? 0,
+                commissionsCeMois: commissionsMois._sum.montantFcfa ?? 0,
                 tauxCollecteMois,
-                graphiqueRevenus: Object.entries(graphique).map(([mois, montant]) => ({
+                graphiqueRevenus: Object.entries(graphique).map(([mois, montantFcfa]) => ({
                     mois,
-                    montant: Math.round(montant),
+                    montantFcfa: Math.round(montantFcfa),
                 })),
                 revenutsMicroCredits: Math.round(interetsMicroCredits),
                 abonnement: abonnement
@@ -339,7 +339,7 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                     select: { nom: true },
                 },
                 kycVerifie: true,
-                soldeCommission: true,
+                soldeCommissionFcfa: true,
             },
         });
         return {

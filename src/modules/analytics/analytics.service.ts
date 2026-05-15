@@ -33,7 +33,7 @@ export class AnalyticsService {
           type: TypeTransaction.COTISATION,
           statut: StatutTransaction.SUCCES,
         },
-        _sum: { montant: true },
+        _sum: { montantFcfa: true },
       }),
       this.prisma.utilisateur.count({
         where: { role: Role.CLIENT, statut: StatutCompte.ACTIF },
@@ -44,13 +44,13 @@ export class AnalyticsService {
           statut: StatutCompte.ACTIF,
         },
       }),
-      this.prisma.commission.aggregate({ _sum: { montant: true } }),
+      this.prisma.commission.aggregate({ _sum: { montantFcfa: true } }),
       this.prisma.microCredit.findMany({
-        select: { montantTotal: true, montantPrincipal: true },
+        select: { montantTotalFcfa: true, montantPrincipalFcfa: true },
       }),
       this.prisma.facturationAgent.aggregate({
         where: { actif: true },
-        _sum: { fraisMensuels: true },
+        _sum: { fraisMensuelsFcfa: true },
       }),
       this.prisma.microCredit.count({
         where: { statut: StatutCredit.TERMINE },
@@ -63,24 +63,24 @@ export class AnalyticsService {
     ]);
 
     const revenusMicroCredits = microCredits.reduce(
-      (sum, c) => sum + (c.montantTotal - c.montantPrincipal),
+      (sum, c) => sum + (c.montantTotalFcfa - c.montantPrincipalFcfa),
       0,
     );
     const revenusTotal =
-      (revenusCommissions._sum.montant ?? 0) +
+      (revenusCommissions._sum.montantFcfa ?? 0) +
       revenusMicroCredits +
-      (abonnements._sum.fraisMensuels ?? 0);
+      (abonnements._sum.fraisMensuelsFcfa ?? 0);
 
     return {
       succes: true,
       message: 'KPIs TontineBénin.',
       donnees: {
-        volumeTotal: volumeTotal._sum.montant ?? 0,
+        volumeTotal: volumeTotal._sum.montantFcfa ?? 0,
         totalClients,
         totalCollecteurs,
-        revenusCommissions: revenusCommissions._sum.montant ?? 0,
+        revenusCommissions: revenusCommissions._sum.montantFcfa ?? 0,
         revenusMicroCredits,
-        revenusAbonnements: abonnements._sum.fraisMensuels ?? 0,
+        revenusAbonnements: abonnements._sum.fraisMensuelsFcfa ?? 0,
         revenusTotal,
         tauxRemboursement:
           creditsTotal > 0
@@ -142,12 +142,12 @@ export class AnalyticsService {
                 type: TypeTransaction.COTISATION,
                 statut: StatutTransaction.SUCCES,
               },
-              select: { montant: true },
+              select: { montantFcfa: true },
             },
             scoreCredit: { select: { tauxRegularite: true } },
           },
         },
-        commissions: { select: { montant: true } },
+        commissions: { select: { montantFcfa: true } },
       },
     });
 
@@ -155,9 +155,9 @@ export class AnalyticsService {
       .map((c) => {
         const totalCotisations = c.clients
           .flatMap((cl) => cl.transactions)
-          .reduce((s, t) => s + t.montant, 0);
+          .reduce((s, t) => s + t.montantFcfa, 0);
         const totalCommissions = c.commissions.reduce(
-          (s, com) => s + com.montant,
+          (s, com) => s + com.montantFcfa,
           0,
         );
         const tauxMoyenClients =
@@ -256,7 +256,7 @@ export class AnalyticsService {
 
     const commissions = await this.prisma.commission.findMany({
       where: { creeLe: { gte: sixMoisDate } },
-      select: { montant: true, type: true, creeLe: true },
+      select: { montantFcfa: true, type: true, creeLe: true },
     });
 
     const mois: Record<
@@ -273,9 +273,9 @@ export class AnalyticsService {
     for (const c of commissions) {
       const key = `${c.creeLe.getFullYear()}-${String(c.creeLe.getMonth() + 1).padStart(2, '0')}`;
       if (!mois[key]) continue;
-      if (c.type === 'COTISATION') mois[key].commissions += c.montant;
-      else if (c.type === 'PADME') mois[key].padme += c.montant;
-      else if (c.type === 'ABONNEMENT') mois[key].abonnements += c.montant;
+      if (c.type === 'COTISATION') mois[key].commissions += c.montantFcfa;
+      else if (c.type === 'PADME') mois[key].padme += c.montantFcfa;
+      else if (c.type === 'ABONNEMENT') mois[key].abonnements += c.montantFcfa;
     }
 
     const donnees = Object.entries(mois).map(([m, v]) => ({
@@ -359,7 +359,7 @@ export class AnalyticsService {
         }),
         this.prisma.commission.aggregate({
           where: { type: 'PADME' },
-          _sum: { montant: true },
+          _sum: { montantFcfa: true },
           _count: true,
         }),
         this.prisma.dossierPADME.count({
@@ -394,7 +394,7 @@ export class AnalyticsService {
         tauxAcceptation:
           soumis > 0 ? Math.round((dossiersAcceptes / soumis) * 100) : 0,
         commissions: {
-          total: commissionsPADME._sum.montant ?? 0,
+          total: commissionsPADME._sum.montantFcfa ?? 0,
           nombre: commissionsPADME._count,
         },
         derniersDossiers,
@@ -413,10 +413,10 @@ export class AnalyticsService {
         scoreCredit: {
           select: { score: true, tauxRegularite: true, totalMois: true },
         },
-        tontines: { select: { soldeActuel: true } },
+        tontines: { select: { soldeActuelFcfa: true } },
         transactions: {
           where: { type: 'COTISATION' as any, statut: 'SUCCES' as any },
-          select: { montantNet: true },
+          select: { montantNetFcfa: true },
         },
         badges: {
           orderBy: { obtenuLe: 'desc' },
@@ -429,9 +429,9 @@ export class AnalyticsService {
     // Calculer le score de classement (50% épargne, 30% score crédit, 20% régularité)
     const classes = clients
       .map((c) => {
-        const solde = c.tontines.reduce((s, t) => s + t.soldeActuel, 0);
+        const solde = c.tontines.reduce((s, t) => s + t.soldeActuelFcfa, 0);
         const totalCotise = c.transactions.reduce(
-          (s, tx) => s + tx.montantNet,
+          (s, tx) => s + tx.montantNetFcfa,
           0,
         );
         const score = c.scoreCredit?.score ?? 0;

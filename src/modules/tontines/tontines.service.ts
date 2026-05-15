@@ -67,7 +67,7 @@ export class TontinesService {
       actualOwnerId = dto.clientId;
     }
 
-    // PROJET : dateFin + objectifMontant obligatoires
+    // PROJET : dateFin + objectifMontantFcfa obligatoires
     if (dto.type === TypeTontine.PROJET) {
       if (!dto.dateFin) {
         throw new BadRequestException({
@@ -75,9 +75,9 @@ export class TontinesService {
           code: 'DATE_FIN_REQUISE',
         });
       }
-      if (!dto.objectifMontant) {
+      if (!dto.objectifMontantFcfa) {
         throw new BadRequestException({
-          message: 'Une tontine de type PROJET doit avoir un objectifMontant.',
+          message: 'Une tontine de type PROJET doit avoir un objectifMontantFcfa.',
           code: 'OBJECTIF_REQUIS',
         });
       }
@@ -102,8 +102,8 @@ export class TontinesService {
     this.verifierConfigurationPolitiqueRetrait({
       politique: dto.politique ?? PolitiqueRetrait.FLEXIBLE,
       dateDeverrouillage: dto.dateDeverrouillage,
-      objectifMontant: dto.objectifMontant,
-      montantJournalier: dto.montantJournalier ?? 500,
+      objectifMontantFcfa: dto.objectifMontantFcfa,
+      montantJournalierFcfa: dto.montantJournalierFcfa ?? 500,
       frequence: dto.frequence ?? FrequenceTontine.MENSUEL,
     });
 
@@ -129,8 +129,8 @@ export class TontinesService {
         frequence: dto.frequence ?? FrequenceTontine.MENSUEL,
         jourFixe: dto.jourFixe,
         politique: dto.politique ?? PolitiqueRetrait.FLEXIBLE,
-        objectifMontant: dto.objectifMontant,
-        montantJournalier: dto.montantJournalier ?? 500,
+        objectifMontantFcfa: dto.objectifMontantFcfa,
+        montantJournalierFcfa: dto.montantJournalierFcfa ?? 500,
         dateDeverrouillage: dto.dateDeverrouillage,
         dateFin: dto.dateFin,
         dateProchaineCotisation,
@@ -138,25 +138,25 @@ export class TontinesService {
         qrInvitation,
         nbMembresMax:
           dto.type === TypeTontine.GROUPE ? dto.nbMembresMax : undefined,
-        montantParMembre:
+        montantParMembreFcfa:
           dto.type === TypeTontine.GROUPE
-            ? (dto.montantParMembre ?? dto.montantJournalier ?? 500)
+            ? (dto.montantParMembreFcfa ?? dto.montantJournalierFcfa ?? 500)
             : undefined,
         cautionObligatoire:
           dto.type === TypeTontine.GROUPE
             ? (dto.cautionObligatoire ?? false)
             : false,
-        montantCautionObligatoire:
+        montantCautionObligatoireFcfa:
           dto.type === TypeTontine.GROUPE
-            ? (dto.montantCautionObligatoire ?? 0)
+            ? (dto.montantCautionFcfaObligatoireFcfa ?? 0)
             : 0,
         penaliteRetardActive:
           dto.type === TypeTontine.GROUPE
             ? (dto.penaliteRetardActive ?? false)
             : false,
-        montantPenaliteRetard:
+        montantPenaliteRetardFcfa:
           dto.type === TypeTontine.GROUPE
-            ? (dto.montantPenaliteRetard ?? 0)
+            ? (dto.montantPenaliteRetardFcfa ?? 0)
             : 0,
         modeTirage:
           dto.type === TypeTontine.GROUPE
@@ -280,9 +280,9 @@ export class TontinesService {
       }
     }
 
-    if (t.soldeActuel > 0) {
+    if (t.soldeActuelFcfa > 0) {
       throw new BadRequestException({
-        message: `Solde restant de ${t.soldeActuel} FCFA. Effectuez d'abord un retrait total.`,
+        message: `Solde restant de ${t.soldeActuelFcfa} FCFA. Effectuez d'abord un retrait total.`,
         code: 'SOLDE_NON_NUL',
       });
     }
@@ -364,7 +364,7 @@ export class TontinesService {
         membre: membre.map((m) => ({
           ...m.tontine,
           monStatut: m.statut,
-          caution: m.montantCaution,
+          caution: m.montantCautionFcfa,
         })),
       },
     };
@@ -406,13 +406,13 @@ export class TontinesService {
       ...dto,
       type: t.type,
       nbMembresMax: dto.nbMembresMax ?? t.nbMembresMax ?? undefined,
-      montantParMembre: dto.montantParMembre ?? t.montantParMembre ?? undefined,
+      montantParMembreFcfa: dto.montantParMembreFcfa ?? t.montantParMembreFcfa ?? undefined,
       cautionObligatoire: dto.cautionObligatoire ?? t.cautionObligatoire,
-      montantCautionObligatoire:
-        dto.montantCautionObligatoire ?? t.montantCautionObligatoire,
+      montantCautionObligatoireFcfa:
+        dto.montantCautionFcfaObligatoireFcfa ?? t.montantCautionObligatoireFcfa,
       penaliteRetardActive: dto.penaliteRetardActive ?? t.penaliteRetardActive,
-      montantPenaliteRetard:
-        dto.montantPenaliteRetard ?? t.montantPenaliteRetard,
+      montantPenaliteRetardFcfa:
+        dto.montantPenaliteRetardFcfa ?? t.montantPenaliteRetardFcfa,
       modeTirage: dto.modeTirage ?? t.modeTirage,
     });
 
@@ -420,8 +420,8 @@ export class TontinesService {
       politique: dto.politique ?? t.politique,
       dateDeverrouillage:
         dto.dateDeverrouillage ?? t.dateDeverrouillage ?? undefined,
-      objectifMontant: dto.objectifMontant ?? t.objectifMontant ?? undefined,
-      montantJournalier: dto.montantJournalier ?? t.montantJournalier,
+      objectifMontantFcfa: dto.objectifMontantFcfa ?? t.objectifMontantFcfa ?? undefined,
+      montantJournalierFcfa: dto.montantJournalierFcfa ?? t.montantJournalierFcfa,
       frequence: dto.frequence ?? t.frequence,
     });
 
@@ -433,11 +433,11 @@ export class TontinesService {
         ...(dto.politique && { politique: dto.politique }),
         ...(dto.frequence && { frequence: dto.frequence }),
         ...(dto.jourFixe !== undefined && { jourFixe: dto.jourFixe }),
-        ...(dto.objectifMontant !== undefined && {
-          objectifMontant: dto.objectifMontant,
+        ...(dto.objectifMontantFcfa !== undefined && {
+          objectifMontantFcfa: dto.objectifMontantFcfa,
         }),
-        ...(dto.montantJournalier && {
-          montantJournalier: dto.montantJournalier,
+        ...(dto.montantJournalierFcfa && {
+          montantJournalierFcfa: dto.montantJournalierFcfa,
         }),
         ...(dto.dateDeverrouillage && {
           dateDeverrouillage: dto.dateDeverrouillage,
@@ -446,20 +446,20 @@ export class TontinesService {
         ...(dto.nbMembresMax !== undefined && {
           nbMembresMax: dto.nbMembresMax,
         }),
-        ...(dto.montantParMembre !== undefined && {
-          montantParMembre: dto.montantParMembre,
+        ...(dto.montantParMembreFcfa !== undefined && {
+          montantParMembreFcfa: dto.montantParMembreFcfa,
         }),
         ...(dto.cautionObligatoire !== undefined && {
           cautionObligatoire: dto.cautionObligatoire,
         }),
-        ...(dto.montantCautionObligatoire !== undefined && {
-          montantCautionObligatoire: dto.montantCautionObligatoire,
+        ...(dto.montantCautionFcfaObligatoireFcfa !== undefined && {
+          montantCautionObligatoireFcfa: dto.montantCautionFcfaObligatoireFcfa,
         }),
         ...(dto.penaliteRetardActive !== undefined && {
           penaliteRetardActive: dto.penaliteRetardActive,
         }),
-        ...(dto.montantPenaliteRetard !== undefined && {
-          montantPenaliteRetard: dto.montantPenaliteRetard,
+        ...(dto.montantPenaliteRetardFcfa !== undefined && {
+          montantPenaliteRetardFcfa: dto.montantPenaliteRetardFcfa,
         }),
         ...(dto.modeTirage && { modeTirage: dto.modeTirage }),
       },
@@ -521,10 +521,10 @@ export class TontinesService {
 
     if (
       t.cautionObligatoire &&
-      (dto.montantCaution ?? 0) < t.montantCautionObligatoire
+      (dto.montantCautionFcfa ?? 0) < t.montantCautionObligatoireFcfa
     ) {
       throw new BadRequestException({
-        message: `Caution obligatoire de ${t.montantCautionObligatoire} FCFA requise.`,
+        message: `Caution obligatoire de ${t.montantCautionObligatoireFcfa} FCFA requise.`,
         code: 'CAUTION_REQUISE',
       });
     }
@@ -535,12 +535,12 @@ export class TontinesService {
         tontineId,
         utilisateurId,
         statut: StatutMembreGroupe.ACTIF,
-        montantCaution: dto.montantCaution ?? 0,
+        montantCautionFcfa: dto.montantCautionFcfa ?? 0,
         cautionBloquee: true,
       },
       update: {
         statut: StatutMembreGroupe.ACTIF,
-        montantCaution: dto.montantCaution ?? 0,
+        montantCautionFcfa: dto.montantCautionFcfa ?? 0,
       },
       include: {
         utilisateur: { select: { id: true, nom: true, collecteurId: true } },
@@ -599,13 +599,13 @@ export class TontinesService {
         id: t.id,
         nom: t.nom,
         type: t.type,
-        montantJournalier: t.montantJournalier,
-        montantParMembre: t.montantParMembre,
+        montantJournalierFcfa: t.montantJournalierFcfa,
+        montantParMembreFcfa: t.montantParMembreFcfa,
         frequence: t.frequence,
         president: t.proprietaire.nom,
         statut: t.statut,
         cautionObligatoire: t.cautionObligatoire,
-        montantCautionObligatoire: t.montantCautionObligatoire,
+        montantCautionObligatoireFcfa: t.montantCautionObligatoireFcfa,
         nbMembresMax: t.nbMembresMax,
       },
     };
@@ -868,16 +868,16 @@ export class TontinesService {
     const membresActifs = await this.prisma.membreTontineGroupe.count({
       where: { tontineId, statut: StatutMembreGroupe.ACTIF },
     });
-    const montantParMembre = t.montantParMembre ?? t.montantJournalier;
-    const cagnotteAttendue = membresActifs * montantParMembre;
-    if (t.soldeActuel < cagnotteAttendue) {
+    const montantParMembreFcfa = t.montantParMembreFcfa ?? t.montantJournalierFcfa;
+    const cagnotteAttendue = membresActifs * montantParMembreFcfa;
+    if (t.soldeActuelFcfa < cagnotteAttendue) {
       throw new BadRequestException({
-        message: `Cotisations du tour incomplètes. Cagnotte attendue: ${cagnotteAttendue} FCFA, disponible: ${t.soldeActuel} FCFA.`,
+        message: `Cotisations du tour incomplètes. Cagnotte attendue: ${cagnotteAttendue} FCFA, disponible: ${t.soldeActuelFcfa} FCFA.`,
         code: 'COTISATIONS_TOUR_INCOMPLETES',
       });
     }
 
-    if (t.soldeActuel <= 0)
+    if (t.soldeActuelFcfa <= 0)
       throw new BadRequestException({
         message: 'Solde insuffisant pour distribuer',
         code: 'SOLDE_INSUFFISANT',
@@ -910,14 +910,14 @@ export class TontinesService {
       });
     }
 
-    const montantDistribution = t.soldeActuel;
+    const montantFcfaDistribution = t.soldeActuelFcfa;
     // Distribution GROUPE = sortie de fonds → taux retrait 2% (pas taux cotisation)
     const fraisDistribution =
-      BUSINESS.calculerFraisRetrait(montantDistribution);
-    const montantNet = montantDistribution - fraisDistribution;
+      BUSINESS.calculerFraisRetrait(montantFcfaDistribution);
+    const montantNetFcfa = montantFcfaDistribution - fraisDistribution;
 
     const transfert = await this.kkiapay.initierTransfert({
-      montant: montantNet,
+      montant: montantNetFcfa,
       telephone: prochainTirage.utilisateur.telephone,
       reference: `dist_${tontineId}_${prochainTirage.id}`,
       motif: `Distribution tontine ${t.nom}`,
@@ -944,7 +944,7 @@ export class TontinesService {
     await this.prisma.$transaction([
       this.prisma.ordreTirage.update({
         where: { id: prochainTirage.id },
-        data: { aRecu: true, recuLe: new Date(), montantRecu: montantNet },
+        data: { aRecu: true, recuLe: new Date(), montantRecuFcfa: montantNetFcfa },
       }),
       this.prisma.membreTontineGroupe.update({
         where: {
@@ -958,7 +958,7 @@ export class TontinesService {
       this.prisma.tontine.update({
         where: { id: tontineId },
         data: {
-          soldeActuel: 0,
+          soldeActuelFcfa: 0,
           dateProchaineCotisation: estDerniere ? null : prochaineDateCotisation,
           ...(!estDerniere && { tourActuel: { increment: 1 } }),
           ...(estDerniere && { statut: StatutTontine.TERMINEE }),
@@ -966,14 +966,14 @@ export class TontinesService {
       }),
       this.prisma.transaction.create({
         data: {
-          montant: montantDistribution,
-          montantNet,
+          montantFcfa: montantFcfaDistribution,
+          montantNetFcfa,
           type: TypeTransaction.DISTRIBUTION_GROUPE,
           tontineId,
           utilisateurId: prochainTirage.utilisateurId,
           refKKiaPay: transfert.refKKiaPay,
-          fraisPlateforme:
-            BUSINESS.calculerFraisPlateforme(montantDistribution),
+          fraisPlateformeFcfa:
+            BUSINESS.calculerFraisPlateforme(montantFcfaDistribution),
         },
       }),
     ]);
@@ -982,12 +982,12 @@ export class TontinesService {
     try {
       const beneficiaire = prochainTirage.utilisateur;
       const tontineNom = t.nom;
-      const montantFmt = montantNet.toLocaleString('fr-FR');
+      const montantFcfaFmt = montantNetFcfa.toLocaleString('fr-FR');
 
       // 1. Notification au bénéficiaire (Push + SMS)
       const titreBeneficiaire = "C'est ton tour ! 🎉";
-      const messagePushBeneficiaire = `Félicitations ${beneficiaire.nom} ! Ta cagnotte de ${montantFmt} FCFA de '${tontineNom}' vient d'être envoyée sur ton Mobile Money.`;
-      const messageSmsBeneficiaire = `TontinePro: ${beneficiaire.nom}, ta cagnotte ${montantFmt}F de '${tontineNom}' est envoyee sur ton MoMo. Verifie ton solde.`;
+      const messagePushBeneficiaire = `Félicitations ${beneficiaire.nom} ! Ta cagnotte de ${montantFcfaFmt} FCFA de '${tontineNom}' vient d'être envoyée sur ton Mobile Money.`;
+      const messageSmsBeneficiaire = `TontineBénin: ${beneficiaire.nom}, ta cagnotte ${montantFcfaFmt}F de '${tontineNom}' est envoyee sur ton MoMo. Verifie ton solde.`;
 
       await this.notifications.envoyerAUtilisateur(
         beneficiaire.id,
@@ -1006,7 +1006,7 @@ export class TontinesService {
 
       // 2. Notification au collecteur du bénéficiaire (Push uniquement)
       if (beneficiaire.collecteurId) {
-        const messageCollector = `Votre client ${beneficiaire.nom} a reçu sa cagnotte de ${montantFmt} FCFA dans la tontine '${tontineNom}'.`;
+        const messageCollector = `Votre client ${beneficiaire.nom} a reçu sa cagnotte de ${montantFcfaFmt} FCFA dans la tontine '${tontineNom}'.`;
         await this.notifications.envoyerAUtilisateur(
           beneficiaire.collecteurId,
           'Cagnotte reçue par un client',
@@ -1047,10 +1047,10 @@ export class TontinesService {
 
     return {
       succes: true,
-      message: `Distribution de ${montantNet} FCFA envoyée à ${prochainTirage.utilisateur.nom}.${estDerniere ? ' Tontine clôturée automatiquement.' : ''}`,
+      message: `Distribution de ${montantNetFcfa} FCFA envoyée à ${prochainTirage.utilisateur.nom}.${estDerniere ? ' Tontine clôturée automatiquement.' : ''}`,
       donnees: {
         beneficiaire: prochainTirage.utilisateur,
-        montantNet,
+        montantNetFcfa,
         refKKiaPay: transfert.refKKiaPay,
         tontineTerminee: estDerniere,
         prochaineDateCotisation: estDerniere ? null : prochaineDateCotisation,
@@ -1093,8 +1093,8 @@ export class TontinesService {
   private verifierConfigurationPolitiqueRetrait(input: {
     politique: PolitiqueRetrait;
     dateDeverrouillage?: Date | string | null;
-    objectifMontant?: number | null;
-    montantJournalier?: number | null;
+    objectifMontantFcfa?: number | null;
+    montantJournalierFcfa?: number | null;
     frequence: FrequenceTontine;
   }) {
     if (
@@ -1124,24 +1124,24 @@ export class TontinesService {
 
     if (input.politique === PolitiqueRetrait.PROGRAMME) return;
 
-    if (!input.objectifMontant || input.objectifMontant <= 0) {
+    if (!input.objectifMontantFcfa || input.objectifMontantFcfa <= 0) {
       throw new BadRequestException({
-        message: 'Une tontine BLOQUE doit avoir un objectifMontant positif.',
+        message: 'Une tontine BLOQUE doit avoir un objectifMontantFcfa positif.',
         code: 'OBJECTIF_REQUIS',
       });
     }
 
-    const montantCotisation = input.montantJournalier ?? 500;
-    if (montantCotisation < 100) {
+    const montantFcfaCotisation = input.montantJournalierFcfa ?? 500;
+    if (montantFcfaCotisation < 100) {
       throw new BadRequestException({
-        message: 'Le montant de cotisation doit être au moins 100 FCFA.',
+        message: 'Le montantFcfa de cotisation doit être au moins 100 FCFA.',
         code: 'MONTANT_COTISATION_INVALIDE',
       });
     }
 
     const dateFinEstimee = this.calculerDateFinEstimee(
-      input.objectifMontant,
-      montantCotisation,
+      input.objectifMontantFcfa,
+      montantFcfaCotisation,
       input.frequence,
     );
     if (this.debutJour(dateDeverrouillage) < this.debutJour(dateFinEstimee)) {
@@ -1155,11 +1155,11 @@ export class TontinesService {
   private verifierConfigurationGroupe(input: {
     type?: TypeTontine;
     nbMembresMax?: number | null;
-    montantParMembre?: number | null;
+    montantParMembreFcfa?: number | null;
     cautionObligatoire?: boolean | null;
-    montantCautionObligatoire?: number | null;
+    montantCautionObligatoireFcfa?: number | null;
     penaliteRetardActive?: boolean | null;
-    montantPenaliteRetard?: number | null;
+    montantPenaliteRetardFcfa?: number | null;
     modeTirage?: ModeTirageGroupe | null;
   }) {
     if (input.type !== TypeTontine.GROUPE) return;
@@ -1170,30 +1170,30 @@ export class TontinesService {
         code: 'NB_MEMBRES_INVALIDE',
       });
     }
-    if (!input.montantParMembre || input.montantParMembre < 100) {
+    if (!input.montantParMembreFcfa || input.montantParMembreFcfa < 100) {
       throw new BadRequestException({
         message:
-          'Une tontine GROUPE doit définir un montant par membre d’au moins 100 FCFA.',
+          'Une tontine GROUPE doit définir un montantFcfa par membre d’au moins 100 FCFA.',
         code: 'MONTANT_PAR_MEMBRE_INVALIDE',
       });
     }
     if (
       input.cautionObligatoire &&
-      (!input.montantCautionObligatoire || input.montantCautionObligatoire <= 0)
+      (!input.montantCautionObligatoireFcfa || input.montantCautionObligatoireFcfa <= 0)
     ) {
       throw new BadRequestException({
         message:
-          'Le montant de caution est obligatoire si la caution est activée.',
+          'Le montantFcfa de caution est obligatoire si la caution est activée.',
         code: 'MONTANT_CAUTION_REQUIS',
       });
     }
     if (
       input.penaliteRetardActive &&
-      (!input.montantPenaliteRetard || input.montantPenaliteRetard <= 0)
+      (!input.montantPenaliteRetardFcfa || input.montantPenaliteRetardFcfa <= 0)
     ) {
       throw new BadRequestException({
         message:
-          'Le montant de pénalité est obligatoire si la pénalité retard est activée.',
+          'Le montantFcfa de pénalité est obligatoire si la pénalité retard est activée.',
         code: 'MONTANT_PENALITE_REQUIS',
       });
     }
@@ -1204,12 +1204,12 @@ export class TontinesService {
   }
 
   private calculerDateFinEstimee(
-    objectifMontant: number,
-    montantCotisation: number,
+    objectifMontantFcfa: number,
+    montantFcfaCotisation: number,
     frequence: FrequenceTontine,
   ): Date {
     const nombreCotisations = Math.max(
-      Math.ceil(objectifMontant / montantCotisation),
+      Math.ceil(objectifMontantFcfa / montantFcfaCotisation),
       1,
     );
     const joursParCotisation: Record<FrequenceTontine, number> = {
@@ -1231,8 +1231,8 @@ export class TontinesService {
 
   private verifierPolitique(tontine: {
     politique: PolitiqueRetrait;
-    soldeActuel: number;
-    objectifMontant: number | null;
+    soldeActuelFcfa: number;
+    objectifMontantFcfa: number | null;
     dateDeverrouillage: Date | null;
   }) {
     if (tontine.politique === PolitiqueRetrait.BLOQUE) {
@@ -1248,15 +1248,15 @@ export class TontinesService {
           code: 'TONTINE_BLOQUEE',
         });
       }
-      if (!tontine.objectifMontant) {
+      if (!tontine.objectifMontantFcfa) {
         throw new BadRequestException({
           message: 'Objectif requis pour une tontine bloquée.',
           code: 'OBJECTIF_REQUIS',
         });
       }
-      if (tontine.soldeActuel < tontine.objectifMontant) {
+      if (tontine.soldeActuelFcfa < tontine.objectifMontantFcfa) {
         throw new BadRequestException({
-          message: `Objectif non atteint. Progression: ${tontine.soldeActuel}/${tontine.objectifMontant} FCFA`,
+          message: `Objectif non atteint. Progression: ${tontine.soldeActuelFcfa}/${tontine.objectifMontantFcfa} FCFA`,
           code: 'OBJECTIF_NON_ATTEINT',
         });
       }

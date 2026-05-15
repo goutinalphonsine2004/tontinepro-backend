@@ -29,6 +29,7 @@ import { CollecteurTerrainModule } from './modules/collecteur-terrain/collecteur
 import { ParametresModule } from './modules/parametres/parametres.module';
 import { SupportModule } from './modules/support/support.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OperationsAssisteesModule } from './modules/operations-assistees/operations-assistees.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
@@ -64,6 +65,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     ParametresModule,
     SupportModule,
     NotificationsModule,
+    OperationsAssisteesModule,
   ],
   controllers: [AppController],
   providers: [

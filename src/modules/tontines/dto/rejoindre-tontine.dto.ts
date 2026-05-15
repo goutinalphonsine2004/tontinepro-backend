@@ -6,5 +6,5 @@ export class RejoindreTonitneDto {
   @IsNumber()
   @Min(0, { message: 'Le montant de caution doit être positif' })
   @IsOptional()
-  montantCaution?: number = 0;
+  montantCautionFcfa?: number = 0;
 }

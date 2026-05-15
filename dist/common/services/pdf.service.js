@@ -24,7 +24,7 @@ let PdfService = class PdfService {
         });
         doc
             .fontSize(20)
-            .text('TontineBenin', { align: 'center' })
+            .text('TontineBénin', { align: 'center' })
             .moveDown(0.4)
             .fontSize(14)
             .text('Recu de transaction', { align: 'center' })
@@ -39,8 +39,8 @@ let PdfService = class PdfService {
         this.ligne(doc, 'Reference KKiaPay', recu.refKKiaPay);
         doc.moveDown(0.8);
         this.ligne(doc, 'Montant', `${recu.montant.toLocaleString('fr-FR')} FCFA`);
-        this.ligne(doc, 'Frais plateforme', `${recu.fraisPlateforme.toLocaleString('fr-FR')} FCFA`);
-        this.ligne(doc, 'Montant net', `${recu.montantNet.toLocaleString('fr-FR')} FCFA`);
+        this.ligne(doc, 'Frais plateforme', `${recu.fraisPlateformeFcfa.toLocaleString('fr-FR')} FCFA`);
+        this.ligne(doc, 'Montant net', `${recu.montantNetFcfa.toLocaleString('fr-FR')} FCFA`);
         doc.moveDown(1);
         doc
             .fontSize(9)
@@ -51,7 +51,7 @@ let PdfService = class PdfService {
         doc
             .fontSize(9)
             .fillColor('#555')
-            .text('Document genere automatiquement par TontineBenin.');
+            .text('Document genere automatiquement par TontineBénin.');
         doc.end();
         return done;
     }
@@ -64,7 +64,7 @@ let PdfService = class PdfService {
         });
         doc
             .fontSize(20)
-            .text('TontineBenin', { align: 'center' })
+            .text('TontineBénin', { align: 'center' })
             .moveDown(0.4)
             .fontSize(14)
             .text('Dossier PADME genere automatiquement', { align: 'center' })
@@ -72,14 +72,14 @@ let PdfService = class PdfService {
         this.ligne(doc, 'Dossier', dossier.dossierId);
         this.ligne(doc, 'Client', `${dossier.clientNom} (${dossier.clientTelephone})`);
         this.ligne(doc, 'Score', `${dossier.score}/100`);
-        this.ligne(doc, 'Total epargne', `${dossier.totalEpargne.toLocaleString('fr-FR')} FCFA`);
+        this.ligne(doc, 'Total epargne', `${dossier.totalEpargneFcfa.toLocaleString('fr-FR')} FCFA`);
         this.ligne(doc, 'Taux regularite', `${Math.round(dossier.tauxRegularite * 100)}%`);
         this.ligne(doc, 'Credits rembourses', `${dossier.creditsRembourses}`);
         this.ligne(doc, 'Genere le', dossier.genereLe.toLocaleString('fr-FR'));
         doc.moveDown(1.5);
         doc
             .fontSize(10)
-            .text('Ce document synthetise les donnees internes TontineBenin utilisees pour la prequalification PADME.');
+            .text('Ce document synthetise les donnees internes TontineBénin utilisees pour la prequalification PADME.');
         doc.end();
         const buffer = await done;
         const dossierDir = (0, path_1.join)(process.cwd(), 'uploads', 'padme');

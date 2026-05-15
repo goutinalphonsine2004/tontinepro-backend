@@ -26,7 +26,7 @@ let AnalyticsService = class AnalyticsService {
                     type: client_1.TypeTransaction.COTISATION,
                     statut: client_1.StatutTransaction.SUCCES,
                 },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
             }),
             this.prisma.utilisateur.count({
                 where: { role: client_1.Role.CLIENT, statut: client_1.StatutCompte.ACTIF },
@@ -37,13 +37,13 @@ let AnalyticsService = class AnalyticsService {
                     statut: client_1.StatutCompte.ACTIF,
                 },
             }),
-            this.prisma.commission.aggregate({ _sum: { montant: true } }),
+            this.prisma.commission.aggregate({ _sum: { montantFcfa: true } }),
             this.prisma.microCredit.findMany({
-                select: { montantTotal: true, montantPrincipal: true },
+                select: { montantTotalFcfa: true, montantPrincipalFcfa: true },
             }),
             this.prisma.facturationAgent.aggregate({
                 where: { actif: true },
-                _sum: { fraisMensuels: true },
+                _sum: { fraisMensuelsFcfa: true },
             }),
             this.prisma.microCredit.count({
                 where: { statut: client_1.StatutCredit.TERMINE },
@@ -54,20 +54,20 @@ let AnalyticsService = class AnalyticsService {
             this.prisma.scoreCredit.count({ where: { eligiblePADME: true } }),
             this.prisma.scoreCredit.count({ where: { eligibleMicroCredit: true } }),
         ]);
-        const revenusMicroCredits = microCredits.reduce((sum, c) => sum + (c.montantTotal - c.montantPrincipal), 0);
-        const revenusTotal = (revenusCommissions._sum.montant ?? 0) +
+        const revenusMicroCredits = microCredits.reduce((sum, c) => sum + (c.montantTotalFcfa - c.montantPrincipalFcfa), 0);
+        const revenusTotal = (revenusCommissions._sum.montantFcfa ?? 0) +
             revenusMicroCredits +
-            (abonnements._sum.fraisMensuels ?? 0);
+            (abonnements._sum.fraisMensuelsFcfa ?? 0);
         return {
             succes: true,
             message: 'KPIs TontineBénin.',
             donnees: {
-                volumeTotal: volumeTotal._sum.montant ?? 0,
+                volumeTotal: volumeTotal._sum.montantFcfa ?? 0,
                 totalClients,
                 totalCollecteurs,
-                revenusCommissions: revenusCommissions._sum.montant ?? 0,
+                revenusCommissions: revenusCommissions._sum.montantFcfa ?? 0,
                 revenusMicroCredits,
-                revenusAbonnements: abonnements._sum.fraisMensuels ?? 0,
+                revenusAbonnements: abonnements._sum.fraisMensuelsFcfa ?? 0,
                 revenusTotal,
                 tauxRemboursement: creditsTotal > 0
                     ? Math.round((creditsTermines / creditsTotal) * 100)
@@ -119,20 +119,20 @@ let AnalyticsService = class AnalyticsService {
                                 type: client_1.TypeTransaction.COTISATION,
                                 statut: client_1.StatutTransaction.SUCCES,
                             },
-                            select: { montant: true },
+                            select: { montantFcfa: true },
                         },
                         scoreCredit: { select: { tauxRegularite: true } },
                     },
                 },
-                commissions: { select: { montant: true } },
+                commissions: { select: { montantFcfa: true } },
             },
         });
         const perf = collecteurs
             .map((c) => {
             const totalCotisations = c.clients
                 .flatMap((cl) => cl.transactions)
-                .reduce((s, t) => s + t.montant, 0);
-            const totalCommissions = c.commissions.reduce((s, com) => s + com.montant, 0);
+                .reduce((s, t) => s + t.montantFcfa, 0);
+            const totalCommissions = c.commissions.reduce((s, com) => s + com.montantFcfa, 0);
             const tauxMoyenClients = c.clients.length > 0
                 ? c.clients
                     .filter((cl) => cl.scoreCredit)
@@ -210,7 +210,7 @@ let AnalyticsService = class AnalyticsService {
         sixMoisDate.setDate(1);
         const commissions = await this.prisma.commission.findMany({
             where: { creeLe: { gte: sixMoisDate } },
-            select: { montant: true, type: true, creeLe: true },
+            select: { montantFcfa: true, type: true, creeLe: true },
         });
         const mois = {};
         for (let i = 5; i >= 0; i--) {
@@ -224,11 +224,11 @@ let AnalyticsService = class AnalyticsService {
             if (!mois[key])
                 continue;
             if (c.type === 'COTISATION')
-                mois[key].commissions += c.montant;
+                mois[key].commissions += c.montantFcfa;
             else if (c.type === 'PADME')
-                mois[key].padme += c.montant;
+                mois[key].padme += c.montantFcfa;
             else if (c.type === 'ABONNEMENT')
-                mois[key].abonnements += c.montant;
+                mois[key].abonnements += c.montantFcfa;
         }
         const donnees = Object.entries(mois).map(([m, v]) => ({
             mois: m,
@@ -304,7 +304,7 @@ let AnalyticsService = class AnalyticsService {
             }),
             this.prisma.commission.aggregate({
                 where: { type: 'PADME' },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
                 _count: true,
             }),
             this.prisma.dossierPADME.count({
@@ -333,7 +333,7 @@ let AnalyticsService = class AnalyticsService {
                 acceptes: dossiersAcceptes,
                 tauxAcceptation: soumis > 0 ? Math.round((dossiersAcceptes / soumis) * 100) : 0,
                 commissions: {
-                    total: commissionsPADME._sum.montant ?? 0,
+                    total: commissionsPADME._sum.montantFcfa ?? 0,
                     nombre: commissionsPADME._count,
                 },
                 derniersDossiers,
@@ -349,10 +349,10 @@ let AnalyticsService = class AnalyticsService {
                 scoreCredit: {
                     select: { score: true, tauxRegularite: true, totalMois: true },
                 },
-                tontines: { select: { soldeActuel: true } },
+                tontines: { select: { soldeActuelFcfa: true } },
                 transactions: {
                     where: { type: 'COTISATION', statut: 'SUCCES' },
-                    select: { montantNet: true },
+                    select: { montantNetFcfa: true },
                 },
                 badges: {
                     orderBy: { obtenuLe: 'desc' },
@@ -363,8 +363,8 @@ let AnalyticsService = class AnalyticsService {
         });
         const classes = clients
             .map((c) => {
-            const solde = c.tontines.reduce((s, t) => s + t.soldeActuel, 0);
-            const totalCotise = c.transactions.reduce((s, tx) => s + tx.montantNet, 0);
+            const solde = c.tontines.reduce((s, t) => s + t.soldeActuelFcfa, 0);
+            const totalCotise = c.transactions.reduce((s, tx) => s + tx.montantNetFcfa, 0);
             const score = c.scoreCredit?.score ?? 0;
             const regularite = c.scoreCredit?.tauxRegularite ?? 0;
             const scoreClassement = Math.round(score * 0.4 +

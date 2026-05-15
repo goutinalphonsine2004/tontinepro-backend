@@ -5,13 +5,16 @@ export class AppController {
   @Get('health')
   health() {
     return {
-      succes: true,
-      message: 'TontineBénin API opérationnelle',
-      donnees: {
-        statut: 'ok',
-        version: '1.0.0',
-        timestamp: new Date().toISOString(),
-      },
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+    };
+  }
+
+  @Get('version')
+  version() {
+    return {
+      version: '1.0.0',
     };
   }
 }

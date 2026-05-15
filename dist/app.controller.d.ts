@@ -1,11 +1,10 @@
 export declare class AppController {
     health(): {
-        succes: boolean;
-        message: string;
-        donnees: {
-            statut: string;
-            version: string;
-            timestamp: string;
-        };
+        status: string;
+        timestamp: string;
+        version: string;
+    };
+    version(): {
+        version: string;
     };
 }

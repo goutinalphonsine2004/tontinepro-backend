@@ -197,7 +197,7 @@ let PadmeService = class PadmeService {
                     transactionId: (await this.prisma.transaction.findFirst({
                         where: { utilisateurId: dossier.client.id },
                     }))?.id ?? adminId,
-                    montant: commission,
+                    montantFcfa: commission,
                     type: 'PADME',
                 },
             })

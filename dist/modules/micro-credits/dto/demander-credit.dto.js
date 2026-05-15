@@ -13,7 +13,7 @@ exports.DemanderCreditDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 class DemanderCreditDto {
-    montantPrincipal;
+    montantPrincipalFcfa;
     methodeConsentement = 'SMARTPHONE';
     telephone;
 }
@@ -23,7 +23,7 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(500, { message: 'Montant minimum 500 FCFA' }),
     __metadata("design:type", Number)
-], DemanderCreditDto.prototype, "montantPrincipal", void 0);
+], DemanderCreditDto.prototype, "montantPrincipalFcfa", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsIn)(['SMARTPHONE', 'SMS'], {

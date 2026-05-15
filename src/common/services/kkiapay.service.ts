@@ -69,6 +69,10 @@ export class KkiapayService {
     return { succes: true, refKKiaPay };
   }
 
+  get estSandbox(): boolean {
+    return this.sandbox;
+  }
+
   // Vérification signature HMAC-SHA256 du webhook KKiaPay
   verifierSignature(rawBody: string, signatureRecue: string): boolean {
     if (!this.secretKey) {

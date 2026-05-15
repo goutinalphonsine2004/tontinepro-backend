@@ -17,6 +17,7 @@ class ConfirmerRetraitDto {
     montant;
     code;
     telephone;
+    idempotencyKey;
 }
 exports.ConfirmerRetraitDto = ConfirmerRetraitDto;
 __decorate([
@@ -26,17 +27,27 @@ __decorate([
 ], ConfirmerRetraitDto.prototype, "tontineId", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(500, { message: 'Le montant minimum de retrait est 500 FCFA' }),
+    (0, class_validator_1.Max)(10000000, { message: 'Le montant maximum est 10 000 000 FCFA' }),
     __metadata("design:type", Number)
 ], ConfirmerRetraitDto.prototype, "montant", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Length)(6, 6, { message: 'Le code OTP doit contenir 6 chiffres' }),
+    (0, class_validator_1.Matches)(/^\d{6}$/, { message: 'Le code OTP doit contenir 6 chiffres' }),
     __metadata("design:type", String)
 ], ConfirmerRetraitDto.prototype, "code", void 0);
 __decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^(\+229|229)\d{8}$/, {
+        message: 'Téléphone invalide. Format attendu: +229XXXXXXXX ou 229XXXXXXXX',
+    }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], ConfirmerRetraitDto.prototype, "telephone", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ConfirmerRetraitDto.prototype, "idempotencyKey", void 0);
 //# sourceMappingURL=confirmer-retrait.dto.js.map

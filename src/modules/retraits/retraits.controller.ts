@@ -7,6 +7,7 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -23,6 +24,7 @@ export class RetraitsController {
   constructor(private service: RetraitsService) {}
 
   @Post('demander')
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   demander(
     @UtilisateurCourant() u: { id: string },
     @Body() dto: DemanderRetraitDto,
@@ -31,6 +33,7 @@ export class RetraitsController {
   }
 
   @Post('demander-otp')
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   demanderOtp(
     @UtilisateurCourant() u: { id: string },
     @Body() dto: DemanderRetraitDto,
@@ -39,6 +42,7 @@ export class RetraitsController {
   }
 
   @Post('confirmer')
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   confirmer(
     @UtilisateurCourant() u: { id: string },
     @Body() dto: ConfirmerRetraitDto,
@@ -49,6 +53,11 @@ export class RetraitsController {
   @Get('mes-retraits')
   mesRetraits(@UtilisateurCourant() u: { id: string }) {
     return this.service.mesRetraits(u.id);
+  }
+
+  @Get(':id/statut')
+  statut(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.statut(id, u.id);
   }
 
   @Roles(Role.ADMIN, Role.SUPERVISEUR)

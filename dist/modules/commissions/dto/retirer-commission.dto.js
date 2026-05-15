@@ -19,12 +19,16 @@ class RetirerCommissionDto {
 exports.RetirerCommissionDto = RetirerCommissionDto;
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(500, { message: 'Le montant minimum de retrait est 500 FCFA' }),
+    (0, class_validator_1.Max)(10000000, { message: 'Le montant maximum est 10 000 000 FCFA' }),
     __metadata("design:type", Number)
 ], RetirerCommissionDto.prototype, "montant", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^(\+229|229)\d{8}$/, {
+        message: 'Téléphone invalide. Format attendu: +229XXXXXXXX ou 229XXXXXXXX',
+    }),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], RetirerCommissionDto.prototype, "telephone", void 0);

@@ -5,15 +5,15 @@ export declare class ModifierTontineDto {
     politique?: PolitiqueRetrait;
     frequence?: FrequenceTontine;
     jourFixe?: number;
-    objectifMontant?: number;
-    montantJournalier?: number;
+    objectifMontantFcfa?: number;
+    montantJournalierFcfa?: number;
     dateDeverrouillage?: Date;
     dateFin?: Date;
     nbMembresMax?: number;
-    montantParMembre?: number;
+    montantParMembreFcfa?: number;
     cautionObligatoire?: boolean;
-    montantCautionObligatoire?: number;
+    montantCautionFcfaObligatoireFcfa?: number;
     penaliteRetardActive?: boolean;
-    montantPenaliteRetard?: number;
+    montantPenaliteRetardFcfa?: number;
     modeTirage?: ModeTirageGroupe;
 }

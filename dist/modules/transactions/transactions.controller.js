@@ -15,12 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionsController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
+const client_1 = require("@prisma/client");
 const utilisateur_courant_decorator_1 = require("../../common/decorators/utilisateur-courant.decorator");
 const transactions_service_1 = require("./transactions.service");
 const cotiser_dto_1 = require("./dto/cotiser.dto");
 const webhook_kkiapay_dto_1 = require("./dto/webhook-kkiapay.dto");
 const filtrer_transactions_dto_1 = require("./dto/filtrer-transactions.dto");
 const partager_recu_whatsapp_dto_1 = require("./dto/partager-recu-whatsapp.dto");
+const simuler_transaction_dto_1 = require("./dto/simuler-transaction.dto");
 let TransactionsController = class TransactionsController {
     service;
     constructor(service) {
@@ -29,12 +31,17 @@ let TransactionsController = class TransactionsController {
     cotiser(u, dto) {
         return this.service.cotiser(u.id, dto);
     }
+    simuler(dto) {
+        return this.service.simuler(dto);
+    }
     webhook(req, body, signature) {
         const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(body));
         return this.service.traiterWebhook(body, rawBody, signature ?? '');
     }
-    historique(u, filtres) {
-        return this.service.historique(u.id, filtres);
+    historique(u, filtres, clientId) {
+        const estCollecteur = u.role === client_1.Role.AGENT || u.role === client_1.Role.INDEPENDANT;
+        const cibleId = estCollecteur && clientId ? clientId : u.id;
+        return this.service.historique(cibleId, filtres, estCollecteur ? u.id : undefined);
     }
     recu(id, u) {
         return this.service.recu(id, u.id);
@@ -59,6 +66,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TransactionsController.prototype, "cotiser", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('simuler'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [simuler_transaction_dto_1.SimulerTransactionDto]),
+    __metadata("design:returntype", void 0)
+], TransactionsController.prototype, "simuler", null);
+__decorate([
     (0, common_1.Post)('webhook-kkiapay'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
@@ -72,8 +87,9 @@ __decorate([
     (0, common_1.Get)('historique'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Query)()),
+    __param(2, (0, common_1.Query)('clientId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, filtrer_transactions_dto_1.FiltrerTransactionsDto]),
+    __metadata("design:paramtypes", [Object, filtrer_transactions_dto_1.FiltrerTransactionsDto, String]),
     __metadata("design:returntype", void 0)
 ], TransactionsController.prototype, "historique", null);
 __decorate([

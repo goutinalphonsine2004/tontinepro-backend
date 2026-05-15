@@ -31,14 +31,14 @@ exports.BUSINESS = {
     calculerFraisRetrait(montant) {
         return montant * this.TAUX_COMMISSION_RETRAIT;
     },
-    calculerInteretMicroCredit(montantPrincipal) {
-        return montantPrincipal * this.TAUX_INTERET_MICRO_CREDIT;
+    calculerInteretMicroCredit(montantPrincipalFcfa) {
+        return montantPrincipalFcfa * this.TAUX_INTERET_MICRO_CREDIT;
     },
-    calculerMontantTotal(montantPrincipal) {
-        return montantPrincipal + this.calculerInteretMicroCredit(montantPrincipal);
+    calculerMontantTotal(montantPrincipalFcfa) {
+        return montantPrincipalFcfa + this.calculerInteretMicroCredit(montantPrincipalFcfa);
     },
-    calculerPaiementJournalier(montantTotal, jours) {
-        return Math.ceil(montantTotal / jours);
+    calculerPaiementJournalier(montantTotalFcfa, jours) {
+        return Math.ceil(montantTotalFcfa / jours);
     },
     getPlafondMicroCredit(score) {
         if (score >= 90)

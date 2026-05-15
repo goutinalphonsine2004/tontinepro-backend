@@ -21,7 +21,7 @@ export class LitigesService {
   async ouvrirLitige(clientId: string, dto: OuvrirLitigeDto) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id: dto.transactionId },
-      select: { id: true, utilisateurId: true, montant: true },
+      select: { id: true, utilisateurId: true, montantFcfa: true },
     });
 
     if (!transaction) throw new NotFoundException('Transaction introuvable');
@@ -51,7 +51,7 @@ export class LitigesService {
       },
       include: {
         transaction: {
-          select: { id: true, montant: true, type: true, creeLe: true },
+          select: { id: true, montantFcfa: true, type: true, creeLe: true },
         },
       },
     });
@@ -69,7 +69,7 @@ export class LitigesService {
       where: { clientId },
       include: {
         transaction: {
-          select: { id: true, montant: true, type: true, creeLe: true },
+          select: { id: true, montantFcfa: true, type: true, creeLe: true },
         },
       },
       orderBy: { creeLe: 'desc' },
@@ -87,7 +87,7 @@ export class LitigesService {
         include: {
           client: { select: { id: true, nom: true, telephone: true } },
           transaction: {
-            select: { id: true, montant: true, type: true, creeLe: true },
+            select: { id: true, montantFcfa: true, type: true, creeLe: true },
           },
         },
         orderBy: { creeLe: 'asc' },
@@ -212,7 +212,7 @@ export class LitigesService {
       include: {
         client: { select: { id: true, nom: true, telephone: true } },
         transaction: {
-          select: { id: true, montant: true, type: true, creeLe: true },
+          select: { id: true, montantFcfa: true, type: true, creeLe: true },
         },
         commentaires: { orderBy: { creeLe: 'asc' } },
       },

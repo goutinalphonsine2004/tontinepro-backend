@@ -1,3 +1,3 @@
 export declare class RejoindreTonitneDto {
-    montantCaution?: number;
+    montantCautionFcfa?: number;
 }

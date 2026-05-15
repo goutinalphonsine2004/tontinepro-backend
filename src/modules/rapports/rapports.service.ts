@@ -36,10 +36,10 @@ export class RapportsService {
         'tontine',
         'type',
         'statut',
-        'montant',
-        'montantNet',
-        'fraisPlateforme',
-        'fraisAgent',
+        'montantFcfa',
+        'montantNetFcfa',
+        'fraisPlateformeFcfa',
+        'fraisAgentFcfa',
         'operateur',
         'refKKiaPay',
       ],
@@ -52,10 +52,10 @@ export class RapportsService {
         tx.tontine?.nom ?? '',
         tx.type,
         tx.statut,
-        tx.montant,
-        tx.montantNet,
-        tx.fraisPlateforme,
-        tx.fraisAgent,
+        tx.montantFcfa,
+        tx.montantNetFcfa,
+        tx.fraisPlateformeFcfa,
+        tx.fraisAgentFcfa,
         tx.operateur ?? '',
         tx.refKKiaPay ?? '',
       ]),
@@ -86,7 +86,7 @@ export class RapportsService {
         'telephone',
         'role',
         'tontine',
-        'montant',
+        'montantFcfa',
         'statut',
         'validePar',
         'motifRejet',
@@ -100,7 +100,7 @@ export class RapportsService {
         r.utilisateur.telephone,
         r.utilisateur.role,
         r.tontine.nom,
-        r.montant,
+        r.montantFcfa,
         r.statut,
         r.validePar ?? '',
         r.motifRejet ?? '',
@@ -148,12 +148,12 @@ export class RapportsService {
         c.client.nom,
         c.client.telephone,
         c.client.collecteurId ?? '',
-        c.montantPrincipal,
-        c.montantTotal - c.montantPrincipal,
-        c.montantTotal,
-        c.paiementJournalier,
+        c.montantPrincipalFcfa,
+        c.montantTotalFcfa - c.montantPrincipalFcfa,
+        c.montantTotalFcfa,
+        c.paiementJournalierFcfa,
         c.joursPayes,
-        c.montantRestant,
+        c.montantRestantFcfa,
         c.statut,
         c.scoreAuMoment,
         c.dateEcheance.toISOString(),
@@ -185,10 +185,10 @@ export class RapportsService {
           creeLe: { gte: periode.debut, lte: periode.fin },
         },
         _sum: {
-          montant: true,
-          montantNet: true,
-          fraisPlateforme: true,
-          fraisAgent: true,
+          montantFcfa: true,
+          montantNetFcfa: true,
+          fraisPlateformeFcfa: true,
+          fraisAgentFcfa: true,
         },
         _count: true,
       }),
@@ -197,7 +197,7 @@ export class RapportsService {
           statut: StatutRetrait.EXECUTE,
           creeLe: { gte: periode.debut, lte: periode.fin },
         },
-        _sum: { montant: true },
+        _sum: { montantFcfa: true },
         _count: true,
       }),
       this.prisma.transaction.aggregate({
@@ -205,12 +205,12 @@ export class RapportsService {
           type: TypeTransaction.DISTRIBUTION_GROUPE,
           creeLe: { gte: periode.debut, lte: periode.fin },
         },
-        _sum: { montant: true, montantNet: true },
+        _sum: { montantFcfa: true, montantNetFcfa: true },
         _count: true,
       }),
       this.prisma.commission.aggregate({
         where: { creeLe: { gte: periode.debut, lte: periode.fin } },
-        _sum: { montant: true },
+        _sum: { montantFcfa: true },
         _count: true,
       }),
       this.prisma.microCredit.findMany({
@@ -224,14 +224,14 @@ export class RapportsService {
             ],
           },
         },
-        select: { montantPrincipal: true, montantTotal: true, statut: true },
+        select: { montantPrincipalFcfa: true, montantTotalFcfa: true, statut: true },
       }),
       this.prisma.remboursementCredit.aggregate({
         where: {
           statut: 'SUCCES',
           payeLe: { gte: periode.debut, lte: periode.fin },
         },
-        _sum: { montant: true },
+        _sum: { montantFcfa: true },
         _count: true,
       }),
       this.prisma.transaction.aggregate({
@@ -240,7 +240,7 @@ export class RapportsService {
           statut: StatutTransaction.SUCCES,
           creeLe: { gte: periode.debut, lte: periode.fin },
         },
-        _sum: { montant: true },
+        _sum: { montantFcfa: true },
         _count: true,
       }),
       this.prisma.transaction.groupBy({
@@ -251,11 +251,11 @@ export class RapportsService {
     ]);
 
     const principalCredits = microCredits.reduce(
-      (s, c) => s + c.montantPrincipal,
+      (s, c) => s + c.montantPrincipalFcfa,
       0,
     );
     const interetsCredits = microCredits.reduce(
-      (s, c) => s + (c.montantTotal - c.montantPrincipal),
+      (s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa),
       0,
     );
     const creditsEnDefaut = microCredits.filter(
@@ -263,7 +263,7 @@ export class RapportsService {
     ).length;
 
     const buffer = await this.pdf((doc) => {
-      doc.fontSize(20).text('TontineBenin', { align: 'center' });
+      doc.fontSize(20).text('TontineBénin', { align: 'center' });
       doc
         .moveDown(0.4)
         .fontSize(14)
@@ -278,43 +278,43 @@ export class RapportsService {
       this.ligne(
         doc,
         'Cotisations brutes',
-        this.fcfa(cotisations._sum.montant ?? 0),
+        this.fcfa(cotisations._sum.montantFcfa ?? 0),
       );
       this.ligne(
         doc,
         'Cotisations nettes creditees',
-        this.fcfa(cotisations._sum.montantNet ?? 0),
+        this.fcfa(cotisations._sum.montantNetFcfa ?? 0),
       );
       this.ligne(doc, 'Nombre cotisations', `${cotisations._count}`);
       this.ligne(
         doc,
         'Retraits executes',
-        this.fcfa(retraitsExecutes._sum.montant ?? 0),
+        this.fcfa(retraitsExecutes._sum.montantFcfa ?? 0),
       );
       this.ligne(doc, 'Nombre retraits executes', `${retraitsExecutes._count}`);
       this.ligne(
         doc,
         'Distributions groupe',
-        this.fcfa(distributions._sum.montant ?? 0),
+        this.fcfa(distributions._sum.montantFcfa ?? 0),
       );
 
       this.section(doc, 'Revenus');
       this.ligne(
         doc,
         'Frais plateforme cotisations',
-        this.fcfa(cotisations._sum.fraisPlateforme ?? 0),
+        this.fcfa(cotisations._sum.fraisPlateformeFcfa ?? 0),
       );
       this.ligne(
         doc,
         'Commissions agents',
-        this.fcfa(cotisations._sum.fraisAgent ?? 0),
+        this.fcfa(cotisations._sum.fraisAgentFcfa ?? 0),
       );
       this.ligne(
         doc,
         'Commissions comptabilisees',
-        this.fcfa(commissions._sum.montant ?? 0),
+        this.fcfa(commissions._sum.montantFcfa ?? 0),
       );
-      this.ligne(doc, 'Abonnements', this.fcfa(abonnements._sum.montant ?? 0));
+      this.ligne(doc, 'Abonnements', this.fcfa(abonnements._sum.montantFcfa ?? 0));
       this.ligne(
         doc,
         'Interets micro-credits generes',
@@ -326,7 +326,7 @@ export class RapportsService {
       this.ligne(
         doc,
         'Remboursements recus',
-        this.fcfa(remboursements._sum.montant ?? 0),
+        this.fcfa(remboursements._sum.montantFcfa ?? 0),
       );
       this.ligne(
         doc,
@@ -409,14 +409,14 @@ export class RapportsService {
     const actifs = credits.filter((c) => c.statut === 'ACTIF');
     const termines = credits.filter((c) => c.statut === 'TERMINE');
     const defaut = credits.filter((c) => c.statut === 'EN_DEFAUT');
-    const totalDecaisse = credits.reduce((s, c) => s + c.montantPrincipal, 0);
+    const totalDecaisse = credits.reduce((s, c) => s + c.montantPrincipalFcfa, 0);
     const totalInterets = credits.reduce(
-      (s, c) => s + (c.montantTotal - c.montantPrincipal),
+      (s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa),
       0,
     );
     const totalRestant = credits
       .filter((c) => c.statut === 'ACTIF')
-      .reduce((s, c) => s + c.montantRestant, 0);
+      .reduce((s, c) => s + c.montantRestantFcfa, 0);
 
     const buffer = await new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -466,7 +466,7 @@ export class RapportsService {
             .fontSize(10)
             .fillColor('#dc2626')
             .text(
-              `• ${c.client.nom} (${c.client.telephone}) — Restant: ${this.fcfa(c.montantRestant)}`,
+              `• ${c.client.nom} (${c.client.telephone}) — Restant: ${this.fcfa(c.montantRestantFcfa)}`,
             );
         });
         doc.moveDown(1);
@@ -478,7 +478,7 @@ export class RapportsService {
           .fontSize(9)
           .fillColor('#555')
           .text(
-            `${c.client.nom} | ${this.fcfa(c.montantPrincipal)} | Score: ${c.scoreAuMoment} | Restant: ${this.fcfa(c.montantRestant)} | ${c.joursPayes}/${c.totalJours} j`,
+            `${c.client.nom} | ${this.fcfa(c.montantPrincipalFcfa)} | Score: ${c.scoreAuMoment} | Restant: ${this.fcfa(c.montantRestantFcfa)} | ${c.joursPayes}/${c.totalJours} j`,
           );
       });
       if (actifs.length > 30)
@@ -510,14 +510,14 @@ export class RapportsService {
                 statut: 'SUCCES' as any,
                 creeLe: { gte: periode.debut, lte: periode.fin },
               },
-              select: { montant: true },
+              select: { montantFcfa: true },
             },
             scoreCredit: { select: { tauxRegularite: true } },
           },
         },
         commissions: {
           where: { creeLe: { gte: periode.debut, lte: periode.fin } },
-          select: { montant: true },
+          select: { montantFcfa: true },
         },
       },
       orderBy: { nom: 'asc' },
@@ -531,8 +531,8 @@ export class RapportsService {
         nbClients: a.clients.length,
         volumeCollecte: a.clients
           .flatMap((c) => c.transactions)
-          .reduce((s, tx) => s + tx.montant, 0),
-        commissions: a.commissions.reduce((s, c) => s + c.montant, 0),
+          .reduce((s, tx) => s + tx.montantFcfa, 0),
+        commissions: a.commissions.reduce((s, c) => s + c.montantFcfa, 0),
         tauxMoyenRegularite:
           a.clients.length > 0
             ? a.clients
@@ -603,21 +603,21 @@ export class RapportsService {
             type: 'COTISATION' as any,
             statut: 'SUCCES' as any,
           },
-          _sum: { montant: true, fraisPlateforme: true },
+          _sum: { montantFcfa: true, fraisPlateformeFcfa: true },
           _count: true,
         }),
         this.prisma.transaction.aggregate({
           where: { ...where, type: 'RETRAIT' as any, statut: 'SUCCES' as any },
-          _sum: { montant: true },
+          _sum: { montantFcfa: true },
           _count: true,
         }),
         this.prisma.microCredit.findMany({
           where: { ...where, statut: { in: ['ACTIF', 'TERMINE'] as any } },
-          select: { montantPrincipal: true, montantTotal: true },
+          select: { montantPrincipalFcfa: true, montantTotalFcfa: true },
         }),
         this.prisma.commission.aggregate({
           where,
-          _sum: { montant: true },
+          _sum: { montantFcfa: true },
           _count: true,
         }),
         this.prisma.transaction.aggregate({
@@ -626,14 +626,14 @@ export class RapportsService {
             type: 'DEBLOCAGE_CREDIT' as any,
             statut: 'SUCCES' as any,
           },
-          _sum: { montant: true },
+          _sum: { montantFcfa: true },
         }),
       ]);
 
     const revenus =
-      (cotisations._sum.fraisPlateforme ?? 0) +
-      credits.reduce((s, c) => s + (c.montantTotal - c.montantPrincipal), 0);
-    const charges = commissions._sum.montant ?? 0;
+      (cotisations._sum.fraisPlateformeFcfa ?? 0) +
+      credits.reduce((s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa), 0);
+    const charges = commissions._sum.montantFcfa ?? 0;
     const resultatNet = revenus - charges;
 
     const buffer = await new Promise<Buffer>((resolve, reject) => {
@@ -658,17 +658,17 @@ export class RapportsService {
       this.ligne(
         doc,
         'Cotisations collectées',
-        this.fcfa(cotisations._sum.montant ?? 0),
+        this.fcfa(cotisations._sum.montantFcfa ?? 0),
       );
       this.ligne(
         doc,
         'Retraits exécutés',
-        this.fcfa(retraits._sum.montant ?? 0),
+        this.fcfa(retraits._sum.montantFcfa ?? 0),
       );
       this.ligne(
         doc,
         'Décaissements crédits',
-        this.fcfa(decaissements._sum.montant ?? 0),
+        this.fcfa(decaissements._sum.montantFcfa ?? 0),
       );
       doc.moveDown(1);
 
@@ -676,14 +676,14 @@ export class RapportsService {
       this.ligne(
         doc,
         'Frais plateforme collectés',
-        this.fcfa(cotisations._sum.fraisPlateforme ?? 0),
+        this.fcfa(cotisations._sum.fraisPlateformeFcfa ?? 0),
       );
       this.ligne(
         doc,
         'Intérêts micro-crédits',
         this.fcfa(
           credits.reduce(
-            (s, c) => s + (c.montantTotal - c.montantPrincipal),
+            (s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa),
             0,
           ),
         ),
@@ -718,8 +718,8 @@ export class RapportsService {
     doc.fillColor('#111').text(` : ${valeur}`);
   }
 
-  private fcfa(montant: number) {
-    return `${Math.round(montant).toLocaleString('fr-FR')} FCFA`;
+  private fcfa(montantFcfa: number) {
+    return `${Math.round(montantFcfa).toLocaleString('fr-FR')} FCFA`;
   }
 
   private finDeJournee(date: string) {

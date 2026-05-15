@@ -1,14 +1,19 @@
+import { Role } from '@prisma/client';
 import { MicroCreditsService } from './micro-credits.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { DemanderCreditDto } from './dto/demander-credit.dto';
 import { ConfirmerPinDto } from './dto/confirmer-pin.dto';
 import { ConsentementSmsDto } from './dto/consentement-sms.dto';
 import { RefuserCreditDto } from './dto/refuser-credit.dto';
 export declare class MicroCreditsController {
     private service;
-    constructor(service: MicroCreditsService);
+    private prisma;
+    constructor(service: MicroCreditsService, prisma: PrismaService);
+    private verifierAccesClient;
     monEligibilite(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -18,10 +23,10 @@ export declare class MicroCreditsController {
             tauxInteret: string;
             dureeJours: number;
             exempleCalcul: {
-                montantPrincipal: number;
+                montantPrincipalFcfa: number;
                 interet: number;
-                montantTotal: number;
-                paiementJournalier: number;
+                montantTotalFcfa: number;
+                paiementJournalierFcfa: number;
             } | null;
             scoreRequis: number;
             creditActifEnCours: boolean;
@@ -29,14 +34,15 @@ export declare class MicroCreditsController {
     }>;
     demander(u: {
         id: string;
-    }, dto: DemanderCreditDto): Promise<{
+        role: Role;
+    }, dto: DemanderCreditDto, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: {
             creditId: string;
-            montantPrincipal: number;
-            montantTotal: number;
-            paiementJournalier: number;
+            montantPrincipalFcfa: number;
+            montantTotalFcfa: number;
+            paiementJournalierFcfa: number;
             tauxInteret: string;
             methodeConsentement: string;
             dateEcheance: Date;
@@ -68,13 +74,13 @@ export declare class MicroCreditsController {
             misAJourLe: Date;
             statut: import("@prisma/client").$Enums.StatutCredit;
             clientId: string;
-            montantPrincipal: number;
+            montantPrincipalFcfa: number;
             tauxInteret: number;
-            montantTotal: number;
-            paiementJournalier: number;
+            montantTotalFcfa: number;
+            paiementJournalierFcfa: number;
             totalJours: number;
             joursPayes: number;
-            montantRestant: number;
+            montantRestantFcfa: number;
             scoreAuMoment: number;
             initiePar: string;
             methodeConsentement: string | null;
@@ -93,7 +99,7 @@ export declare class MicroCreditsController {
         donnees: {
             creditId: string;
             refKKiaPay: string;
-            montantDecaisse: number;
+            montantFcfaDecaisse: number;
         };
     }>;
     refuser(id: string, u: {
@@ -104,7 +110,8 @@ export declare class MicroCreditsController {
     }>;
     mesCredits(u: {
         id: string;
-    }): Promise<{
+        role: Role;
+    }, clientId?: string): Promise<{
         succes: boolean;
         message: string;
         donnees: ({
@@ -117,13 +124,13 @@ export declare class MicroCreditsController {
             misAJourLe: Date;
             statut: import("@prisma/client").$Enums.StatutCredit;
             clientId: string;
-            montantPrincipal: number;
+            montantPrincipalFcfa: number;
             tauxInteret: number;
-            montantTotal: number;
-            paiementJournalier: number;
+            montantTotalFcfa: number;
+            paiementJournalierFcfa: number;
             totalJours: number;
             joursPayes: number;
-            montantRestant: number;
+            montantRestantFcfa: number;
             scoreAuMoment: number;
             initiePar: string;
             methodeConsentement: string | null;
@@ -141,18 +148,18 @@ export declare class MicroCreditsController {
         message: string;
         donnees: {
             credit: {
-                montantTotal: number;
-                montantRestant: number;
+                montantTotalFcfa: number;
+                montantRestantFcfa: number;
                 joursPayes: number;
                 totalJours: number;
-                paiementJournalier: number;
+                paiementJournalierFcfa: number;
                 statut: import("@prisma/client").$Enums.StatutCredit;
             };
             remboursements: {
                 refKKiaPay: string | null;
-                montant: number;
                 id: string;
                 statut: string;
+                montantFcfa: number;
                 microCreditId: string;
                 payeLe: Date;
             }[];

@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RetraitsController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const client_1 = require("@prisma/client");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
@@ -40,6 +41,9 @@ let RetraitsController = class RetraitsController {
     mesRetraits(u) {
         return this.service.mesRetraits(u.id);
     }
+    statut(id, u) {
+        return this.service.statut(id, u.id);
+    }
     enAttente() {
         return this.service.enAttente();
     }
@@ -53,6 +57,7 @@ let RetraitsController = class RetraitsController {
 exports.RetraitsController = RetraitsController;
 __decorate([
     (0, common_1.Post)('demander'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 3600000 } }),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -61,6 +66,7 @@ __decorate([
 ], RetraitsController.prototype, "demander", null);
 __decorate([
     (0, common_1.Post)('demander-otp'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 3600000 } }),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -69,6 +75,7 @@ __decorate([
 ], RetraitsController.prototype, "demanderOtp", null);
 __decorate([
     (0, common_1.Post)('confirmer'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 3600000 } }),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -82,6 +89,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], RetraitsController.prototype, "mesRetraits", null);
+__decorate([
+    (0, common_1.Get)(':id/statut'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], RetraitsController.prototype, "statut", null);
 __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERVISEUR),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),

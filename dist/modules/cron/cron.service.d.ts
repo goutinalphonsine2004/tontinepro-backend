@@ -22,6 +22,7 @@ export declare class CronService {
     private gererEchecRemboursement;
     scoringNocturne(): Promise<void>;
     calculerEtMettreAJourScore(clientId: string): Promise<number>;
+    private notifierEvolutionScore;
     private genererDossierPADME;
     private notifierAdminsDossierPADME;
     nettoyerOTPExpires(): Promise<void>;

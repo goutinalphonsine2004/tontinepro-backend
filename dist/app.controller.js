@@ -14,13 +14,14 @@ const common_1 = require("@nestjs/common");
 let AppController = class AppController {
     health() {
         return {
-            succes: true,
-            message: 'TontineBénin API opérationnelle',
-            donnees: {
-                statut: 'ok',
-                version: '1.0.0',
-                timestamp: new Date().toISOString(),
-            },
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+        };
+    }
+    version() {
+        return {
+            version: '1.0.0',
         };
     }
 };
@@ -31,6 +32,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AppController.prototype, "health", null);
+__decorate([
+    (0, common_1.Get)('version'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AppController.prototype, "version", null);
 exports.AppController = AppController = __decorate([
     (0, common_1.Controller)()
 ], AppController);

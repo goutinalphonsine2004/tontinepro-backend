@@ -43,7 +43,7 @@ let SmsService = SmsService_1 = class SmsService {
             await this.sms.send({
                 to: [telephone],
                 message,
-                from: this.config.get('AT_SENDER', 'TontinePro'),
+                from: this.config.get('AT_SENDER', 'TontineBénin'),
             });
             this.logger.log(`SMS envoyé à ${telephone}`);
         }
@@ -72,68 +72,68 @@ let SmsService = SmsService_1 = class SmsService {
                     return this.gererCommandeRejoindre(utilisateur, mots[1]);
                 case 'AIDE':
                 default:
-                    return this.envoyer(from, 'TontinePro: Commandes valides: SOLDE, RETRAIT [Montant], REJOINDRE [Code], AIDE.');
+                    return this.envoyer(from, 'TontineBénin: Commandes valides: SOLDE, RETRAIT [Montant], REJOINDRE [Code], AIDE.');
             }
         }
         catch (error) {
             this.logger.error(`Erreur traitement commande SMS: ${error.message}`);
-            await this.envoyer(from, `TontinePro: Erreur - ${error.message}`);
+            await this.envoyer(from, `TontineBénin: Erreur - ${error.message}`);
         }
     }
     async gererCommandeRejoindre(utilisateur, code) {
         if (!code) {
-            return this.envoyer(utilisateur.telephone, "TontinePro: Précisez le code d'invitation. Exemple: REJOINDRE X8Z2P");
+            return this.envoyer(utilisateur.telephone, "TontineBénin: Précisez le code d'invitation. Exemple: REJOINDRE X8Z2P");
         }
         const tontine = await this.prisma.tontine.findUnique({
             where: { codeInvitation: code.toUpperCase() },
         });
         if (!tontine) {
-            return this.envoyer(utilisateur.telephone, "TontinePro: Code d'invitation invalide.");
+            return this.envoyer(utilisateur.telephone, "TontineBénin: Code d'invitation invalide.");
         }
         try {
             await this.tontinesService.rejoindre(tontine.id, utilisateur.id, {
-                montantCaution: 0,
+                montantCautionFcfa: 0,
             });
-            await this.envoyer(utilisateur.telephone, `TontinePro: Félicitations ! Vous avez rejoint le groupe '${tontine.nom}'.`);
+            await this.envoyer(utilisateur.telephone, `TontineBénin: Félicitations ! Vous avez rejoint le groupe '${tontine.nom}'.`);
         }
         catch (err) {
-            await this.envoyer(utilisateur.telephone, `TontinePro: Impossible de rejoindre : ${err.message}`);
+            await this.envoyer(utilisateur.telephone, `TontineBénin: Impossible de rejoindre : ${err.message}`);
         }
     }
     async gererCommandeSolde(utilisateur) {
         const tontines = await this.prisma.tontine.findMany({
             where: { proprietaireId: utilisateur.id, statut: 'ACTIVE' },
-            select: { nom: true, soldeActuel: true },
+            select: { nom: true, soldeActuelFcfa: true },
         });
         if (tontines.length === 0) {
-            return this.envoyer(utilisateur.telephone, "TontinePro: Vous n'avez aucune tontine active.");
+            return this.envoyer(utilisateur.telephone, "TontineBénin: Vous n'avez aucune tontine active.");
         }
-        const total = tontines.reduce((sum, t) => sum + t.soldeActuel, 0);
+        const total = tontines.reduce((sum, t) => sum + t.soldeActuelFcfa, 0);
         const detail = tontines
-            .map((t) => `${t.nom}: ${t.soldeActuel}F`)
+            .map((t) => `${t.nom}: ${t.soldeActuelFcfa}F`)
             .join(', ');
-        await this.envoyer(utilisateur.telephone, `TontinePro: Solde Total: ${total} FCFA. Détails: ${detail}.`);
+        await this.envoyer(utilisateur.telephone, `TontineBénin: Solde Total: ${total} FCFA. Détails: ${detail}.`);
     }
-    async gererCommandeRetrait(utilisateur, montantStr) {
-        if (!montantStr || isNaN(Number(montantStr))) {
-            return this.envoyer(utilisateur.telephone, 'TontinePro: Précisez le montant. Exemple: RETRAIT 5000');
+    async gererCommandeRetrait(utilisateur, montantFcfaStr) {
+        if (!montantFcfaStr || isNaN(Number(montantFcfaStr))) {
+            return this.envoyer(utilisateur.telephone, 'TontineBénin: Précisez le montantFcfa. Exemple: RETRAIT 5000');
         }
-        const montant = Number(montantStr);
+        const montantFcfa = Number(montantFcfaStr);
         const tontine = await this.prisma.tontine.findFirst({
             where: {
                 proprietaireId: utilisateur.id,
-                soldeActuel: { gte: montant },
+                soldeActuelFcfa: { gte: montantFcfa },
                 statut: 'ACTIVE',
             },
-            orderBy: { soldeActuel: 'desc' },
+            orderBy: { soldeActuelFcfa: 'desc' },
         });
         if (!tontine) {
-            return this.envoyer(utilisateur.telephone, `TontinePro: Solde insuffisant pour retirer ${montant} FCFA sur vos tontines actives.`);
+            return this.envoyer(utilisateur.telephone, `TontineBénin: Solde insuffisant pour retirer ${montantFcfa} FCFA sur vos tontines actives.`);
         }
-        await this.envoyer(utilisateur.telephone, `TontinePro: Demande de retrait de ${montant}F sur '${tontine.nom}' reçue.`);
+        await this.envoyer(utilisateur.telephone, `TontineBénin: Demande de retrait de ${montantFcfa}F sur '${tontine.nom}' reçue.`);
         await this.retraitsService.demanderOtp(utilisateur.id, {
             tontineId: tontine.id,
-            montant: montant,
+            montant: montantFcfa,
             telephone: utilisateur.telephone,
         });
     }

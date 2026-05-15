@@ -14,6 +14,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KycController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
 const client_1 = require("@prisma/client");
 const jwt_guard_1 = require("../../common/guards/jwt.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
@@ -22,10 +24,27 @@ const utilisateur_courant_decorator_1 = require("../../common/decorators/utilisa
 const kyc_service_1 = require("./kyc.service");
 const soumettre_kyc_dto_1 = require("./dto/soumettre-kyc.dto");
 const rejeter_kyc_dto_1 = require("./dto/rejeter-kyc.dto");
+const TAILLE_MAX = 5 * 1024 * 1024;
+const MIME_AUTORISES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
 let KycController = class KycController {
     service;
     constructor(service) {
         this.service = service;
+    }
+    async uploadDocument(u, fichier, typeDocument) {
+        if (!fichier) {
+            throw new common_1.BadRequestException({
+                message: 'Aucun fichier reçu.',
+                code: 'FICHIER_MANQUANT',
+            });
+        }
+        if (!typeDocument) {
+            throw new common_1.BadRequestException({
+                message: 'Le type de document est obligatoire.',
+                code: 'TYPE_DOCUMENT_MANQUANT',
+            });
+        }
+        return this.service.uploadEtSoumettre(u.id, typeDocument, fichier);
     }
     soumettre(u, dto) {
         return this.service.soumettre(u.id, dto);
@@ -44,6 +63,33 @@ let KycController = class KycController {
     }
 };
 exports.KycController = KycController;
+__decorate([
+    (0, common_1.Post)('upload'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('fichier', {
+        storage: (0, multer_1.memoryStorage)(),
+        limits: {
+            fileSize: TAILLE_MAX,
+            files: 1,
+        },
+        fileFilter: (req, file, cb) => {
+            if (MIME_AUTORISES.includes(file.mimetype)) {
+                cb(null, true);
+            }
+            else {
+                cb(new common_1.BadRequestException({
+                    message: 'Format non accepté. Utilisez JPG, PNG ou PDF.',
+                    code: 'FORMAT_INVALIDE',
+                }), false);
+            }
+        },
+    })),
+    __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Body)('typeDocument')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, String]),
+    __metadata("design:returntype", Promise)
+], KycController.prototype, "uploadDocument", null);
 __decorate([
     (0, common_1.Post)('soumettre'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
@@ -78,7 +124,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], KycController.prototype, "valider", null);
 __decorate([
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERVISEUR),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, common_1.Put)(':id/rejeter'),
     __param(0, (0, common_1.Param)('id')),

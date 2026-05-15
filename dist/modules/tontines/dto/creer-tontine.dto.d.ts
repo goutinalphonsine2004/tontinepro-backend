@@ -6,16 +6,16 @@ export declare class CreerTontineDto {
     politique?: PolitiqueRetrait;
     frequence?: FrequenceTontine;
     jourFixe?: number;
-    objectifMontant?: number;
-    montantJournalier?: number;
+    objectifMontantFcfa?: number;
+    montantJournalierFcfa?: number;
     dateDeverrouillage?: Date;
     dateFin?: Date;
     clientId?: string;
     nbMembresMax?: number;
-    montantParMembre?: number;
+    montantParMembreFcfa?: number;
     cautionObligatoire?: boolean;
-    montantCautionObligatoire?: number;
+    montantCautionFcfaObligatoireFcfa?: number;
     penaliteRetardActive?: boolean;
-    montantPenaliteRetard?: number;
+    montantPenaliteRetardFcfa?: number;
     modeTirage?: ModeTirageGroupe;
 }

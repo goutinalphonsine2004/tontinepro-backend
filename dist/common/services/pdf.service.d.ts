@@ -7,8 +7,8 @@ export type RecuTransactionPdf = {
     telephone: string;
     tontine: string;
     montant: number;
-    fraisPlateforme: number;
-    montantNet: number;
+    fraisPlateformeFcfa: number;
+    montantNetFcfa: number;
     operateur: string;
     refKKiaPay: string;
     hashIntegrite: string;
@@ -18,7 +18,7 @@ export type DossierPadmePdf = {
     clientNom: string;
     clientTelephone: string;
     score: number;
-    totalEpargne: number;
+    totalEpargneFcfa: number;
     tauxRegularite: number;
     creditsRembourses: number;
     genereLe: Date;

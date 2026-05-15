@@ -123,7 +123,7 @@ let ZonesService = class ZonesService {
                     creeLe: { gte: debutMois },
                     utilisateur: { collecteur: { zoneId } },
                 },
-                _sum: { montant: true },
+                _sum: { montantFcfa: true },
                 _count: true,
             }),
         ]);
@@ -141,7 +141,7 @@ let ZonesService = class ZonesService {
                 nbAgents: agents.length,
                 nbClients: clients.length,
                 scoreMoyen,
-                volumeCeMois: volumeMois._sum.montant ?? 0,
+                volumeCeMois: volumeMois._sum.montantFcfa ?? 0,
                 transactionsCeMois: volumeMois._count,
                 agents,
             },
@@ -163,7 +163,7 @@ let ZonesService = class ZonesService {
                             select: {
                                 transactions: {
                                     where: { statut: 'SUCCES', type: 'COTISATION' },
-                                    select: { montant: true },
+                                    select: { montantFcfa: true },
                                 },
                                 scoreCredit: { select: { score: true, eligiblePADME: true } },
                             },
@@ -176,7 +176,7 @@ let ZonesService = class ZonesService {
             const clients = zone.agents.flatMap((a) => a.clients);
             const volumeTotal = clients
                 .flatMap((c) => c.transactions)
-                .reduce((s, tx) => s + tx.montant, 0);
+                .reduce((s, tx) => s + tx.montantFcfa, 0);
             const scores = clients
                 .filter((c) => c.scoreCredit)
                 .map((c) => c.scoreCredit.score);

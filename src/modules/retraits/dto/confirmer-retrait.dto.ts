@@ -1,10 +1,11 @@
 import {
+  IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
-  Length,
+  Matches,
+  Max,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -15,14 +16,23 @@ export class ConfirmerRetraitDto {
   tontineId!: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(500, { message: 'Le montant minimum de retrait est 500 FCFA' })
+  @Max(10000000, { message: 'Le montant maximum est 10 000 000 FCFA' })
   montant!: number;
 
   @IsString()
-  @Length(6, 6, { message: 'Le code OTP doit contenir 6 chiffres' })
+  @Matches(/^\d{6}$/, { message: 'Le code OTP doit contenir 6 chiffres' })
   code!: string;
 
+  @IsString()
+  @Matches(/^(\+229|229)\d{8}$/, {
+    message: 'Téléphone invalide. Format attendu: +229XXXXXXXX ou 229XXXXXXXX',
+  })
   @IsOptional()
   telephone?: string;
+
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
 }
