@@ -34,9 +34,9 @@ services:
       - key: KKIAPAY_SANDBOX
         value: "true"
       - key: AT_USERNAME
-        sync: false
+        value: sandbox
       - key: AT_API_KEY
-        sync: false
+        value: DEMO_KEY_PLACEHOLDER
       - key: AT_SENDER
         value: TontineBenin
       - key: SEUIL_RETRAIT_ADMIN
