@@ -49,36 +49,19 @@ export class AuthService {
       dto.role && roleAutorise.includes(dto.role) ? dto.role : Role.CLIENT;
 
     if (existant) {
-      // Inscription commencée mais OTP/PIN non terminés → renvoyer un OTP
-      if (
-        existant.statut === StatutCompte.EN_ATTENTE &&
-        !existant.pinHash
-      ) {
-        if (dto.nom?.trim()) {
-          await this.prisma.utilisateur.update({
-            where: { id: existant.id },
-            data: { nom: dto.nom.trim(), role },
-          });
-        }
-        return this.envoyerOtpInscription(
-          existant.id,
-          dto.telephone,
-          true,
-          dto.nom?.trim() || existant.nom,
-          role,
-        );
-      }
-
-      if (existant.statut === StatutCompte.ACTIF && existant.pinHash) {
-        throw new ConflictException({
-          message:
-            'Ce numéro est déjà actif. Connectez-vous avec votre PIN ou utilisez « PIN oublié ».',
-          code: 'TELEPHONE_EXISTANT',
-        });
-      }
+      const reprise = await this.tenterRepriseInscription(
+        existant,
+        dto.telephone,
+        dto.nom?.trim(),
+        role,
+      );
+      if (reprise) return reprise;
 
       throw new ConflictException({
-        message: 'Ce numéro de téléphone est déjà inscrit',
+        message:
+          existant.pinHash
+            ? 'Ce numéro est déjà actif. Connectez-vous avec votre PIN.'
+            : 'Ce numéro de téléphone est déjà inscrit',
         code: 'TELEPHONE_EXISTANT',
       });
     }
@@ -98,6 +81,75 @@ export class AuthService {
       false,
       dto.nom,
       role,
+    );
+  }
+
+  /** Renvoie l'OTP si l'inscription n'est pas terminée (pas de PIN). */
+  async renvoyerOtpInscription(telephone: string) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({
+      where: { telephone },
+    });
+    if (!utilisateur) {
+      throw new NotFoundException({
+        message: 'Aucun compte trouvé pour ce numéro. Faites une inscription.',
+        code: 'COMPTE_INTROUVABLE',
+      });
+    }
+
+    const reprise = await this.tenterRepriseInscription(
+      utilisateur,
+      telephone,
+    );
+    if (reprise) return reprise;
+
+    throw new ConflictException({
+      message:
+        'Ce numéro a déjà un PIN. Utilisez la connexion ou « PIN oublié ».',
+      code: 'COMPTE_DEJA_ACTIF',
+    });
+  }
+
+  /** Reprend l'inscription si pas de PIN (OTP ou création PIN non terminés). */
+  private async tenterRepriseInscription(
+    utilisateur: {
+      id: string;
+      nom: string;
+      role: Role;
+      statut: StatutCompte;
+      pinHash: string | null;
+    },
+    telephone: string,
+    nom?: string,
+    role?: Role,
+  ) {
+    if (
+      utilisateur.statut === StatutCompte.SUSPENDU ||
+      utilisateur.statut === StatutCompte.BANNI
+    ) {
+      throw new ForbiddenException({
+        message: 'Ce compte est suspendu ou banni. Contactez le support.',
+        code: 'COMPTE_SUSPENDU',
+      });
+    }
+
+    if (utilisateur.pinHash) {
+      return null;
+    }
+
+    const roleFinal = role ?? utilisateur.role;
+    if (nom) {
+      await this.prisma.utilisateur.update({
+        where: { id: utilisateur.id },
+        data: { nom, role: roleFinal },
+      });
+    }
+
+    return this.envoyerOtpInscription(
+      utilisateur.id,
+      telephone,
+      true,
+      nom || utilisateur.nom,
+      roleFinal,
     );
   }
 

@@ -20,6 +20,7 @@ import { CreerPinDto } from './dto/creer-pin.dto';
 import { ConnexionDto } from './dto/connexion.dto';
 import { RafraichirTokenDto } from './dto/rafraichir-token.dto';
 import { DemanderResetPinDto } from './dto/demander-reset-pin.dto';
+import { RenvoyerOtpInscriptionDto } from './dto/renvoyer-otp-inscription.dto';
 import { VerifierOtpResetPinDto } from './dto/verifier-otp-reset-pin.dto';
 import { ReinitialiserPinDto } from './dto/reinitialiser-pin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
@@ -36,6 +37,11 @@ export class AuthController {
   @Post('inscription')
   inscription(@Body() dto: InscriptionDto) {
     return this.authService.inscription(dto);
+  }
+
+  @Post('renvoyer-otp-inscription')
+  renvoyerOtpInscription(@Body() dto: RenvoyerOtpInscriptionDto) {
+    return this.authService.renvoyerOtpInscription(dto.telephone);
   }
 
   @Post('verifier-otp')
