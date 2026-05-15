@@ -63,15 +63,15 @@ export declare class CommissionsService {
                     utilisateur: {
                         nom: string;
                     };
-                    creeLe: Date;
                     type: import("@prisma/client").$Enums.TypeTransaction;
+                    creeLe: Date;
                     montantFcfa: number;
                     reference: string;
                 };
             } & {
                 id: string;
-                creeLe: Date;
                 type: string;
+                creeLe: Date;
                 montantFcfa: number;
                 agentId: string;
                 transactionId: string;

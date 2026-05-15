@@ -26,8 +26,8 @@ export declare class TransactionsService {
             idempotencyKey: string | null;
             id: string;
             utilisateurId: string;
-            creeLe: Date;
             type: import("@prisma/client").$Enums.TypeTransaction;
+            creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutTransaction;
             montantFcfa: number;
             tentatives: number;
@@ -88,8 +88,8 @@ export declare class TransactionsService {
                 idempotencyKey: string | null;
                 id: string;
                 utilisateurId: string;
-                creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeTransaction;
+                creeLe: Date;
                 statut: import("@prisma/client").$Enums.StatutTransaction;
                 montantFcfa: number;
                 tentatives: number;

@@ -22,9 +22,9 @@ export declare class TontinesService {
             };
         } & {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
@@ -55,9 +55,9 @@ export declare class TontinesService {
         message: string;
         donnees: {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
@@ -88,9 +88,9 @@ export declare class TontinesService {
         message: string;
         donnees: {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
@@ -121,9 +121,9 @@ export declare class TontinesService {
         message: string;
         donnees: {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
@@ -154,9 +154,9 @@ export declare class TontinesService {
         message: string;
         donnees: {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
@@ -193,9 +193,9 @@ export declare class TontinesService {
                 };
             } & {
                 id: string;
+                type: import("@prisma/client").$Enums.TypeTontine;
                 creeLe: Date;
                 misAJourLe: Date;
-                type: import("@prisma/client").$Enums.TypeTontine;
                 nom: string;
                 statut: import("@prisma/client").$Enums.StatutTontine;
                 codeInvitation: string | null;
@@ -227,9 +227,9 @@ export declare class TontinesService {
                     membres: number;
                 };
                 id: string;
+                type: import("@prisma/client").$Enums.TypeTontine;
                 creeLe: Date;
                 misAJourLe: Date;
-                type: import("@prisma/client").$Enums.TypeTontine;
                 nom: string;
                 statut: import("@prisma/client").$Enums.StatutTontine;
                 codeInvitation: string | null;
@@ -271,9 +271,9 @@ export declare class TontinesService {
             };
         } & {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
@@ -304,9 +304,9 @@ export declare class TontinesService {
         message: string;
         donnees: {
             id: string;
+            type: import("@prisma/client").$Enums.TypeTontine;
             creeLe: Date;
             misAJourLe: Date;
-            type: import("@prisma/client").$Enums.TypeTontine;
             nom: string;
             statut: import("@prisma/client").$Enums.StatutTontine;
             codeInvitation: string | null;
