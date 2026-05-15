@@ -10,3 +10,5 @@ google-services.json
 tontinepro-firebase-*.json
 firebase-adminsdk-*.json
 *-firebase-adminsdk-*.json
+
+.tsbuildinfo
