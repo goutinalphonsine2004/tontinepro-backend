@@ -14,8 +14,8 @@ export declare class LitigesService {
             litige: {
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
             } & {
@@ -38,8 +38,8 @@ export declare class LitigesService {
             litiges: ({
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
             } & {
@@ -62,8 +62,8 @@ export declare class LitigesService {
             litiges: ({
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
                 client: {
@@ -145,8 +145,8 @@ export declare class LitigesService {
             litige: {
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
                 client: {
@@ -158,9 +158,9 @@ export declare class LitigesService {
                     message: string;
                     id: string;
                     creeLe: Date;
-                    litigeId: string;
                     auteurId: string;
                     pieceJointeUrl: string | null;
+                    litigeId: string;
                 }[];
             } & {
                 motif: string;
@@ -185,9 +185,9 @@ export declare class LitigesService {
             message: string;
             id: string;
             creeLe: Date;
-            litigeId: string;
             auteurId: string;
             pieceJointeUrl: string | null;
+            litigeId: string;
         };
     }>;
     commentaires(litigeId: string, userId: string, role: string): Promise<{
@@ -197,9 +197,9 @@ export declare class LitigesService {
             message: string;
             id: string;
             creeLe: Date;
-            litigeId: string;
             auteurId: string;
             pieceJointeUrl: string | null;
+            litigeId: string;
         }[];
     }>;
 }

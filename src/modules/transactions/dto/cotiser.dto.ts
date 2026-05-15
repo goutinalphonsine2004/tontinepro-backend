@@ -27,7 +27,7 @@ export class CotiserDto {
   operateur!: string;
 
   @IsString()
-  @Matches(/^(\+229|229)\d{8}$/, {
+  @Matches(/^(\+229|229)\d{8,10}$/, {
     message: 'Téléphone invalide. Format attendu: +229XXXXXXXX ou 229XXXXXXXX',
   })
   @IsOptional()

@@ -11,10 +11,10 @@ export declare class AlertesController {
             alertes: {
                 message: string;
                 id: string;
-                type: string;
-                titre: string;
                 creeLe: Date;
                 misAJourLe: Date;
+                type: string;
+                titre: string;
                 statut: string;
                 severite: string;
                 resourceType: string | null;
@@ -43,10 +43,10 @@ export declare class AlertesController {
             dernieres: {
                 message: string;
                 id: string;
-                type: string;
-                titre: string;
                 creeLe: Date;
                 misAJourLe: Date;
+                type: string;
+                titre: string;
                 statut: string;
                 severite: string;
                 resourceType: string | null;
@@ -63,10 +63,10 @@ export declare class AlertesController {
         donnees: {
             message: string;
             id: string;
-            type: string;
-            titre: string;
             creeLe: Date;
             misAJourLe: Date;
+            type: string;
+            titre: string;
             statut: string;
             severite: string;
             resourceType: string | null;
@@ -84,10 +84,10 @@ export declare class AlertesController {
         donnees: {
             message: string;
             id: string;
-            type: string;
-            titre: string;
             creeLe: Date;
             misAJourLe: Date;
+            type: string;
+            titre: string;
             statut: string;
             severite: string;
             resourceType: string | null;
@@ -105,10 +105,10 @@ export declare class AlertesController {
         donnees: {
             message: string;
             id: string;
-            type: string;
-            titre: string;
             creeLe: Date;
             misAJourLe: Date;
+            type: string;
+            titre: string;
             statut: string;
             severite: string;
             resourceType: string | null;

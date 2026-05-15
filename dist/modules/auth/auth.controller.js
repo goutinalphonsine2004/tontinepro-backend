@@ -14,7 +14,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
-const throttler_1 = require("@nestjs/throttler");
 const auth_service_1 = require("./auth.service");
 const inscription_dto_1 = require("./dto/inscription.dto");
 const verifier_otp_dto_1 = require("./dto/verifier-otp.dto");
@@ -89,7 +88,6 @@ let AuthController = class AuthController {
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('inscription'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -97,7 +95,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "inscription", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }),
     (0, common_1.Post)('verifier-otp'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -115,7 +112,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "creerPin", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('connexion'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
@@ -124,7 +120,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "connexion", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }),
     (0, common_1.Post)('demander-reset-pin'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -132,7 +127,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "demanderResetPin", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('verifier-otp-reset-pin'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -140,7 +134,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "verifierOtpResetPin", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('reinitialiser-pin'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -199,7 +192,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "enregistrerAppareil", null);
 __decorate([
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('biometrique/connexion'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),

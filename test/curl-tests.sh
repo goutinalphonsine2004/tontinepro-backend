@@ -57,8 +57,8 @@ R_INSCR=$(curl -s -X POST "$BASE_URL/auth/inscription" \
   -H "Content-Type: application/json" \
   -d "{\"telephone\":\"$TEL\",\"nom\":\"Test Curl\",\"role\":\"CLIENT\"}")
 check "Inscription → succes: true" "$R_INSCR" '"succes":true'
-check "Inscription → OTP présent (dev)" "$R_INSCR" '"otp":'
-OTP=$(echo $R_INSCR | python3 -c "import sys,json; print(json.load(sys.stdin)['donnees']['otp'])" 2>/dev/null)
+check "Inscription → OTP présent (dev)" "$R_INSCR" '"otpTest":'
+OTP=$(echo $R_INSCR | python3 -c "import sys,json; print(json.load(sys.stdin)['donnees']['otpTest'])" 2>/dev/null)
 
 echo ""
 echo "=== TEST: POST /auth/inscription (doublon) ==="

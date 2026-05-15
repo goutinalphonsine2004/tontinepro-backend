@@ -41,9 +41,9 @@ export declare class OperationsAssisteesController {
             qr: any;
             tontine: {
                 id: string;
-                type: import("@prisma/client").$Enums.TypeTontine;
                 creeLe: Date;
                 misAJourLe: Date;
+                type: import("@prisma/client").$Enums.TypeTontine;
                 nom: string;
                 statut: import("@prisma/client").$Enums.StatutTontine;
                 codeInvitation: string | null;

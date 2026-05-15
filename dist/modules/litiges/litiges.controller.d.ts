@@ -12,8 +12,8 @@ export declare class LitigesController {
             litige: {
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
             } & {
@@ -36,8 +36,8 @@ export declare class LitigesController {
             litiges: ({
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
             } & {
@@ -60,8 +60,8 @@ export declare class LitigesController {
             litiges: ({
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
                 client: {
@@ -146,9 +146,9 @@ export declare class LitigesController {
             message: string;
             id: string;
             creeLe: Date;
-            litigeId: string;
             auteurId: string;
             pieceJointeUrl: string | null;
+            litigeId: string;
         };
     }>;
     commentaires(id: string, u: any): Promise<{
@@ -158,9 +158,9 @@ export declare class LitigesController {
             message: string;
             id: string;
             creeLe: Date;
-            litigeId: string;
             auteurId: string;
             pieceJointeUrl: string | null;
+            litigeId: string;
         }[];
     }>;
     detail(id: string, u: any): Promise<{
@@ -170,8 +170,8 @@ export declare class LitigesController {
             litige: {
                 transaction: {
                     id: string;
-                    type: import("@prisma/client").$Enums.TypeTransaction;
                     creeLe: Date;
+                    type: import("@prisma/client").$Enums.TypeTransaction;
                     montantFcfa: number;
                 };
                 client: {
@@ -183,9 +183,9 @@ export declare class LitigesController {
                     message: string;
                     id: string;
                     creeLe: Date;
-                    litigeId: string;
                     auteurId: string;
                     pieceJointeUrl: string | null;
+                    litigeId: string;
                 }[];
             } & {
                 motif: string;

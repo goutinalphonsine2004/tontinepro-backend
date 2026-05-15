@@ -102,9 +102,9 @@ export declare class AuthController {
         donnees: {
             sessionCourante: boolean;
             id: string;
+            expireLe: Date;
             creeLe: Date;
             deviceId: string | null;
-            expireLe: Date;
             userAgent: string | null;
             adresseIP: string | null;
             actif: boolean;

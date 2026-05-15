@@ -49,8 +49,8 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             schedule_1.ScheduleModule.forRoot(),
             throttler_1.ThrottlerModule.forRoot([
-                { name: 'default', ttl: 60000, limit: 60 },
-                { name: 'strict', ttl: 60000, limit: 5 },
+                { name: 'default', ttl: 60000, limit: process.env.NODE_ENV === 'production' ? 60 : 1000 },
+                { name: 'strict', ttl: 60000, limit: process.env.NODE_ENV === 'production' ? 5 : 200 },
             ]),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,

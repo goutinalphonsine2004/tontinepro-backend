@@ -12,7 +12,7 @@ import {
   DefaultValuePipe,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { Throttle } from '@nestjs/throttler';
+
 import { AuthService } from './auth.service';
 import { InscriptionDto } from './dto/inscription.dto';
 import { VerifierOtpDto } from './dto/verifier-otp.dto';
@@ -33,13 +33,11 @@ import { Role } from '@prisma/client';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('inscription')
   inscription(@Body() dto: InscriptionDto) {
     return this.authService.inscription(dto);
   }
 
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('verifier-otp')
   verifierOtp(@Body() dto: VerifierOtpDto) {
     return this.authService.verifierOtp(dto);
@@ -55,25 +53,21 @@ export class AuthController {
     return this.authService.creerPin(utilisateur.id, dto, req);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('connexion')
   connexion(@Body() dto: ConnexionDto, @Req() req: Request) {
     return this.authService.connexion(dto, req);
   }
 
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('demander-reset-pin')
   demanderResetPin(@Body() dto: DemanderResetPinDto) {
     return this.authService.demanderResetPin(dto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('verifier-otp-reset-pin')
   verifierOtpResetPin(@Body() dto: VerifierOtpResetPinDto) {
     return this.authService.verifierOtpResetPin(dto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('reinitialiser-pin')
   reinitialiserPin(@Body() dto: ReinitialiserPinDto) {
     return this.authService.reinitialiserPin(dto);
@@ -151,7 +145,6 @@ export class AuthController {
     return this.authService.enregistrerAppareilBiometrique(u.id, dto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('biometrique/connexion')
   connexionBiometrique(@Body() dto: any, @Req() req: Request) {
     return this.authService.connexionBiometrique(dto, req);

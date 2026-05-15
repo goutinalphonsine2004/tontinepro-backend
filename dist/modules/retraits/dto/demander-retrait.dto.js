@@ -33,7 +33,7 @@ __decorate([
 ], DemanderRetraitDto.prototype, "montant", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Matches)(/^(\+229|229)\d{8}$/, {
+    (0, class_validator_1.Matches)(/^(\+229|229)\d{8,10}$/, {
         message: 'Téléphone invalide. Format attendu: +229XXXXXXXX ou 229XXXXXXXX',
     }),
     (0, class_validator_1.IsOptional)(),

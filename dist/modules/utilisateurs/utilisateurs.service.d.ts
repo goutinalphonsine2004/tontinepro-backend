@@ -227,8 +227,8 @@ export declare class UtilisateursService {
                 idempotencyKey: string | null;
                 id: string;
                 utilisateurId: string;
-                type: import("@prisma/client").$Enums.TypeTransaction;
                 creeLe: Date;
+                type: import("@prisma/client").$Enums.TypeTransaction;
                 statut: import("@prisma/client").$Enums.StatutTransaction;
                 montantFcfa: number;
                 tentatives: number;

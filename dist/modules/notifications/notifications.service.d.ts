@@ -31,10 +31,10 @@ export declare class NotificationsService {
                 lu: boolean;
                 id: string;
                 utilisateurId: string;
+                creeLe: Date;
                 type: import("@prisma/client").$Enums.TypeNotification;
                 titre: string;
                 canal: import("@prisma/client").$Enums.Canal;
-                creeLe: Date;
             }[];
             total: number;
             page: number;
@@ -57,10 +57,10 @@ export declare class NotificationsService {
             lu: boolean;
             id: string;
             utilisateurId: string;
+            creeLe: Date;
             type: import("@prisma/client").$Enums.TypeNotification;
             titre: string;
             canal: import("@prisma/client").$Enums.Canal;
-            creeLe: Date;
         };
     }>;
     toutMarquerLu(utilisateurId: string): Promise<{
