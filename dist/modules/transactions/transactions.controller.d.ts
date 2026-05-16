@@ -15,7 +15,6 @@ export declare class TransactionsController {
         succes: boolean;
         message: string;
         donnees: {
-            refKKiaPay: string | null;
             tontineId: string | null;
             idempotencyKey: string | null;
             id: string;
@@ -24,6 +23,7 @@ export declare class TransactionsController {
             type: import("@prisma/client").$Enums.TypeTransaction;
             statut: import("@prisma/client").$Enums.StatutTransaction;
             montantFcfa: number;
+            refKKiaPay: string | null;
             tentatives: number;
             reference: string;
             montantNetFcfa: number;
@@ -78,7 +78,6 @@ export declare class TransactionsController {
                     nom: string;
                 } | null;
             } & {
-                refKKiaPay: string | null;
                 tontineId: string | null;
                 idempotencyKey: string | null;
                 id: string;
@@ -87,6 +86,7 @@ export declare class TransactionsController {
                 type: import("@prisma/client").$Enums.TypeTransaction;
                 statut: import("@prisma/client").$Enums.StatutTransaction;
                 montantFcfa: number;
+                refKKiaPay: string | null;
                 tentatives: number;
                 reference: string;
                 montantNetFcfa: number;
@@ -132,7 +132,7 @@ export declare class TransactionsController {
                 erreur?: undefined;
             } | {
                 success: boolean;
-                erreur: any;
+                erreur: string;
                 simulated?: undefined;
                 data?: undefined;
             };

@@ -334,7 +334,8 @@ let TontinesService = TontinesService_1 = class TontinesService {
             nbMembresMax: dto.nbMembresMax ?? t.nbMembresMax ?? undefined,
             montantParMembreFcfa: dto.montantParMembreFcfa ?? t.montantParMembreFcfa ?? undefined,
             cautionObligatoire: dto.cautionObligatoire ?? t.cautionObligatoire,
-            montantCautionObligatoireFcfa: dto.montantCautionFcfaObligatoireFcfa ?? t.montantCautionObligatoireFcfa,
+            montantCautionObligatoireFcfa: dto.montantCautionFcfaObligatoireFcfa ??
+                t.montantCautionObligatoireFcfa,
             penaliteRetardActive: dto.penaliteRetardActive ?? t.penaliteRetardActive,
             montantPenaliteRetardFcfa: dto.montantPenaliteRetardFcfa ?? t.montantPenaliteRetardFcfa,
             modeTirage: dto.modeTirage ?? t.modeTirage,
@@ -779,7 +780,11 @@ let TontinesService = TontinesService_1 = class TontinesService {
         await this.prisma.$transaction([
             this.prisma.ordreTirage.update({
                 where: { id: prochainTirage.id },
-                data: { aRecu: true, recuLe: new Date(), montantRecuFcfa: montantNetFcfa },
+                data: {
+                    aRecu: true,
+                    recuLe: new Date(),
+                    montantRecuFcfa: montantNetFcfa,
+                },
             }),
             this.prisma.membreTontineGroupe.update({
                 where: {
@@ -933,7 +938,8 @@ let TontinesService = TontinesService_1 = class TontinesService {
             });
         }
         if (input.cautionObligatoire &&
-            (!input.montantCautionObligatoireFcfa || input.montantCautionObligatoireFcfa <= 0)) {
+            (!input.montantCautionObligatoireFcfa ||
+                input.montantCautionObligatoireFcfa <= 0)) {
             throw new common_1.BadRequestException({
                 message: 'Le montantFcfa de caution est obligatoire si la caution est activée.',
                 code: 'MONTANT_CAUTION_REQUIS',

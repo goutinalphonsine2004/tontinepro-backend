@@ -4,11 +4,20 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RetraitsService } from '../retraits/retraits.service';
 import { TontinesService } from '../tontines/tontines.service';
 
+interface AtSmsClient {
+  send(args: { to: string[]; message: string; from: string }): Promise<unknown>;
+}
+
+interface UtilisateurSms {
+  id: string;
+  telephone: string;
+}
+
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
 
-  private sms: any | null = null;
+  private sms: AtSmsClient | null = null;
   private smsEnabled = false;
 
   constructor(
@@ -30,9 +39,10 @@ export class SmsService {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
     const AfricasTalking = require('africastalking');
-    const at = AfricasTalking({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+    const at: { SMS: AtSmsClient } = AfricasTalking({
       username: config.get<string>('AT_USERNAME', 'sandbox'),
       apiKey,
     });
@@ -44,7 +54,9 @@ export class SmsService {
   async envoyer(telephone: string, message: string): Promise<void> {
     if (!this.smsEnabled || !this.sms) {
       // Don’t throw: keep app booting / running even if SMS credentials are missing.
-      this.logger.warn(`[SMS] Non configuré — message non envoyé à ${telephone}`);
+      this.logger.warn(
+        `[SMS] Non configuré — message non envoyé à ${telephone}`,
+      );
       return;
     }
 
@@ -100,7 +112,10 @@ export class SmsService {
     }
   }
 
-  private async gererCommandeRejoindre(utilisateur: any, code?: string) {
+  private async gererCommandeRejoindre(
+    utilisateur: UtilisateurSms,
+    code?: string,
+  ) {
     if (!code) {
       return this.envoyer(
         utilisateur.telephone,
@@ -136,7 +151,7 @@ export class SmsService {
     }
   }
 
-  private async gererCommandeSolde(utilisateur: any) {
+  private async gererCommandeSolde(utilisateur: UtilisateurSms) {
     const tontines = await this.prisma.tontine.findMany({
       where: { proprietaireId: utilisateur.id, statut: 'ACTIVE' },
       select: { nom: true, soldeActuelFcfa: true },
@@ -160,7 +175,10 @@ export class SmsService {
     );
   }
 
-  private async gererCommandeRetrait(utilisateur: any, montantFcfaStr?: string) {
+  private async gererCommandeRetrait(
+    utilisateur: UtilisateurSms,
+    montantFcfaStr?: string,
+  ) {
     if (!montantFcfaStr || isNaN(Number(montantFcfaStr))) {
       return this.envoyer(
         utilisateur.telephone,

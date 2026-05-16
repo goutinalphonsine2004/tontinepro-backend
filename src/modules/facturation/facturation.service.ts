@@ -135,7 +135,10 @@ export class FacturationService {
       },
       orderBy: { prochainPaiement: 'asc' },
     });
-    const totalMensuel = facturations.reduce((s, f) => s + f.fraisMensuelsFcfa, 0);
+    const totalMensuel = facturations.reduce(
+      (s, f) => s + f.fraisMensuelsFcfa,
+      0,
+    );
     return {
       succes: true,
       message: `${facturations.length} facturation(s). Total mensuel: ${totalMensuel} FCFA.`,

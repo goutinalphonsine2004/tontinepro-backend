@@ -63,7 +63,7 @@ let CronService = CronService_1 = class CronService {
     }
     async preleverUnCredit(credit) {
         try {
-            const transfert = await this.kkiapay.initierPaiement({
+            const transfert = this.kkiapay.initierPaiement({
                 montant: credit.paiementJournalierFcfa,
                 telephone: credit.client.telephone,
                 reference: `remb_${credit.id}_${Date.now()}`,
@@ -266,9 +266,7 @@ let CronService = CronService_1 = class CronService {
             return;
         }
         if (progression >= 5) {
-            const prochainSeuil = eligibleCredit
-                ? eligiblePADME ? null : 70
-                : 60;
+            const prochainSeuil = eligibleCredit ? (eligiblePADME ? null : 70) : 60;
             const messageProchain = prochainSeuil
                 ? ` Plus que ${prochainSeuil - nouveauScore} points pour ${prochainSeuil === 60 ? 'le micro-crédit' : 'le dossier PADME'}.`
                 : '';
@@ -639,7 +637,7 @@ let CronService = CronService_1 = class CronService {
             const fraisGestion = nbClients * business_constants_1.BUSINESS.FRAIS_PAR_CLIENT_MENSUEL;
             const totalAFacturer = fact.fraisMensuelsFcfa + fraisGestion;
             try {
-                await this.kkiapay.initierPaiement({
+                this.kkiapay.initierPaiement({
                     montant: totalAFacturer,
                     telephone: fact.agent.telephone,
                     reference: `abonnement_${fact.agentId}_${new Date().toISOString().slice(0, 7)}`,

@@ -9,6 +9,7 @@ export declare class MicroCreditsService {
     private prisma;
     private kkiapay;
     private sms;
+    private readonly logger;
     constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService);
     monEligibilite(clientId: string): Promise<{
         succes: boolean;
@@ -139,10 +140,10 @@ export declare class MicroCreditsService {
                 statut: import("@prisma/client").$Enums.StatutCredit;
             };
             remboursements: {
-                refKKiaPay: string | null;
                 id: string;
                 statut: string;
                 montantFcfa: number;
+                refKKiaPay: string | null;
                 microCreditId: string;
                 payeLe: Date;
             }[];

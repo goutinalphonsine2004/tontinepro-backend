@@ -28,7 +28,9 @@ let ScoreService = class ScoreService {
                 where: { id: clientId },
                 select: {
                     creeLe: true,
-                    tontines: { select: { soldeActuelFcfa: true, objectifMontantFcfa: true } },
+                    tontines: {
+                        select: { soldeActuelFcfa: true, objectifMontantFcfa: true },
+                    },
                 },
             }),
         ]);

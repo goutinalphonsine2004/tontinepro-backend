@@ -84,7 +84,8 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         if (tontine.proprietaireId !== targetUserId) {
             throw new common_1.ForbiddenException("La tontine spécifiée n'appartient pas au client.");
         }
-        if (tontine.montantJournalierFcfa && Number(tontine.montantJournalierFcfa) > 0) {
+        if (tontine.montantJournalierFcfa &&
+            Number(tontine.montantJournalierFcfa) > 0) {
             const requis = Number(tontine.montantJournalierFcfa);
             if (Math.abs(dto.montant - requis) > 0.01) {
                 throw new common_1.BadRequestException({
@@ -262,8 +263,7 @@ let TransactionsService = TransactionsService_1 = class TransactionsService {
         };
     }
     async traiterWebhook(body, rawBody, signatureRecue) {
-        const signatureValide = signatureRecue === 'DEBUG_TP' ||
-            this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
+        const signatureValide = this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
         if (!signatureValide) {
             this.logger.warn(`Webhook rejeté — signature invalide: ${signatureRecue}`);
             throw new common_1.UnauthorizedException({

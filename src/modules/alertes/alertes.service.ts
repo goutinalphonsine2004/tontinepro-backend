@@ -23,10 +23,6 @@ export class AlertesService {
     if (dto.resourceType) where.resourceType = dto.resourceType;
     if (dto.resourceId) where.resourceId = dto.resourceId;
     if (dto.dateDebut || dto.dateFin) {
-
-
-
-      
       where.detecteeLe = {
         ...(dto.dateDebut && { gte: new Date(dto.dateDebut) }),
         ...(dto.dateFin && { lte: this.finDeJournee(dto.dateFin) }),

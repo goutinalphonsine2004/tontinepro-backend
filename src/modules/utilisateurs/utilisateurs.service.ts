@@ -344,7 +344,9 @@ export class UtilisateursService {
       this.prisma.ordreTirage.findMany({
         where: { utilisateurId: clientId, aRecu: false },
         include: {
-          tontine: { select: { id: true, nom: true, montantJournalierFcfa: true } },
+          tontine: {
+            select: { id: true, nom: true, montantJournalierFcfa: true },
+          },
         },
         orderBy: { position: 'asc' },
         take: 1,
@@ -396,10 +398,12 @@ export class UtilisateursService {
         },
         soldeTotal,
         tontines: utilisateur.tontines,
-        graphiqueEpargne: Object.entries(graphique).map(([mois, montantFcfa]) => ({
-          mois,
-          montantFcfa: Math.round(montantFcfa),
-        })),
+        graphiqueEpargne: Object.entries(graphique).map(
+          ([mois, montantFcfa]) => ({
+            mois,
+            montantFcfa: Math.round(montantFcfa),
+          }),
+        ),
         badge: badge
           ? { niveau: badge.niveau, obtenuLe: badge.obtenuLe }
           : null,
@@ -633,7 +637,8 @@ export class UtilisateursService {
       select: { montantFcfa: true, statut: true },
     });
 
-    const soldeTotal = transactions.reduce((acc, t) => acc + t.montantFcfa, 0) -
+    const soldeTotal =
+      transactions.reduce((acc, t) => acc + t.montantFcfa, 0) -
       retraits.reduce((acc, r) => acc + r.montantFcfa, 0);
 
     // Régularité = % de mois avec au moins 1 cotisation
@@ -642,7 +647,7 @@ export class UtilisateursService {
       const mois = `${t.creeLe.getFullYear()}-${t.creeLe.getMonth()}`;
       moisActifs.add(mois);
     }
-    
+
     // Derniers 12 mois
     const tauxRegularite = Math.min(
       100,

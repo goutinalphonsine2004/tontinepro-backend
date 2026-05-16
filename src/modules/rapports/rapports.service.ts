@@ -224,7 +224,11 @@ export class RapportsService {
             ],
           },
         },
-        select: { montantPrincipalFcfa: true, montantTotalFcfa: true, statut: true },
+        select: {
+          montantPrincipalFcfa: true,
+          montantTotalFcfa: true,
+          statut: true,
+        },
       }),
       this.prisma.remboursementCredit.aggregate({
         where: {
@@ -314,7 +318,11 @@ export class RapportsService {
         'Commissions comptabilisees',
         this.fcfa(commissions._sum.montantFcfa ?? 0),
       );
-      this.ligne(doc, 'Abonnements', this.fcfa(abonnements._sum.montantFcfa ?? 0));
+      this.ligne(
+        doc,
+        'Abonnements',
+        this.fcfa(abonnements._sum.montantFcfa ?? 0),
+      );
       this.ligne(
         doc,
         'Interets micro-credits generes',
@@ -409,7 +417,10 @@ export class RapportsService {
     const actifs = credits.filter((c) => c.statut === 'ACTIF');
     const termines = credits.filter((c) => c.statut === 'TERMINE');
     const defaut = credits.filter((c) => c.statut === 'EN_DEFAUT');
-    const totalDecaisse = credits.reduce((s, c) => s + c.montantPrincipalFcfa, 0);
+    const totalDecaisse = credits.reduce(
+      (s, c) => s + c.montantPrincipalFcfa,
+      0,
+    );
     const totalInterets = credits.reduce(
       (s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa),
       0,
@@ -632,7 +643,10 @@ export class RapportsService {
 
     const revenus =
       (cotisations._sum.fraisPlateformeFcfa ?? 0) +
-      credits.reduce((s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa), 0);
+      credits.reduce(
+        (s, c) => s + (c.montantTotalFcfa - c.montantPrincipalFcfa),
+        0,
+      );
     const charges = commissions._sum.montantFcfa ?? 0;
     const resultatNet = revenus - charges;
 

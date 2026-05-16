@@ -25,7 +25,7 @@ function secretJwt(config: ConfigService) {
         secret: secretJwt(config),
 
         signOptions: {
-          expiresIn: config.get<string>('JWT_EXPIRES_IN', '24h') as any,
+          expiresIn: config.get('JWT_EXPIRES_IN', '24h'),
         },
       }),
       inject: [ConfigService],

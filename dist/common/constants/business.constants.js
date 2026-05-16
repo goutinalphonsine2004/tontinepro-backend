@@ -23,41 +23,39 @@ exports.BUSINESS = {
     MAX_TENTATIVES_PIN: 3,
     DUREE_OTP_MINUTES: 10,
     calculerFraisPlateforme(montant, estDiamant = false) {
-        const taux = estDiamant
-            ? this.TAUX_COMMISSION_DIAMANT
-            : this.TAUX_COMMISSION_BASE;
+        const taux = estDiamant ? 0.02 : 0.03;
         return montant * taux;
     },
     calculerFraisRetrait(montant) {
-        return montant * this.TAUX_COMMISSION_RETRAIT;
+        return montant * 0.02;
     },
     calculerInteretMicroCredit(montantPrincipalFcfa) {
-        return montantPrincipalFcfa * this.TAUX_INTERET_MICRO_CREDIT;
+        return montantPrincipalFcfa * 0.1;
     },
     calculerMontantTotal(montantPrincipalFcfa) {
-        return montantPrincipalFcfa + this.calculerInteretMicroCredit(montantPrincipalFcfa);
+        return montantPrincipalFcfa * 1.1;
     },
     calculerPaiementJournalier(montantTotalFcfa, jours) {
         return Math.ceil(montantTotalFcfa / jours);
     },
     getPlafondMicroCredit(score) {
         if (score >= 90)
-            return this.PLAFONDS_MICRO_CREDIT.SCORE_90_PLUS;
+            return 100000;
         if (score >= 80)
-            return this.PLAFONDS_MICRO_CREDIT.SCORE_80_90;
+            return 50000;
         if (score >= 70)
-            return this.PLAFONDS_MICRO_CREDIT.SCORE_70_80;
+            return 25000;
         if (score >= 60)
-            return this.PLAFONDS_MICRO_CREDIT.SCORE_60_70;
+            return 10000;
         return 0;
     },
     calculerCommissionAgent(montantCotisation, estIndependant) {
         if (!estIndependant)
             return 0;
-        return montantCotisation * this.TAUX_COMMISSION_BASE * 0.5;
+        return montantCotisation * 0.03 * 0.5;
     },
     calculerCommissionPADME(montantCreditAccorde) {
-        return montantCreditAccorde * this.TAUX_COMMISSION_PADME;
+        return montantCreditAccorde * 0.03;
     },
 };
 //# sourceMappingURL=business.constants.js.map

@@ -19,7 +19,9 @@ export class DeviceFingerprintGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest<Request & { user?: any }>();
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { user?: { id: string; sessionId?: string } }>();
     const utilisateur = req.user;
 
     // Ce guard doit être utilisé après JwtAuthGuard (utilisateur injecté)

@@ -4,11 +4,11 @@ import { InscriptionDto } from './dto/inscription.dto';
 import { VerifierOtpDto } from './dto/verifier-otp.dto';
 import { CreerPinDto } from './dto/creer-pin.dto';
 import { ConnexionDto } from './dto/connexion.dto';
-import { RafraichirTokenDto } from './dto/rafraichir-token.dto';
 import { DemanderResetPinDto } from './dto/demander-reset-pin.dto';
 import { RenvoyerOtpInscriptionDto } from './dto/renvoyer-otp-inscription.dto';
 import { VerifierOtpResetPinDto } from './dto/verifier-otp-reset-pin.dto';
 import { ReinitialiserPinDto } from './dto/reinitialiser-pin.dto';
+import { Role } from '@prisma/client';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -70,10 +70,10 @@ export declare class AuthController {
     rafraichirToken(utilisateur: {
         id: string;
         telephone: string;
-        role: any;
+        role: Role;
         sessionId: string;
         refreshTokenBrut?: string;
-    }, _dto: RafraichirTokenDto): Promise<{
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -130,7 +130,13 @@ export declare class AuthController {
     }>;
     enregistrerAppareil(u: {
         id: string;
-    }, dto: any): Promise<{
+    }, dto: {
+        deviceId: string;
+        empreinteToken: string;
+        nomAppareil?: string;
+        modeleAppareil?: string;
+        systemeExploitation?: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -139,7 +145,11 @@ export declare class AuthController {
             nomAppareil: string | null;
         };
     }>;
-    connexionBiometrique(dto: any, req: Request): Promise<{
+    connexionBiometrique(dto: {
+        telephone: string;
+        deviceId: string;
+        empreinteToken: string;
+    }, req: Request): Promise<{
         succes: boolean;
         message: string;
         donnees: {

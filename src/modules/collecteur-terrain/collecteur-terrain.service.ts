@@ -1,10 +1,14 @@
 import {
   Injectable,
-  BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { Role, StatutCompte } from '@prisma/client';
+import {
+  Role,
+  StatutCompte,
+  TypeTransaction,
+  StatutTransaction,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
 import { CheckInDto } from './dto/check-in.dto';
@@ -244,8 +248,8 @@ export class CollecteurTerrainService {
             id: true,
             transactions: {
               where: {
-                type: 'COTISATION' as any,
-                statut: 'SUCCES' as any,
+                type: TypeTransaction.COTISATION,
+                statut: StatutTransaction.SUCCES,
                 creeLe: { gte: debutMois },
               },
               select: { montantFcfa: true },
@@ -319,10 +323,12 @@ export class CollecteurTerrainService {
         clientsActifs,
         commissionsCeMois: commissionsMois._sum.montantFcfa ?? 0,
         tauxCollecteMois,
-        graphiqueRevenus: Object.entries(graphique).map(([mois, montantFcfa]) => ({
-          mois,
-          montantFcfa: Math.round(montantFcfa),
-        })),
+        graphiqueRevenus: Object.entries(graphique).map(
+          ([mois, montantFcfa]) => ({
+            mois,
+            montantFcfa: Math.round(montantFcfa),
+          }),
+        ),
         revenutsMicroCredits: Math.round(interetsMicroCredits),
         abonnement: abonnement
           ? {
@@ -370,9 +376,9 @@ export class CollecteurTerrainService {
   async monCollecteur(clientId: string) {
     const client = await this.prisma.utilisateur.findUnique({
       where: { id: clientId },
-      select: { 
-        id: true, 
-        collecteurId: true, 
+      select: {
+        id: true,
+        collecteurId: true,
       },
     });
 

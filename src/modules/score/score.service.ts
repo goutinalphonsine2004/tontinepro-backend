@@ -17,7 +17,9 @@ export class ScoreService {
         where: { id: clientId },
         select: {
           creeLe: true,
-          tontines: { select: { soldeActuelFcfa: true, objectifMontantFcfa: true } },
+          tontines: {
+            select: { soldeActuelFcfa: true, objectifMontantFcfa: true },
+          },
         },
       }),
     ]);
@@ -26,7 +28,8 @@ export class ScoreService {
     const plafond = BUSINESS.getPlafondMicroCredit(score);
     const ancienneteEnMois = scoreCredit?.totalMois ?? 0;
     const bonusObjectif = utilisateur?.tontines.some(
-      (t) => t.objectifMontantFcfa && t.soldeActuelFcfa >= t.objectifMontantFcfa,
+      (t) =>
+        t.objectifMontantFcfa && t.soldeActuelFcfa >= t.objectifMontantFcfa,
     )
       ? 1
       : 0;
@@ -322,7 +325,8 @@ export class ScoreService {
         mois === maintenant.getMonth() && annee === maintenant.getFullYear();
       const jourMax = estMoisCourant ? maintenant.getDate() : nbJoursDansMois;
 
-      const jours: { date: string; cotise: boolean; montantFcfa: number }[] = [];
+      const jours: { date: string; cotise: boolean; montantFcfa: number }[] =
+        [];
       let nbCotises = 0;
 
       for (let j = 1; j <= jourMax; j++) {

@@ -123,7 +123,7 @@ let CommissionsService = class CommissionsService {
             });
         }
         const telephone = dto.telephone ?? agent.telephone;
-        const transfert = await this.kkiapay.initierTransfert({
+        const transfert = this.kkiapay.initierTransfert({
             montant: dto.montant,
             telephone,
             reference: `comm_${utilisateurId}_${Date.now()}`,

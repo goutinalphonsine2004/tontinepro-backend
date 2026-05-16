@@ -156,10 +156,10 @@ export declare class MicroCreditsController {
                 statut: import("@prisma/client").$Enums.StatutCredit;
             };
             remboursements: {
-                refKKiaPay: string | null;
                 id: string;
                 statut: string;
                 montantFcfa: number;
+                refKKiaPay: string | null;
                 microCreditId: string;
                 payeLe: Date;
             }[];

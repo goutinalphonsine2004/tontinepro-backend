@@ -23,7 +23,9 @@ let DeviceFingerprintGuard = DeviceFingerprintGuard_1 = class DeviceFingerprintG
         this.sms = sms;
     }
     async canActivate(context) {
-        const req = context.switchToHttp().getRequest();
+        const req = context
+            .switchToHttp()
+            .getRequest();
         const utilisateur = req.user;
         if (!utilisateur?.id || !utilisateur?.sessionId)
             return true;

@@ -86,7 +86,9 @@ export declare class NotificationsController {
             canal: import("@prisma/client").$Enums.Canal;
         };
     }>;
-    enregistrerToken(u: any, dto: EnregistrerTokenDto): Promise<{
+    enregistrerToken(u: {
+        id: string;
+    }, dto: EnregistrerTokenDto): Promise<{
         succes: boolean;
         message: string;
     }>;

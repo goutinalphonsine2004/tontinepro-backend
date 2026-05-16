@@ -22,7 +22,12 @@ import { SoumettreKycDto } from './dto/soumettre-kyc.dto';
 import { RejeterKycDto } from './dto/rejeter-kyc.dto';
 
 const TAILLE_MAX = 5 * 1024 * 1024; // 5 Mo
-const MIME_AUTORISES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+const MIME_AUTORISES = [
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'application/pdf',
+];
 
 @UseGuards(JwtAuthGuard)
 @Controller('kyc')

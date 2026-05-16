@@ -99,9 +99,7 @@ export class KycService {
 
   // ─── Upload fichier (Cloudinary ou base64 dev) ────────────
 
-  private async uploaderFichier(
-    fichier: Express.Multer.File,
-  ): Promise<string> {
+  private async uploaderFichier(fichier: Express.Multer.File): Promise<string> {
     const cloudinaryUrl = this.config.get<string>('CLOUDINARY_URL');
 
     if (cloudinaryUrl && cloudinaryUrl.startsWith('cloudinary://')) {

@@ -1,6 +1,6 @@
 import * as QRCode from 'qrcode-terminal';
 
-const codeQR = "TONTINEPRO-TEST-123456";
+const codeQR = 'TONTINEPRO-TEST-123456';
 
 QRCode.generate(codeQR, { small: true }, (qrcode: string) => {
   console.log('\n=== QR CODE COLLECTEUR ===');

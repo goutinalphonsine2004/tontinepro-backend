@@ -302,7 +302,13 @@ export class AnalyticsService {
           utilisateur: { select: { id: true, nom: true, telephone: true } },
           dossiersPADME: {
             where: {
-              statut: { in: ['GENERE', 'VALIDE_ADMIN', 'SOUMIS_PADME'] as any },
+              statut: {
+                in: [
+                  StatutDossierPADME.GENERE,
+                  StatutDossierPADME.VALIDE_ADMIN,
+                  StatutDossierPADME.SOUMIS_PADME,
+                ],
+              },
             },
             orderBy: { creeLe: 'desc' },
             take: 1,
@@ -406,7 +412,7 @@ export class AnalyticsService {
   async leaderboard(limite = 50) {
     // Récupérer tous les clients avec leur score et épargne totale
     const clients = await this.prisma.utilisateur.findMany({
-      where: { role: 'CLIENT' as any, statut: 'ACTIF' as any },
+      where: { role: Role.CLIENT, statut: StatutCompte.ACTIF },
       select: {
         id: true,
         nom: true,
@@ -415,7 +421,10 @@ export class AnalyticsService {
         },
         tontines: { select: { soldeActuelFcfa: true } },
         transactions: {
-          where: { type: 'COTISATION' as any, statut: 'SUCCES' as any },
+          where: {
+            type: TypeTransaction.COTISATION,
+            statut: StatutTransaction.SUCCES,
+          },
           select: { montantNetFcfa: true },
         },
         badges: {

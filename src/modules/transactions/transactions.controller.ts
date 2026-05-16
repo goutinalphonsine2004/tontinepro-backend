@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -47,8 +48,12 @@ export class TransactionsController {
     @Body() body: WebhookKkiapayDto,
     @Headers('x-kkiapay-signature') signature: string,
   ) {
-    const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(body));
-    return this.service.traiterWebhook(body, rawBody, signature ?? '');
+    if (!req.rawBody) {
+      throw new UnauthorizedException(
+        'Corps brut indisponible — vérification HMAC impossible',
+      );
+    }
+    return this.service.traiterWebhook(body, req.rawBody, signature ?? '');
   }
 
   @UseGuards(JwtAuthGuard)
@@ -60,7 +65,11 @@ export class TransactionsController {
   ) {
     const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
     const cibleId = estCollecteur && clientId ? clientId : u.id;
-    return this.service.historique(cibleId, filtres, estCollecteur ? u.id : undefined);
+    return this.service.historique(
+      cibleId,
+      filtres,
+      estCollecteur ? u.id : undefined,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

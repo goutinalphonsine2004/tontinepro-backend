@@ -21,7 +21,7 @@ export declare class WhatsappService {
         erreur?: undefined;
     } | {
         success: boolean;
-        erreur: any;
+        erreur: string;
         simulated?: undefined;
         data?: undefined;
     }>;

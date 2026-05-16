@@ -35,7 +35,6 @@ export declare class RetraitsController {
         succes: boolean;
         message: string;
         donnees: {
-            refKKiaPay: string | null;
             tontineId: string;
             idempotencyKey: string | null;
             id: string;
@@ -45,6 +44,7 @@ export declare class RetraitsController {
             montantFcfa: number;
             validePar: string | null;
             motifRejet: string | null;
+            refKKiaPay: string | null;
             executeLe: Date | null;
         };
     }>;
@@ -59,7 +59,6 @@ export declare class RetraitsController {
                 nom: string;
             };
         } & {
-            refKKiaPay: string | null;
             tontineId: string;
             idempotencyKey: string | null;
             id: string;
@@ -69,6 +68,7 @@ export declare class RetraitsController {
             montantFcfa: number;
             validePar: string | null;
             motifRejet: string | null;
+            refKKiaPay: string | null;
             executeLe: Date | null;
         })[];
     }>;
@@ -82,13 +82,13 @@ export declare class RetraitsController {
                 statut: string;
                 date: Date;
             }[];
-            refKKiaPay: string | null;
             id: string;
             utilisateurId: string;
             creeLe: Date;
             statut: import("@prisma/client").$Enums.StatutRetrait;
             montantFcfa: number;
             motifRejet: string | null;
+            refKKiaPay: string | null;
             executeLe: Date | null;
         };
     }>;
@@ -107,7 +107,6 @@ export declare class RetraitsController {
                 soldeActuelFcfa: number;
             };
         } & {
-            refKKiaPay: string | null;
             tontineId: string;
             idempotencyKey: string | null;
             id: string;
@@ -117,6 +116,7 @@ export declare class RetraitsController {
             montantFcfa: number;
             validePar: string | null;
             motifRejet: string | null;
+            refKKiaPay: string | null;
             executeLe: Date | null;
         })[];
     }>;

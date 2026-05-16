@@ -24,7 +24,7 @@ let KkiapayService = KkiapayService_1 = class KkiapayService {
         this.sandbox = config.get('KKIAPAY_SANDBOX', 'true') === 'true';
         this.secretKey = config.get('KKIAPAY_SECRET_KEY', '');
     }
-    async initierPaiement(params) {
+    initierPaiement(params) {
         const refKKiaPay = `kkp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         if (this.sandbox) {
             this.logger.log(`[SANDBOX] Paiement initié: ${params.montant} FCFA → ${params.telephone} | ref: ${params.reference}`);
@@ -39,7 +39,7 @@ let KkiapayService = KkiapayService_1 = class KkiapayService {
             paymentUrl: `https://api.kkiapay.me/pay/${refKKiaPay}`,
         };
     }
-    async initierTransfert(params) {
+    initierTransfert(params) {
         const refKKiaPay = `transfer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         if (this.sandbox) {
             this.logger.log(`[SANDBOX] Transfert: ${params.montant} FCFA → ${params.telephone} | motif: ${params.motif ?? 'N/A'}`);

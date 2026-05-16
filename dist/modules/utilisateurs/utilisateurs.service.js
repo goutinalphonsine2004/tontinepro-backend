@@ -329,7 +329,9 @@ let UtilisateursService = class UtilisateursService {
             this.prisma.ordreTirage.findMany({
                 where: { utilisateurId: clientId, aRecu: false },
                 include: {
-                    tontine: { select: { id: true, nom: true, montantJournalierFcfa: true } },
+                    tontine: {
+                        select: { id: true, nom: true, montantJournalierFcfa: true },
+                    },
                 },
                 orderBy: { position: 'asc' },
                 take: 1,

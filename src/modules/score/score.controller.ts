@@ -28,7 +28,10 @@ export class ScoreController {
     const client = await this.prisma.utilisateur.findFirst({
       where: { id: clientId, collecteurId: u.id },
     });
-    if (!client) throw new ForbiddenException('Ce client ne fait pas partie de votre portefeuille.');
+    if (!client)
+      throw new ForbiddenException(
+        'Ce client ne fait pas partie de votre portefeuille.',
+      );
     return clientId;
   }
 

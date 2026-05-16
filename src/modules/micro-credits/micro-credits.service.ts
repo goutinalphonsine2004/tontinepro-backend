@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { StatutCredit } from '@prisma/client';
@@ -20,6 +21,8 @@ const DUREE_CREDIT_JOURS = 30;
 
 @Injectable()
 export class MicroCreditsService {
+  private readonly logger = new Logger(MicroCreditsService.name);
+
   constructor(
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
@@ -35,9 +38,14 @@ export class MicroCreditsService {
     const score = scoreCredit?.score ?? 0;
     const eligible = score >= BUSINESS.SEUIL_SCORE_MICRO_CREDIT;
     const plafond = BUSINESS.getPlafondMicroCredit(score);
-    const montantTotalFcfa = eligible ? BUSINESS.calculerMontantTotal(plafond) : 0;
+    const montantTotalFcfa = eligible
+      ? BUSINESS.calculerMontantTotal(plafond)
+      : 0;
     const paiementJournalierFcfa = eligible
-      ? BUSINESS.calculerPaiementJournalier(montantTotalFcfa, DUREE_CREDIT_JOURS)
+      ? BUSINESS.calculerPaiementJournalier(
+          montantTotalFcfa,
+          DUREE_CREDIT_JOURS,
+        )
       : 0;
 
     // Vérifier si crédit en cours
@@ -113,7 +121,9 @@ export class MicroCreditsService {
       });
     }
 
-    const montantTotalFcfa = BUSINESS.calculerMontantTotal(dto.montantPrincipalFcfa);
+    const montantTotalFcfa = BUSINESS.calculerMontantTotal(
+      dto.montantPrincipalFcfa,
+    );
     const paiementJournalierFcfa = BUSINESS.calculerPaiementJournalier(
       montantTotalFcfa,
       DUREE_CREDIT_JOURS,
@@ -303,6 +313,7 @@ export class MicroCreditsService {
 
   // ─── PUT /micro-credits/:id/valider (Admin) ───────
   async valider(creditId: string, adminId: string) {
+    this.logger.log(`[valider] crédit ${creditId} validé par admin ${adminId}`);
     const credit = await this.prisma.microCredit.findUnique({
       where: { id: creditId },
       include: { client: { select: { id: true, nom: true, telephone: true } } },
@@ -323,7 +334,7 @@ export class MicroCreditsService {
     }
 
     // Décaissement via KKiaPay
-    const transfert = await this.kkiapay.initierTransfert({
+    const transfert = this.kkiapay.initierTransfert({
       montant: credit.montantPrincipalFcfa,
       telephone: credit.client.telephone,
       reference: `credit_${creditId}`,

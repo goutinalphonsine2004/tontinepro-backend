@@ -57,8 +57,9 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             return { success: true, data: response.data };
         }
         catch (err) {
-            this.logger.error(`[WhatsApp] Erreur: ${err.message}`);
-            return { success: false, erreur: err.message };
+            const msg = err.message;
+            this.logger.error(`[WhatsApp] Erreur: ${msg}`);
+            return { success: false, erreur: msg };
         }
     }
 };

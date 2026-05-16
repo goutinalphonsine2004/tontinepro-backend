@@ -77,7 +77,8 @@ export class TontinesService {
       }
       if (!dto.objectifMontantFcfa) {
         throw new BadRequestException({
-          message: 'Une tontine de type PROJET doit avoir un objectifMontantFcfa.',
+          message:
+            'Une tontine de type PROJET doit avoir un objectifMontantFcfa.',
           code: 'OBJECTIF_REQUIS',
         });
       }
@@ -406,10 +407,12 @@ export class TontinesService {
       ...dto,
       type: t.type,
       nbMembresMax: dto.nbMembresMax ?? t.nbMembresMax ?? undefined,
-      montantParMembreFcfa: dto.montantParMembreFcfa ?? t.montantParMembreFcfa ?? undefined,
+      montantParMembreFcfa:
+        dto.montantParMembreFcfa ?? t.montantParMembreFcfa ?? undefined,
       cautionObligatoire: dto.cautionObligatoire ?? t.cautionObligatoire,
       montantCautionObligatoireFcfa:
-        dto.montantCautionFcfaObligatoireFcfa ?? t.montantCautionObligatoireFcfa,
+        dto.montantCautionFcfaObligatoireFcfa ??
+        t.montantCautionObligatoireFcfa,
       penaliteRetardActive: dto.penaliteRetardActive ?? t.penaliteRetardActive,
       montantPenaliteRetardFcfa:
         dto.montantPenaliteRetardFcfa ?? t.montantPenaliteRetardFcfa,
@@ -420,8 +423,10 @@ export class TontinesService {
       politique: dto.politique ?? t.politique,
       dateDeverrouillage:
         dto.dateDeverrouillage ?? t.dateDeverrouillage ?? undefined,
-      objectifMontantFcfa: dto.objectifMontantFcfa ?? t.objectifMontantFcfa ?? undefined,
-      montantJournalierFcfa: dto.montantJournalierFcfa ?? t.montantJournalierFcfa,
+      objectifMontantFcfa:
+        dto.objectifMontantFcfa ?? t.objectifMontantFcfa ?? undefined,
+      montantJournalierFcfa:
+        dto.montantJournalierFcfa ?? t.montantJournalierFcfa,
       frequence: dto.frequence ?? t.frequence,
     });
 
@@ -868,7 +873,8 @@ export class TontinesService {
     const membresActifs = await this.prisma.membreTontineGroupe.count({
       where: { tontineId, statut: StatutMembreGroupe.ACTIF },
     });
-    const montantParMembreFcfa = t.montantParMembreFcfa ?? t.montantJournalierFcfa;
+    const montantParMembreFcfa =
+      t.montantParMembreFcfa ?? t.montantJournalierFcfa;
     const cagnotteAttendue = membresActifs * montantParMembreFcfa;
     if (t.soldeActuelFcfa < cagnotteAttendue) {
       throw new BadRequestException({
@@ -912,8 +918,9 @@ export class TontinesService {
 
     const montantFcfaDistribution = t.soldeActuelFcfa;
     // Distribution GROUPE = sortie de fonds → taux retrait 2% (pas taux cotisation)
-    const fraisDistribution =
-      BUSINESS.calculerFraisRetrait(montantFcfaDistribution);
+    const fraisDistribution = BUSINESS.calculerFraisRetrait(
+      montantFcfaDistribution,
+    );
     const montantNetFcfa = montantFcfaDistribution - fraisDistribution;
 
     const transfert = await this.kkiapay.initierTransfert({
@@ -944,7 +951,11 @@ export class TontinesService {
     await this.prisma.$transaction([
       this.prisma.ordreTirage.update({
         where: { id: prochainTirage.id },
-        data: { aRecu: true, recuLe: new Date(), montantRecuFcfa: montantNetFcfa },
+        data: {
+          aRecu: true,
+          recuLe: new Date(),
+          montantRecuFcfa: montantNetFcfa,
+        },
       }),
       this.prisma.membreTontineGroupe.update({
         where: {
@@ -972,8 +983,9 @@ export class TontinesService {
           tontineId,
           utilisateurId: prochainTirage.utilisateurId,
           refKKiaPay: transfert.refKKiaPay,
-          fraisPlateformeFcfa:
-            BUSINESS.calculerFraisPlateforme(montantFcfaDistribution),
+          fraisPlateformeFcfa: BUSINESS.calculerFraisPlateforme(
+            montantFcfaDistribution,
+          ),
         },
       }),
     ]);
@@ -1126,7 +1138,8 @@ export class TontinesService {
 
     if (!input.objectifMontantFcfa || input.objectifMontantFcfa <= 0) {
       throw new BadRequestException({
-        message: 'Une tontine BLOQUE doit avoir un objectifMontantFcfa positif.',
+        message:
+          'Une tontine BLOQUE doit avoir un objectifMontantFcfa positif.',
         code: 'OBJECTIF_REQUIS',
       });
     }
@@ -1179,7 +1192,8 @@ export class TontinesService {
     }
     if (
       input.cautionObligatoire &&
-      (!input.montantCautionObligatoireFcfa || input.montantCautionObligatoireFcfa <= 0)
+      (!input.montantCautionObligatoireFcfa ||
+        input.montantCautionObligatoireFcfa <= 0)
     ) {
       throw new BadRequestException({
         message:

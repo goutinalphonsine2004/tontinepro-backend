@@ -37,8 +37,16 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
-      { name: 'default', ttl: 60000, limit: process.env.NODE_ENV === 'production' ? 60 : 1000 },
-      { name: 'strict',  ttl: 60000, limit: process.env.NODE_ENV === 'production' ? 5  : 200  },
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: process.env.NODE_ENV === 'production' ? 60 : 1000,
+      },
+      {
+        name: 'strict',
+        ttl: 60000,
+        limit: process.env.NODE_ENV === 'production' ? 5 : 200,
+      },
     ]),
     PrismaModule,
     AuthModule,

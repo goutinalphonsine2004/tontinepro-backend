@@ -35,8 +35,10 @@ let TransactionsController = class TransactionsController {
         return this.service.simuler(dto);
     }
     webhook(req, body, signature) {
-        const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(body));
-        return this.service.traiterWebhook(body, rawBody, signature ?? '');
+        if (!req.rawBody) {
+            throw new common_1.UnauthorizedException('Corps brut indisponible — vérification HMAC impossible');
+        }
+        return this.service.traiterWebhook(body, req.rawBody, signature ?? '');
     }
     historique(u, filtres, clientId) {
         const estCollecteur = u.role === client_1.Role.AGENT || u.role === client_1.Role.INDEPENDANT;

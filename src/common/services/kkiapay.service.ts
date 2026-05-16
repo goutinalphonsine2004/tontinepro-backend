@@ -28,9 +28,10 @@ export class KkiapayService {
     this.secretKey = config.get<string>('KKIAPAY_SECRET_KEY', '');
   }
 
-  async initierPaiement(
-    params: InitierPaiementParams,
-  ): Promise<{ refKKiaPay: string; paymentUrl: string }> {
+  initierPaiement(params: InitierPaiementParams): {
+    refKKiaPay: string;
+    paymentUrl: string;
+  } {
     const refKKiaPay = `kkp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     if (this.sandbox) {
@@ -51,9 +52,10 @@ export class KkiapayService {
     };
   }
 
-  async initierTransfert(
-    params: InitierTransfertParams,
-  ): Promise<{ succes: boolean; refKKiaPay: string }> {
+  initierTransfert(params: InitierTransfertParams): {
+    succes: boolean;
+    refKKiaPay: string;
+  } {
     const refKKiaPay = `transfer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     if (this.sandbox) {

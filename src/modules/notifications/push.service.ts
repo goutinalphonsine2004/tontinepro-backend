@@ -51,7 +51,7 @@ export class PushService {
       this.logger.log(`[Push] Envoyé: ${result}`);
       return { success: true, messageId: result };
     } catch (err: any) {
-      this.logger.error(`[Push] Erreur: ${err.message}`);
+      this.logger.error(`[Push] Erreur: ${(err as Error).message}`);
       return { success: false, erreur: err.message };
     }
   }
@@ -77,7 +77,7 @@ export class PushService {
       );
       return result;
     } catch (err: any) {
-      this.logger.error(`[Push Multi] Erreur: ${err.message}`);
+      this.logger.error(`[Push Multi] Erreur: ${(err as Error).message}`);
     }
   }
 }

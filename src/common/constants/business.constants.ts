@@ -51,23 +51,21 @@ export const BUSINESS = {
 
   /** Calcule les frais plateforme selon le niveau du client */
   calculerFraisPlateforme(montant: number, estDiamant = false): number {
-    const taux = estDiamant
-      ? this.TAUX_COMMISSION_DIAMANT
-      : this.TAUX_COMMISSION_BASE;
+    const taux = estDiamant ? 0.02 : 0.03;
     return montant * taux;
   },
 
   /** Calcule les frais de retrait (MoMo + Marge) */
   calculerFraisRetrait(montant: number): number {
-    return montant * this.TAUX_COMMISSION_RETRAIT;
+    return montant * 0.02;
   },
 
   calculerInteretMicroCredit(montantPrincipalFcfa: number): number {
-    return montantPrincipalFcfa * this.TAUX_INTERET_MICRO_CREDIT;
+    return montantPrincipalFcfa * 0.1;
   },
 
   calculerMontantTotal(montantPrincipalFcfa: number): number {
-    return montantPrincipalFcfa + this.calculerInteretMicroCredit(montantPrincipalFcfa);
+    return montantPrincipalFcfa * 1.1;
   },
 
   calculerPaiementJournalier(montantTotalFcfa: number, jours: number): number {
@@ -75,31 +73,22 @@ export const BUSINESS = {
   },
 
   getPlafondMicroCredit(score: number): number {
-    if (score >= 90) return this.PLAFONDS_MICRO_CREDIT.SCORE_90_PLUS;
-    if (score >= 80) return this.PLAFONDS_MICRO_CREDIT.SCORE_80_90;
-    if (score >= 70) return this.PLAFONDS_MICRO_CREDIT.SCORE_70_80;
-    if (score >= 60) return this.PLAFONDS_MICRO_CREDIT.SCORE_60_70;
+    if (score >= 90) return 100000;
+    if (score >= 80) return 50000;
+    if (score >= 70) return 25000;
+    if (score >= 60) return 10000;
     return 0;
   },
 
-  /**
-   * Commission de l'agent sur une cotisation.
-   * INDÉPENDANT : reçoit 50% des frais plateforme (1.5% sur 3%, ou 1% sur 2% DIAMANT).
-   * SALARIÉ (AGENT) : 0% — la plateforme garde tout (sert à financer le salaire fixe).
-   */
   calculerCommissionAgent(
     montantCotisation: number,
     estIndependant: boolean,
   ): number {
     if (!estIndependant) return 0;
-    return montantCotisation * this.TAUX_COMMISSION_BASE * 0.5; // 1.5%
+    return montantCotisation * 0.03 * 0.5; // 1.5%
   },
 
-  /**
-   * Commission PADME sur un crédit accordé.
-   * 100% plateforme — aucun partage avec les collecteurs (indépendants ou salariés).
-   */
   calculerCommissionPADME(montantCreditAccorde: number): number {
-    return montantCreditAccorde * this.TAUX_COMMISSION_PADME; // 3%
+    return montantCreditAccorde * 0.03; // 3%
   },
 };

@@ -75,7 +75,6 @@ export declare class UtilisateursController {
                     nom: string;
                 } | null;
             } & {
-                refKKiaPay: string | null;
                 tontineId: string | null;
                 idempotencyKey: string | null;
                 id: string;
@@ -84,6 +83,7 @@ export declare class UtilisateursController {
                 type: import("@prisma/client").$Enums.TypeTransaction;
                 statut: import("@prisma/client").$Enums.StatutTransaction;
                 montantFcfa: number;
+                refKKiaPay: string | null;
                 tentatives: number;
                 reference: string;
                 montantNetFcfa: number;

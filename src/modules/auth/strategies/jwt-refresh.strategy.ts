@@ -55,7 +55,8 @@ export class JwtRefreshStrategy extends PassportStrategy(
       throw new UnauthorizedException('Session expirée ou révoquée');
 
     // Extraire le refresh token brut pour la vérification blacklist
-    const refreshTokenBrut = req.body?.refreshToken ?? null;
+    const refreshTokenBrut =
+      (req.body as Record<string, string> | undefined)?.refreshToken ?? null;
 
     return {
       id: payload.sub,

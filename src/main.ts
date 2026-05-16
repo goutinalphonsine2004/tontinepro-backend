@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import * as express from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import helmet from 'helmet';
@@ -9,12 +10,16 @@ async function bootstrap() {
   // rawBody: true → accès au corps brut pour vérification HMAC webhook KKiaPay
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
+  // Augmenter la limite pour les photos base64 (KYC terrain)
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
   app.use(helmet());
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Ignorer les champs inconnus (ex: cipPhotoUrl, politique)
       transform: true,
     }),
   );
@@ -37,4 +42,4 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
   logger.log(`TontineBénin API démarrée sur le port ${port}`);
 }
-bootstrap();
+void bootstrap();

@@ -58,7 +58,7 @@ export class NotificationsController {
 
   @Post('token-push')
   enregistrerToken(
-    @UtilisateurCourant() u: any,
+    @UtilisateurCourant() u: { id: string },
     @Body() dto: EnregistrerTokenDto,
   ) {
     return this.service.enregistrerTokenPush(u.id, dto.tokenPush);

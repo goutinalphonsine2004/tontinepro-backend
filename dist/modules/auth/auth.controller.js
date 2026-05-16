@@ -19,7 +19,6 @@ const inscription_dto_1 = require("./dto/inscription.dto");
 const verifier_otp_dto_1 = require("./dto/verifier-otp.dto");
 const creer_pin_dto_1 = require("./dto/creer-pin.dto");
 const connexion_dto_1 = require("./dto/connexion.dto");
-const rafraichir_token_dto_1 = require("./dto/rafraichir-token.dto");
 const demander_reset_pin_dto_1 = require("./dto/demander-reset-pin.dto");
 const renvoyer_otp_inscription_dto_1 = require("./dto/renvoyer-otp-inscription.dto");
 const verifier_otp_reset_pin_dto_1 = require("./dto/verifier-otp-reset-pin.dto");
@@ -59,7 +58,7 @@ let AuthController = class AuthController {
     reinitialiserPin(dto) {
         return this.authService.reinitialiserPin(dto);
     }
-    rafraichirToken(utilisateur, _dto) {
+    rafraichirToken(utilisateur) {
         return this.authService.rafraichirToken(utilisateur.id, utilisateur.telephone, utilisateur.role, utilisateur.sessionId, utilisateur.refreshTokenBrut);
     }
     deconnexion(utilisateur) {
@@ -155,9 +154,8 @@ __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt-refresh')),
     (0, common_1.Post)('rafraichir-token'),
     __param(0, (0, utilisateur_courant_decorator_1.UtilisateurCourant)()),
-    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, rafraichir_token_dto_1.RafraichirTokenDto]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "rafraichirToken", null);
 __decorate([

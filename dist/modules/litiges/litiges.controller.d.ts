@@ -5,7 +5,10 @@ import { RejeterLitigeDto } from './dto/rejeter-litige.dto';
 export declare class LitigesController {
     private service;
     constructor(service: LitigesService);
-    ouvrir(u: any, dto: OuvrirLitigeDto): Promise<{
+    ouvrir(u: {
+        id: string;
+        role?: string;
+    }, dto: OuvrirLitigeDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -29,7 +32,10 @@ export declare class LitigesController {
             };
         };
     }>;
-    mesList(u: any): Promise<{
+    mesList(u: {
+        id: string;
+        role?: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -85,7 +91,10 @@ export declare class LitigesController {
             totalPages: number;
         };
     }>;
-    examiner(id: string, u: any): Promise<{
+    examiner(id: string, u: {
+        id: string;
+        role?: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -102,7 +111,10 @@ export declare class LitigesController {
             };
         };
     }>;
-    resoudre(id: string, u: any, dto: ResoudreLitigeDto): Promise<{
+    resoudre(id: string, u: {
+        id: string;
+        role?: string;
+    }, dto: ResoudreLitigeDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -119,7 +131,10 @@ export declare class LitigesController {
             };
         };
     }>;
-    rejeter(id: string, u: any, dto: RejeterLitigeDto): Promise<{
+    rejeter(id: string, u: {
+        id: string;
+        role?: string;
+    }, dto: RejeterLitigeDto): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -136,7 +151,10 @@ export declare class LitigesController {
             };
         };
     }>;
-    ajouterCommentaire(id: string, u: any, dto: {
+    ajouterCommentaire(id: string, u: {
+        id: string;
+        role: string;
+    }, dto: {
         message: string;
         pieceJointeUrl?: string;
     }): Promise<{
@@ -151,7 +169,10 @@ export declare class LitigesController {
             litigeId: string;
         };
     }>;
-    commentaires(id: string, u: any): Promise<{
+    commentaires(id: string, u: {
+        id: string;
+        role: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {
@@ -163,7 +184,10 @@ export declare class LitigesController {
             litigeId: string;
         }[];
     }>;
-    detail(id: string, u: any): Promise<{
+    detail(id: string, u: {
+        id: string;
+        role: string;
+    }): Promise<{
         succes: boolean;
         message: string;
         donnees: {

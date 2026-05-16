@@ -18,7 +18,7 @@ import { InscriptionDto } from './dto/inscription.dto';
 import { VerifierOtpDto } from './dto/verifier-otp.dto';
 import { CreerPinDto } from './dto/creer-pin.dto';
 import { ConnexionDto } from './dto/connexion.dto';
-import { RafraichirTokenDto } from './dto/rafraichir-token.dto';
+
 import { DemanderResetPinDto } from './dto/demander-reset-pin.dto';
 import { RenvoyerOtpInscriptionDto } from './dto/renvoyer-otp-inscription.dto';
 import { VerifierOtpResetPinDto } from './dto/verifier-otp-reset-pin.dto';
@@ -86,11 +86,10 @@ export class AuthController {
     utilisateur: {
       id: string;
       telephone: string;
-      role: any;
+      role: Role;
       sessionId: string;
       refreshTokenBrut?: string;
     },
-    @Body() _dto: RafraichirTokenDto,
   ) {
     return this.authService.rafraichirToken(
       utilisateur.id,
@@ -146,13 +145,24 @@ export class AuthController {
   @Post('biometrique/enregistrer')
   enregistrerAppareil(
     @UtilisateurCourant() u: { id: string },
-    @Body() dto: any,
+    @Body()
+    dto: {
+      deviceId: string;
+      empreinteToken: string;
+      nomAppareil?: string;
+      modeleAppareil?: string;
+      systemeExploitation?: string;
+    },
   ) {
     return this.authService.enregistrerAppareilBiometrique(u.id, dto);
   }
 
   @Post('biometrique/connexion')
-  connexionBiometrique(@Body() dto: any, @Req() req: Request) {
+  connexionBiometrique(
+    @Body()
+    dto: { telephone: string; deviceId: string; empreinteToken: string },
+    @Req() req: Request,
+  ) {
     return this.authService.connexionBiometrique(dto, req);
   }
 

@@ -26,12 +26,15 @@ export class LitigesController {
   constructor(private service: LitigesService) {}
 
   @Post()
-  ouvrir(@UtilisateurCourant() u: any, @Body() dto: OuvrirLitigeDto) {
+  ouvrir(
+    @UtilisateurCourant() u: { id: string; role?: string },
+    @Body() dto: OuvrirLitigeDto,
+  ) {
     return this.service.ouvrirLitige(u.id, dto);
   }
 
   @Get('mes-litiges')
-  mesList(@UtilisateurCourant() u: any) {
+  mesList(@UtilisateurCourant() u: { id: string; role?: string }) {
     return this.service.mesList(u.id);
   }
 
@@ -48,7 +51,10 @@ export class LitigesController {
   @Put(':id/examiner')
   @Roles(Role.ADMIN, Role.SUPERVISEUR)
   @UseGuards(RolesGuard)
-  examiner(@Param('id') id: string, @UtilisateurCourant() u: any) {
+  examiner(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string; role?: string },
+  ) {
     return this.service.examiner(id, u.id);
   }
 
@@ -57,7 +63,7 @@ export class LitigesController {
   @UseGuards(RolesGuard)
   resoudre(
     @Param('id') id: string,
-    @UtilisateurCourant() u: any,
+    @UtilisateurCourant() u: { id: string; role?: string },
     @Body() dto: ResoudreLitigeDto,
   ) {
     return this.service.resoudre(id, u.id, dto);
@@ -68,7 +74,7 @@ export class LitigesController {
   @UseGuards(RolesGuard)
   rejeter(
     @Param('id') id: string,
-    @UtilisateurCourant() u: any,
+    @UtilisateurCourant() u: { id: string; role?: string },
     @Body() dto: RejeterLitigeDto,
   ) {
     return this.service.rejeter(id, u.id, dto);
@@ -77,19 +83,25 @@ export class LitigesController {
   @Post(':id/commentaire')
   ajouterCommentaire(
     @Param('id') id: string,
-    @UtilisateurCourant() u: any,
+    @UtilisateurCourant() u: { id: string; role: string },
     @Body() dto: { message: string; pieceJointeUrl?: string },
   ) {
     return this.service.ajouterCommentaire(id, u.id, dto, u.role);
   }
 
   @Get(':id/commentaires')
-  commentaires(@Param('id') id: string, @UtilisateurCourant() u: any) {
+  commentaires(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string; role: string },
+  ) {
     return this.service.commentaires(id, u.id, u.role);
   }
 
   @Get(':id')
-  detail(@Param('id') id: string, @UtilisateurCourant() u: any) {
+  detail(
+    @Param('id') id: string,
+    @UtilisateurCourant() u: { id: string; role: string },
+  ) {
     return this.service.detail(id, u.id, u.role);
   }
 }

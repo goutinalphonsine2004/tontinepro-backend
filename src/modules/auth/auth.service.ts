@@ -3,7 +3,6 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
@@ -58,10 +57,9 @@ export class AuthService {
       if (reprise) return reprise;
 
       throw new ConflictException({
-        message:
-          existant.pinHash
-            ? 'Ce numéro est déjà actif. Connectez-vous avec votre PIN.'
-            : 'Ce numéro de téléphone est déjà inscrit',
+        message: existant.pinHash
+          ? 'Ce numéro est déjà actif. Connectez-vous avec votre PIN.'
+          : 'Ce numéro de téléphone est déjà inscrit',
         code: 'TELEPHONE_EXISTANT',
       });
     }
@@ -96,10 +94,7 @@ export class AuthService {
       });
     }
 
-    const reprise = await this.tenterRepriseInscription(
-      utilisateur,
-      telephone,
-    );
+    const reprise = await this.tenterRepriseInscription(utilisateur, telephone);
     if (reprise) return reprise;
 
     throw new ConflictException({
@@ -430,7 +425,10 @@ export class AuthService {
         },
       };
     } catch (error) {
-      this.logger.error(`Erreur connexion: ${error.message}`, error.stack);
+      this.logger.error(
+        `Erreur connexion: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }
@@ -1010,7 +1008,7 @@ export class AuthService {
       data: {
         utilisateurId: utilisateur.id,
         deviceId: dto.deviceId,
-        adresseIP: (req as any).ip,
+        adresseIP: (req as Request & { ip?: string }).ip,
         expireLe,
         actif: true,
       },
@@ -1126,7 +1124,7 @@ export class AuthService {
       suspicion: string;
     }[] = [];
 
-    for (const [uid, sessions] of parUtilisateur.entries()) {
+    for (const [, sessions] of parUtilisateur.entries()) {
       const ips = [
         ...new Set(sessions.map((s) => s.adresseIP).filter(Boolean)),
       ] as string[];

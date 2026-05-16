@@ -21,7 +21,6 @@ export declare class TransactionsService {
         succes: boolean;
         message: string;
         donnees: {
-            refKKiaPay: string | null;
             tontineId: string | null;
             idempotencyKey: string | null;
             id: string;
@@ -30,6 +29,7 @@ export declare class TransactionsService {
             type: import("@prisma/client").$Enums.TypeTransaction;
             statut: import("@prisma/client").$Enums.StatutTransaction;
             montantFcfa: number;
+            refKKiaPay: string | null;
             tentatives: number;
             reference: string;
             montantNetFcfa: number;
@@ -83,7 +83,6 @@ export declare class TransactionsService {
                     nom: string;
                 } | null;
             } & {
-                refKKiaPay: string | null;
                 tontineId: string | null;
                 idempotencyKey: string | null;
                 id: string;
@@ -92,6 +91,7 @@ export declare class TransactionsService {
                 type: import("@prisma/client").$Enums.TypeTransaction;
                 statut: import("@prisma/client").$Enums.StatutTransaction;
                 montantFcfa: number;
+                refKKiaPay: string | null;
                 tentatives: number;
                 reference: string;
                 montantNetFcfa: number;
@@ -134,7 +134,7 @@ export declare class TransactionsService {
                 erreur?: undefined;
             } | {
                 success: boolean;
-                erreur: any;
+                erreur: string;
                 simulated?: undefined;
                 data?: undefined;
             };

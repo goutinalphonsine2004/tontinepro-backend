@@ -102,7 +102,10 @@ export class TransactionsService {
     }
 
     // Validation montantFcfa si la tontine a un montantFcfa fixe
-    if (tontine.montantJournalierFcfa && Number(tontine.montantJournalierFcfa) > 0) {
+    if (
+      tontine.montantJournalierFcfa &&
+      Number(tontine.montantJournalierFcfa) > 0
+    ) {
       const requis = Number(tontine.montantJournalierFcfa);
       if (Math.abs(dto.montant - requis) > 0.01) {
         throw new BadRequestException({
@@ -280,7 +283,9 @@ export class TransactionsService {
         try {
           await this.traiterSucces(txComplete as any);
         } catch (err) {
-          this.logger.warn(`[SANDBOX] Auto-confirm partiel: ${(err as Error).message}`);
+          this.logger.warn(
+            `[SANDBOX] Auto-confirm partiel: ${(err as Error).message}`,
+          );
         }
       }
     }
@@ -326,9 +331,10 @@ export class TransactionsService {
     signatureRecue: string,
   ) {
     // 1. Vérifier signature HMAC-SHA256
-    const signatureValide =
-      signatureRecue === 'DEBUG_TP' ||
-      this.kkiapay.verifierSignature(rawBody.toString(), signatureRecue ?? '');
+    const signatureValide = this.kkiapay.verifierSignature(
+      rawBody.toString(),
+      signatureRecue ?? '',
+    );
     if (!signatureValide) {
       this.logger.warn(
         `Webhook rejeté — signature invalide: ${signatureRecue}`,
@@ -652,14 +658,21 @@ export class TransactionsService {
   }
 
   // ─── GET /transactions/historique ─────────────────
-  async historique(utilisateurId: string, filtres: FiltrerTransactionsDto, collecteurId?: string) {
+  async historique(
+    utilisateurId: string,
+    filtres: FiltrerTransactionsDto,
+    collecteurId?: string,
+  ) {
     // Sécurité anti-fraude : si un collecteur consulte pour un client,
     // on vérifie que ce client lui est bien assigné
     if (collecteurId) {
       const client = await this.prisma.utilisateur.findFirst({
         where: { id: utilisateurId, collecteurId },
       });
-      if (!client) throw new ForbiddenException('Ce client ne fait pas partie de votre portefeuille.');
+      if (!client)
+        throw new ForbiddenException(
+          'Ce client ne fait pas partie de votre portefeuille.',
+        );
     }
     const page = filtres.page ?? 1;
     const limite = Math.min(filtres.limite ?? 20, 100);

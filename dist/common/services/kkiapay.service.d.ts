@@ -18,14 +18,14 @@ export declare class KkiapayService {
     private readonly sandbox;
     private readonly secretKey;
     constructor(config: ConfigService);
-    initierPaiement(params: InitierPaiementParams): Promise<{
+    initierPaiement(params: InitierPaiementParams): {
         refKKiaPay: string;
         paymentUrl: string;
-    }>;
-    initierTransfert(params: InitierTransfertParams): Promise<{
+    };
+    initierTransfert(params: InitierTransfertParams): {
         succes: boolean;
         refKKiaPay: string;
-    }>;
+    };
     get estSandbox(): boolean;
     verifierSignature(rawBody: string, signatureRecue: string): boolean;
 }

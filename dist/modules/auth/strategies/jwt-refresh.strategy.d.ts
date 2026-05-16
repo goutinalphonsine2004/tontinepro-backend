@@ -19,7 +19,7 @@ export declare class JwtRefreshStrategy extends JwtRefreshStrategy_base {
         telephone: string;
         role: string;
         sessionId: string;
-        refreshTokenBrut: any;
+        refreshTokenBrut: string | null;
     }>;
 }
 export {};

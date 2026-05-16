@@ -251,7 +251,13 @@ let AnalyticsService = class AnalyticsService {
                     utilisateur: { select: { id: true, nom: true, telephone: true } },
                     dossiersPADME: {
                         where: {
-                            statut: { in: ['GENERE', 'VALIDE_ADMIN', 'SOUMIS_PADME'] },
+                            statut: {
+                                in: [
+                                    client_1.StatutDossierPADME.GENERE,
+                                    client_1.StatutDossierPADME.VALIDE_ADMIN,
+                                    client_1.StatutDossierPADME.SOUMIS_PADME,
+                                ],
+                            },
                         },
                         orderBy: { creeLe: 'desc' },
                         take: 1,
@@ -342,7 +348,7 @@ let AnalyticsService = class AnalyticsService {
     }
     async leaderboard(limite = 50) {
         const clients = await this.prisma.utilisateur.findMany({
-            where: { role: 'CLIENT', statut: 'ACTIF' },
+            where: { role: client_1.Role.CLIENT, statut: client_1.StatutCompte.ACTIF },
             select: {
                 id: true,
                 nom: true,
@@ -351,7 +357,10 @@ let AnalyticsService = class AnalyticsService {
                 },
                 tontines: { select: { soldeActuelFcfa: true } },
                 transactions: {
-                    where: { type: 'COTISATION', statut: 'SUCCES' },
+                    where: {
+                        type: client_1.TypeTransaction.COTISATION,
+                        statut: client_1.StatutTransaction.SUCCES,
+                    },
                     select: { montantNetFcfa: true },
                 },
                 badges: {

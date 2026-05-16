@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var MicroCreditsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MicroCreditsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -52,10 +53,11 @@ const sms_service_1 = require("../notifications/sms.service");
 const business_constants_1 = require("../../common/constants/business.constants");
 const DUREE_CONSENTEMENT_MIN = 30;
 const DUREE_CREDIT_JOURS = 30;
-let MicroCreditsService = class MicroCreditsService {
+let MicroCreditsService = MicroCreditsService_1 = class MicroCreditsService {
     prisma;
     kkiapay;
     sms;
+    logger = new common_1.Logger(MicroCreditsService_1.name);
     constructor(prisma, kkiapay, sms) {
         this.prisma = prisma;
         this.kkiapay = kkiapay;
@@ -68,7 +70,9 @@ let MicroCreditsService = class MicroCreditsService {
         const score = scoreCredit?.score ?? 0;
         const eligible = score >= business_constants_1.BUSINESS.SEUIL_SCORE_MICRO_CREDIT;
         const plafond = business_constants_1.BUSINESS.getPlafondMicroCredit(score);
-        const montantTotalFcfa = eligible ? business_constants_1.BUSINESS.calculerMontantTotal(plafond) : 0;
+        const montantTotalFcfa = eligible
+            ? business_constants_1.BUSINESS.calculerMontantTotal(plafond)
+            : 0;
         const paiementJournalierFcfa = eligible
             ? business_constants_1.BUSINESS.calculerPaiementJournalier(montantTotalFcfa, DUREE_CREDIT_JOURS)
             : 0;
@@ -283,6 +287,7 @@ let MicroCreditsService = class MicroCreditsService {
         };
     }
     async valider(creditId, adminId) {
+        this.logger.log(`[valider] crédit ${creditId} validé par admin ${adminId}`);
         const credit = await this.prisma.microCredit.findUnique({
             where: { id: creditId },
             include: { client: { select: { id: true, nom: true, telephone: true } } },
@@ -301,7 +306,7 @@ let MicroCreditsService = class MicroCreditsService {
                 code: 'STATUT_INVALIDE',
             });
         }
-        const transfert = await this.kkiapay.initierTransfert({
+        const transfert = this.kkiapay.initierTransfert({
             montant: credit.montantPrincipalFcfa,
             telephone: credit.client.telephone,
             reference: `credit_${creditId}`,
@@ -393,7 +398,7 @@ let MicroCreditsService = class MicroCreditsService {
     }
 };
 exports.MicroCreditsService = MicroCreditsService;
-exports.MicroCreditsService = MicroCreditsService = __decorate([
+exports.MicroCreditsService = MicroCreditsService = MicroCreditsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         kkiapay_service_1.KkiapayService,

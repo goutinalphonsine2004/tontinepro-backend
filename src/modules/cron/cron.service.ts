@@ -22,6 +22,19 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { BadgesService } from '../badges/badges.service';
 import { BUSINESS } from '../../common/constants/business.constants';
 
+interface CreditAvecClient {
+  id: string;
+  statut: StatutCredit;
+  paiementJournalierFcfa: number;
+  montantPrincipalFcfa: number;
+  client: {
+    id: string;
+    nom: string;
+    telephone: string;
+    collecteurId: string | null;
+  };
+}
+
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
@@ -55,13 +68,13 @@ export class CronService {
     });
     this.logger.log(`[CRON 7h] ${credits.length} crédit(s) actif(s) à traiter`);
     for (const credit of credits) {
-      await this.preleverUnCredit(credit as any);
+      await this.preleverUnCredit(credit);
     }
   }
 
-  async preleverUnCredit(credit: any) {
+  async preleverUnCredit(credit: CreditAvecClient) {
     try {
-      const transfert = await this.kkiapay.initierPaiement({
+      const transfert = this.kkiapay.initierPaiement({
         montant: credit.paiementJournalierFcfa,
         telephone: credit.client.telephone,
         reference: `remb_${credit.id}_${Date.now()}`,
@@ -102,7 +115,7 @@ export class CronService {
     }
   }
 
-  private async gererEchecRemboursement(credit: any) {
+  private async gererEchecRemboursement(credit: CreditAvecClient) {
     await this.prisma.remboursementCredit.create({
       data: {
         microCreditId: credit.id,
@@ -238,7 +251,8 @@ export class CronService {
 
     // Bonus objectif atteint
     const bonusObjectif = utilisateur.tontines.some(
-      (t) => t.objectifMontantFcfa && t.soldeActuelFcfa >= t.objectifMontantFcfa,
+      (t) =>
+        t.objectifMontantFcfa && t.soldeActuelFcfa >= t.objectifMontantFcfa,
     )
       ? 1
       : 0;
@@ -331,7 +345,11 @@ export class CronService {
     nouveauScore: number,
     eligibleCredit: boolean,
     eligiblePADME: boolean,
-    ancienScore: { score: number; eligibleMicroCredit: boolean; eligiblePADME: boolean } | null,
+    ancienScore: {
+      score: number;
+      eligibleMicroCredit: boolean;
+      eligiblePADME: boolean;
+    } | null,
   ) {
     const prenom = utilisateur.nom.split(' ')[0];
     const tel = utilisateur.telephone;
@@ -358,9 +376,7 @@ export class CronService {
 
     // 3. Progression significative (+5 pts ou plus)
     if (progression >= 5) {
-      const prochainSeuil = eligibleCredit
-        ? eligiblePADME ? null : 70
-        : 60;
+      const prochainSeuil = eligibleCredit ? (eligiblePADME ? null : 70) : 60;
       const messageProchain = prochainSeuil
         ? ` Plus que ${prochainSeuil - nouveauScore} points pour ${prochainSeuil === 60 ? 'le micro-crédit' : 'le dossier PADME'}.`
         : '';
@@ -893,7 +909,7 @@ export class CronService {
       const totalAFacturer = fact.fraisMensuelsFcfa + fraisGestion;
 
       try {
-        await this.kkiapay.initierPaiement({
+        this.kkiapay.initierPaiement({
           montant: totalAFacturer,
           telephone: fact.agent.telephone,
           reference: `abonnement_${fact.agentId}_${new Date().toISOString().slice(0, 7)}`,
@@ -916,7 +932,7 @@ export class CronService {
         succes++;
       } catch (err) {
         this.logger.error(
-          `Erreur facturation agent ${fact.agentId}: ${err.message}`,
+          `Erreur facturation agent ${fact.agentId}: ${(err as Error).message}`,
         );
         await this.sms.envoyer(
           fact.agent.telephone,
@@ -975,7 +991,7 @@ export class CronService {
           statut: StatutTransaction.SUCCES,
         },
         _sum: { montantNetFcfa: true },
-      } as any);
+      });
 
       const totalRetraits = await this.prisma.retrait.aggregate({
         where: {
@@ -994,9 +1010,9 @@ export class CronService {
       });
 
       const soldeCalcule =
-        ((totalTransactions._sum as any).montantNetFcfa ?? 0) -
-        ((totalRetraits._sum as any).montantFcfa ?? 0) -
-        ((totalDistributions._sum as any).montantFcfa ?? 0);
+        (totalTransactions._sum.montantNetFcfa ?? 0) -
+        (totalRetraits._sum.montantFcfa ?? 0) -
+        (totalDistributions._sum.montantFcfa ?? 0);
       const ecart = Math.abs(soldeCalcule - tontine.soldeActuelFcfa);
 
       if (ecart > 1) {
@@ -1207,9 +1223,9 @@ export class CronService {
           `[CRON 6h] Tontine PROJET clôturée: ${tontine.nom} (${tontine.id})`,
         );
         dissouts++;
-      } catch (err: any) {
+      } catch (err) {
         this.logger.error(
-          `[CRON 6h] Erreur dissolution tontine ${tontine.id}: ${err.message}`,
+          `[CRON 6h] Erreur dissolution tontine ${tontine.id}: ${(err as Error).message}`,
         );
       }
     }

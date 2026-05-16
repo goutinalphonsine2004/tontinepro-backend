@@ -207,8 +207,8 @@ let CollecteurTerrainService = class CollecteurTerrainService {
                     id: true,
                     transactions: {
                         where: {
-                            type: 'COTISATION',
-                            statut: 'SUCCES',
+                            type: client_1.TypeTransaction.COTISATION,
+                            statut: client_1.StatutTransaction.SUCCES,
                             creeLe: { gte: debutMois },
                         },
                         select: { montantFcfa: true },

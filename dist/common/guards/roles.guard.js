@@ -25,7 +25,9 @@ let RolesGuard = class RolesGuard {
         ]);
         if (!rolesRequis || rolesRequis.length === 0)
             return true;
-        const { user } = context.switchToHttp().getRequest();
+        const { user } = context
+            .switchToHttp()
+            .getRequest();
         return rolesRequis.includes(user?.role);
     }
 };

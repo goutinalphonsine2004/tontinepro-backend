@@ -870,7 +870,7 @@ let AuthService = AuthService_1 = class AuthService {
             parUtilisateur.set(s.utilisateurId, existantes);
         }
         const alertes = [];
-        for (const [uid, sessions] of parUtilisateur.entries()) {
+        for (const [, sessions] of parUtilisateur.entries()) {
             const ips = [
                 ...new Set(sessions.map((s) => s.adresseIP).filter(Boolean)),
             ];

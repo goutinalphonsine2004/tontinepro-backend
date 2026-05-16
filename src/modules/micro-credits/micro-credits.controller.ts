@@ -32,7 +32,10 @@ export class MicroCreditsController {
     const client = await this.prisma.utilisateur.findFirst({
       where: { id: clientId, collecteurId },
     });
-    if (!client) throw new ForbiddenException('Ce client ne fait pas partie de votre portefeuille.');
+    if (!client)
+      throw new ForbiddenException(
+        'Ce client ne fait pas partie de votre portefeuille.',
+      );
     return clientId;
   }
 
@@ -43,9 +46,10 @@ export class MicroCreditsController {
     @Query('clientId') clientId?: string,
   ) {
     const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
-    const id = estCollecteur && clientId
-      ? await this.verifierAccesClient(u.id, clientId)
-      : u.id;
+    const id =
+      estCollecteur && clientId
+        ? await this.verifierAccesClient(u.id, clientId)
+        : u.id;
     return this.service.monEligibilite(id);
   }
 
@@ -57,9 +61,10 @@ export class MicroCreditsController {
     @Query('clientId') clientId?: string,
   ) {
     const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
-    const id = estCollecteur && clientId
-      ? await this.verifierAccesClient(u.id, clientId)
-      : u.id;
+    const id =
+      estCollecteur && clientId
+        ? await this.verifierAccesClient(u.id, clientId)
+        : u.id;
     return this.service.demander(id, dto);
   }
 
@@ -111,9 +116,10 @@ export class MicroCreditsController {
     @Query('clientId') clientId?: string,
   ) {
     const estCollecteur = u.role === Role.AGENT || u.role === Role.INDEPENDANT;
-    const id = estCollecteur && clientId
-      ? await this.verifierAccesClient(u.id, clientId)
-      : u.id;
+    const id =
+      estCollecteur && clientId
+        ? await this.verifierAccesClient(u.id, clientId)
+        : u.id;
     return this.service.mesCredits(id);
   }
 

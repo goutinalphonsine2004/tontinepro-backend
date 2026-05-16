@@ -243,7 +243,11 @@ let OperationsAssisteesService = class OperationsAssisteesService {
         return {
             succes: true,
             message: 'Cotisation assistée initiée. Demande Mobile Money et OTP envoyés au client.',
-            donnees: { operation, transactionId: transaction.id, refKKiaPay: paiement.refKKiaPay },
+            donnees: {
+                operation,
+                transactionId: transaction.id,
+                refKKiaPay: paiement.refKKiaPay,
+            },
         };
     }
     async initierRetraitAssiste(initiateurId, role, dto) {
@@ -287,7 +291,7 @@ let OperationsAssisteesService = class OperationsAssisteesService {
             throw new common_1.NotFoundException('Opération introuvable');
         if (!['OTP_ENVOYE', 'EN_ATTENTE_MOBILE_MONEY'].includes(operation.statut)) {
             throw new common_1.BadRequestException({
-                message: "Cette opération ne peut plus être confirmée.",
+                message: 'Cette opération ne peut plus être confirmée.',
                 code: 'STATUT_OPERATION_INVALIDE',
             });
         }
@@ -390,7 +394,10 @@ let OperationsAssisteesService = class OperationsAssisteesService {
         }
         if (role === client_1.Role.SUPERVISEUR) {
             const rattache = await this.prisma.utilisateur.findFirst({
-                where: { id: client.collecteurId ?? undefined, superviseurId: utilisateurId },
+                where: {
+                    id: client.collecteurId ?? undefined,
+                    superviseurId: utilisateurId,
+                },
             });
             if (!rattache) {
                 throw new common_1.ForbiddenException({

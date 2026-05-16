@@ -204,7 +204,11 @@ let RapportsService = class RapportsService {
                         ],
                     },
                 },
-                select: { montantPrincipalFcfa: true, montantTotalFcfa: true, statut: true },
+                select: {
+                    montantPrincipalFcfa: true,
+                    montantTotalFcfa: true,
+                    statut: true,
+                },
             }),
             this.prisma.remboursementCredit.aggregate({
                 where: {

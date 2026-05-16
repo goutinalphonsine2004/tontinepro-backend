@@ -51,9 +51,10 @@ export class WhatsappService {
 
       this.logger.log(`[WhatsApp] Envoyé à ${telephone}`);
       return { success: true, data: response.data };
-    } catch (err: any) {
-      this.logger.error(`[WhatsApp] Erreur: ${err.message}`);
-      return { success: false, erreur: err.message };
+    } catch (err) {
+      const msg = (err as Error).message;
+      this.logger.error(`[WhatsApp] Erreur: ${msg}`);
+      return { success: false, erreur: msg };
     }
   }
 }

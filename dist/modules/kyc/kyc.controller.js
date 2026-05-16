@@ -25,7 +25,12 @@ const kyc_service_1 = require("./kyc.service");
 const soumettre_kyc_dto_1 = require("./dto/soumettre-kyc.dto");
 const rejeter_kyc_dto_1 = require("./dto/rejeter-kyc.dto");
 const TAILLE_MAX = 5 * 1024 * 1024;
-const MIME_AUTORISES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+const MIME_AUTORISES = [
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'application/pdf',
+];
 let KycController = class KycController {
     service;
     constructor(service) {

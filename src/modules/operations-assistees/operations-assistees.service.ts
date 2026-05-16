@@ -257,7 +257,11 @@ export class OperationsAssisteesService {
       succes: true,
       message:
         'Cotisation assistée initiée. Demande Mobile Money et OTP envoyés au client.',
-      donnees: { operation, transactionId: transaction.id, refKKiaPay: paiement.refKKiaPay },
+      donnees: {
+        operation,
+        transactionId: transaction.id,
+        refKKiaPay: paiement.refKKiaPay,
+      },
     };
   }
 
@@ -319,7 +323,7 @@ export class OperationsAssisteesService {
     if (!operation) throw new NotFoundException('Opération introuvable');
     if (!['OTP_ENVOYE', 'EN_ATTENTE_MOBILE_MONEY'].includes(operation.statut)) {
       throw new BadRequestException({
-        message: "Cette opération ne peut plus être confirmée.",
+        message: 'Cette opération ne peut plus être confirmée.',
         code: 'STATUT_OPERATION_INVALIDE',
       });
     }
@@ -435,7 +439,10 @@ export class OperationsAssisteesService {
     }
     if (role === Role.SUPERVISEUR) {
       const rattache = await this.prisma.utilisateur.findFirst({
-        where: { id: client.collecteurId ?? undefined, superviseurId: utilisateurId },
+        where: {
+          id: client.collecteurId ?? undefined,
+          superviseurId: utilisateurId,
+        },
       });
       if (!rattache) {
         throw new ForbiddenException({

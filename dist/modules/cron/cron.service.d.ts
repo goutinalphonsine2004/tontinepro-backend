@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { StatutCredit } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
 import { PdfService } from '../../common/services/pdf.service';
@@ -6,6 +7,18 @@ import { SmsService } from '../notifications/sms.service';
 import { WhatsappService } from '../notifications/whatsapp.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BadgesService } from '../badges/badges.service';
+interface CreditAvecClient {
+    id: string;
+    statut: StatutCredit;
+    paiementJournalierFcfa: number;
+    montantPrincipalFcfa: number;
+    client: {
+        id: string;
+        nom: string;
+        telephone: string;
+        collecteurId: string | null;
+    };
+}
 export declare class CronService {
     private prisma;
     private kkiapay;
@@ -18,7 +31,7 @@ export declare class CronService {
     private readonly logger;
     constructor(prisma: PrismaService, kkiapay: KkiapayService, sms: SmsService, whatsapp: WhatsappService, pdf: PdfService, notifications: NotificationsService, badges: BadgesService, config: ConfigService);
     preleverRemboursementsJournaliers(): Promise<void>;
-    preleverUnCredit(credit: any): Promise<void>;
+    preleverUnCredit(credit: CreditAvecClient): Promise<void>;
     private gererEchecRemboursement;
     scoringNocturne(): Promise<void>;
     calculerEtMettreAJourScore(clientId: string): Promise<number>;
@@ -84,3 +97,4 @@ export declare class CronService {
         message: string;
     }>;
 }
+export {};
