@@ -36,7 +36,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.js ./
 COPY package*.json ./
 
-ENV PORT=8000
-EXPOSE 8000
+EXPOSE 3000
 
 CMD ["node", "dist/main.js"]
