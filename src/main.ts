@@ -27,23 +27,8 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const corsOriginsEnv = process.env.CORS_ORIGINS?.split(',')
-    .map((o) => o.trim())
-    .filter(Boolean) ?? [];
-
   app.enableCors({
-    origin: (origin, callback) => {
-      // Pas d'origin (curl, mobile, Postman) → toujours autorisé
-      if (!origin) return callback(null, true);
-      // Origins explicitement autorisées
-      if (corsOriginsEnv.includes(origin)) return callback(null, true);
-      // Tous les sous-domaines Vercel autorisés (previews inclus)
-      if (/^https:\/\/[a-z0-9-]+-[a-z0-9]+-sodjinoucarrache457\.vercel\.app$/.test(origin)) return callback(null, true);
-      if (/^https:\/\/tontinepro-admin(-[a-z0-9]+)*\.vercel\.app$/.test(origin)) return callback(null, true);
-      // En dev, tout autoriser
-      if (process.env.NODE_ENV !== 'production') return callback(null, true);
-      callback(new Error(`CORS bloqué : ${origin}`));
-    },
+    origin: true,
     credentials: true,
   });
 
