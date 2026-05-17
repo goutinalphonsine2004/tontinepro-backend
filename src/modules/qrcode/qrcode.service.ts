@@ -86,6 +86,30 @@ export class QrcodeService {
     };
   }
 
+  // ─── POST /qrcode/lier/:code ───────────────────────
+  async lierCollecteur(codeQR: string, clientId: string) {
+    const qr = await this.prisma.qRCodeCollecteur.findUnique({
+      where: { codeQR },
+      select: { collecteurId: true, actif: true, expireLe: true },
+    });
+
+    if (!qr)
+      throw new NotFoundException({ message: 'QR code inconnu', code: 'QR_INVALIDE' });
+    if (!qr.actif)
+      throw new BadRequestException({ message: 'QR code désactivé', code: 'QR_DESACTIVE' });
+    if (qr.expireLe < new Date())
+      throw new BadRequestException({ message: 'QR code expiré', code: 'QR_EXPIRE' });
+    if (qr.collecteurId === clientId)
+      throw new BadRequestException({ message: 'Vous ne pouvez pas vous lier à vous-même', code: 'AUTO_LIEN_INTERDIT' });
+
+    await this.prisma.utilisateur.update({
+      where: { id: clientId },
+      data: { collecteurId: qr.collecteurId },
+    });
+
+    return { succes: true, message: 'Collecteur lié avec succès.' };
+  }
+
   // ─── POST /qrcode/regenerer (Admin) ───────────────
   async regenerer(agentId: string) {
     const agent = await this.prisma.utilisateur.findUnique({

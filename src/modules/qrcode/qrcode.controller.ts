@@ -28,6 +28,14 @@ export class QrcodeController {
     return this.service.scanner(code);
   }
 
+  @Post('lier/:code')
+  lierCollecteur(
+    @Param('code') code: string,
+    @UtilisateurCourant() u: { id: string },
+  ) {
+    return this.service.lierCollecteur(code, u.id);
+  }
+
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
   @Post('regenerer')
