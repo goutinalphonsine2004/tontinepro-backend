@@ -10,6 +10,9 @@ import {
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator';
 import { EnregistrerTokenDto } from './dto/enregistrer-token.dto';
 import { FiltrerNotificationsDto } from './dto/filtrer-notifications.dto';
@@ -62,5 +65,14 @@ export class NotificationsController {
     @Body() dto: EnregistrerTokenDto,
   ) {
     return this.service.enregistrerTokenPush(u.id, dto.tokenPush);
+  }
+
+  @Post('diffuser')
+  @Roles(Role.ADMIN)
+  @UseGuards(RolesGuard)
+  diffuser(
+    @Body() dto: { titre: string; message: string; type: string; cible: string },
+  ) {
+    return this.service.diffuser(dto);
   }
 }

@@ -6,7 +6,7 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
-import { Canal, TypeNotification } from '@prisma/client';
+import { Canal, Role, TypeNotification } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from './sms.service';
 import { PushService } from './push.service';
@@ -232,6 +232,37 @@ export class NotificationsService {
       create: { utilisateurId },
       update: {},
     });
+  }
+
+  // ─── POST /notifications/diffuser (Admin) ──────────
+  async diffuser(dto: { titre: string; message: string; type: string; cible: string }) {
+    const roleFilter: Role[] = dto.cible === 'CLIENTS'
+      ? [Role.CLIENT]
+      : dto.cible === 'COLLECTEURS'
+      ? [Role.AGENT, Role.INDEPENDANT, Role.SUPERVISEUR]
+      : [Role.CLIENT, Role.AGENT, Role.INDEPENDANT, Role.SUPERVISEUR];
+
+    const utilisateurs = await this.prisma.utilisateur.findMany({
+      where: { role: { in: roleFilter }, statut: 'ACTIF' },
+      select: { id: true, tokenPush: true },
+    });
+
+    const typeNotif = TypeNotification.BIENVENUE; // type générique pour diffusion admin
+
+    await Promise.allSettled(
+      utilisateurs.map(async (u) => {
+        await this.creerNotification(u.id, typeNotif, dto.titre, dto.message, Canal.PUSH);
+        if (u.tokenPush) {
+          await this.push.envoyerNotification(u.tokenPush, dto.titre, dto.message);
+        }
+      }),
+    );
+
+    return {
+      succes: true,
+      message: `Notification envoyée à ${utilisateurs.length} utilisateur(s).`,
+      donnees: { envoyes: utilisateurs.length },
+    };
   }
 
   private async creerNotification(

@@ -1,14 +1,32 @@
-node_modules
-dist/
-# Keep environment variables out of version control
-.env
+# Dépendances
+node_modules/
 
+# Build compilé — généré automatiquement, jamais committer
+dist/
+*.tsbuildinfo
+tsconfig.*.tsbuildinfo
+
+# Variables d'environnement — SECRETS
+.env
+.env.*
+!.env.example
+
+# Prisma generated
 /generated/prisma
 
-# Firebase — NE JAMAIS COMMITTER
+# Firebase — CLÉS PRIVÉES, JAMAIS COMMITTER
 google-services.json
-tontinepro-firebase-*.json
-firebase-adminsdk-*.json
+*firebase-adminsdk*.json
 *-firebase-adminsdk-*.json
+firebase-adminsdk-*.json
 
-.tsbuildinfo
+# Logs
+*.log
+npm-debug.log*
+
+# Railway
+.railway/
+
+# OS
+.DS_Store
+Thumbs.db

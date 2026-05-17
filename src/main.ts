@@ -1,3 +1,4 @@
+import 'dotenv/config'; // charger .env AVANT tout module NestJS
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
