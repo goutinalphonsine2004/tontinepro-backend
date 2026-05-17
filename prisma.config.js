@@ -7,6 +7,7 @@ module.exports = {
     path: 'prisma/migrations',
   },
   datasource: {
-    url: process.env.DATABASE_URL,
+    // Fallback dummy URL pour que prisma generate fonctionne en CI/CD sans DATABASE_URL
+    url: process.env.DATABASE_URL || 'postgresql://ci:ci@localhost:5432/ci',
   },
 };
