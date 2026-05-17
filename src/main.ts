@@ -11,10 +11,14 @@ async function bootstrap() {
   // rawBody: true → accès au corps brut pour vérification HMAC webhook KKiaPay
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
-  // CORS en premier — doit précéder helmet et tout autre middleware
-  app.enableCors({
-    origin: true,
-    credentials: true,
+  // CORS brut — avant tout middleware, incontournable
+  app.use((req: any, res: any, next: any) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
   });
 
   // Augmenter la limite pour les photos base64 (KYC terrain)
