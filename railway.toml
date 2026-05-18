@@ -1,8 +1,9 @@
 [build]
-builder = "dockerfile"
+builder = "nixpacks"
+buildCommand = "npm install && npx prisma generate && npm run build && echo 'BUILD OK' && ls dist/"
 
 [deploy]
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
+startCommand = "npx prisma migrate deploy && echo '=== STARTING NODE ===' && ls dist/main.js && node --trace-uncaught dist/main.js"
+restartPolicyType = "never"
 
 [environments.production]
