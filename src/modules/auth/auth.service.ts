@@ -173,11 +173,14 @@ export class AuthService {
       nom,
       role,
     };
-    if (this.config.get('NODE_ENV') === 'development') {
+    // Activer le code OTP en mode test via un flag dédié (au lieu de NODE_ENV)
+    // Pour l’activer sur Railway: OTP_TEST_ENABLED=true
+    if (this.config.get('OTP_TEST_ENABLED') === 'true') {
       donnees.otpTest = code;
       donnees.messageTest =
         '⚠️ Mode test - En production ce code ne sera pas visible';
     }
+
 
     return {
       succes: true,
@@ -467,11 +470,12 @@ export class AuthService {
       otpId,
       telephone: dto.telephone,
     };
-    if (this.config.get('NODE_ENV') === 'development') {
+    if (this.config.get('OTP_TEST_ENABLED') === 'true') {
       donnees.otpTest = code;
       donnees.messageTest =
         'Mode test - En production ce code ne sera pas visible';
     }
+
 
     return {
       succes: true,
