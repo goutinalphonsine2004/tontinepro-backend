@@ -539,19 +539,52 @@ export class CronService {
   @Cron('*/30 * * * *', { name: 'expirer-credits-sms' })
   async expirerCreditsConsentementExpires() {
     const limite = new Date(Date.now() - 30 * 60 * 1000);
-    const result = await this.prisma.microCredit.updateMany({
+
+    // Récupérer les crédits à expirer avec le client et l'ID de l'agent
+    const aExpirer = await this.prisma.microCredit.findMany({
       where: {
         statut: StatutCredit.EN_ATTENTE,
         methodeConsentement: 'SMS',
         consentementObtenu: false,
         creeLe: { lt: limite },
       },
+      select: {
+        id: true,
+        montantPrincipalFcfa: true,
+        initiePar: true,
+        client: { select: { nom: true } },
+      },
+    });
+
+    if (aExpirer.length === 0) return;
+
+    // Expirer en masse
+    await this.prisma.microCredit.updateMany({
+      where: { id: { in: aExpirer.map((c) => c.id) } },
       data: { statut: StatutCredit.EXPIRE },
     });
-    if (result.count > 0) {
-      this.logger.log(
-        `[CRON] ${result.count} crédit(s) SMS expiré(s) pour non-réponse`,
-      );
+
+    this.logger.log(
+      `[CRON] ${aExpirer.length} crédit(s) SMS expiré(s) pour non-réponse`,
+    );
+
+    // Récupérer les téléphones des agents en une seule requête
+    const agentIds = [...new Set(aExpirer.map((c) => c.initiePar))];
+    const agents = await this.prisma.utilisateur.findMany({
+      where: { id: { in: agentIds } },
+      select: { id: true, telephone: true },
+    });
+    const agentTelMap = new Map(agents.map((a) => [a.id, a.telephone]));
+
+    // Notifier chaque agent
+    for (const credit of aExpirer) {
+      const tel = agentTelMap.get(credit.initiePar);
+      if (tel) {
+        await this.sms.envoyer(
+          tel,
+          `TontineBénin: La demande de micro-crédit de ${credit.client.nom} (${Math.round(credit.montantPrincipalFcfa / 1000)}K FCFA) a expiré — aucune réponse SMS en 30 min. Vous pouvez soumettre une nouvelle demande.`,
+        ).catch(() => { /* SMS non bloquant */ });
+      }
     }
   }
 
