@@ -38,4 +38,4 @@ COPY package*.json ./
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "echo '=== STARTING NODE ===' && node dist/main.js || echo '=== NODE CRASHED ==='"]
+CMD ["node", "dist/main.js"]
