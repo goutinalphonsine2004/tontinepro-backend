@@ -7,6 +7,16 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { IsInt, IsOptional, IsString, MaxLength, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class DonnerAvisDto {
+  @IsInt() @Min(1) @Max(5) @Type(() => Number)
+  note!: number;
+
+  @IsOptional() @IsString() @MaxLength(300)
+  commentaire?: string;
+}
 import { CollecteurTerrainService } from './collecteur-terrain.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -70,5 +80,24 @@ export class CollecteurTerrainController {
   @Get('mon-collecteur')
   monCollecteur(@UtilisateurCourant() u: { id: string }) {
     return this.service.monCollecteur(u.id);
+  }
+
+  // ─── POST /collecteur/:id/avis ─────────────────────
+  // Le CLIENT donne une note (1-5) à son collecteur
+  @Post(':id/avis')
+  @Roles(Role.CLIENT)
+  donnerAvis(
+    @UtilisateurCourant() u: { id: string },
+    @Param('id') collecteurId: string,
+    @Body() dto: DonnerAvisDto,
+  ) {
+    return this.service.donnerAvis(u.id, collecteurId, dto.note, dto.commentaire);
+  }
+
+  // ─── GET /collecteur/:id/avis ──────────────────────
+  // Résumé public des avis d'un collecteur
+  @Get(':id/avis')
+  avisCollecteur(@Param('id') collecteurId: string) {
+    return this.service.avisCollecteur(collecteurId);
   }
 }

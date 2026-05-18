@@ -55,6 +55,8 @@ model Utilisateur {
   transactions           Transaction[]
   collecteur             Utilisateur?            @relation("CollecteurClients", fields: [collecteurId], references: [id])
   clients                Utilisateur[]           @relation("CollecteurClients")
+  avisLaisses            AvisCollecteur[]        @relation("AvisAuteur")
+  avisRecus              AvisCollecteur[]        @relation("AvisCollecteur")
   enrolePar              Utilisateur?            @relation("ClientEnrolePar", fields: [enroleParId], references: [id])
   clientsEnroles         Utilisateur[]           @relation("ClientEnrolePar")
   superviseur            Utilisateur?            @relation("SuperviseurAgents", fields: [superviseurId], references: [id])
@@ -167,6 +169,9 @@ model CodeOTP {
   creeLe        DateTime    @default(now())
   tentatives    Int         @default(0)
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId])
+  @@index([expireLe])
 }
 
 model AppareilBiometrique {
@@ -316,6 +321,7 @@ model Transaction {
   @@index([utilisateurId])
   @@index([statut])
   @@index([creeLe])
+  @@index([refKKiaPay])
 }
 
 model Retrait {
@@ -747,6 +753,21 @@ enum TypeNotification {
   REMBOURSEMENT_RAPPEL
   DEFAILLANT_GROUPE
   BIENVENUE
+}
+
+model AvisCollecteur {
+  id           String      @id @default(uuid())
+  auteurId     String
+  collecteurId String
+  note         Int                    // 1 à 5
+  commentaire  String?
+  creeLe       DateTime    @default(now())
+  auteur       Utilisateur @relation("AvisAuteur",    fields: [auteurId],     references: [id])
+  collecteur   Utilisateur @relation("AvisCollecteur", fields: [collecteurId], references: [id])
+
+  @@unique([auteurId, collecteurId])  // 1 avis par client par collecteur
+  @@index([collecteurId])
+  @@index([auteurId])
 }
 
 enum Canal {

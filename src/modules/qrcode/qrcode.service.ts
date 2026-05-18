@@ -9,6 +9,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 const DUREE_QR_MS = 24 * 60 * 60 * 1000;
 
+// Note de profil collecteur (1–5) calculée depuis des données réelles
+function _calculerNoteProfile(
+  kycVerifie: boolean,
+  badge: string | null,
+  nbClients: number,
+): number {
+  let note = kycVerifie ? 3.0 : 1.5;               // KYC = base fiable
+  if (badge === 'BRONZE')  note = Math.max(note, 3.0);
+  if (badge === 'ARGENT')  note = Math.max(note, 3.5);
+  if (badge === 'OR')      note = Math.max(note, 4.0);
+  if (badge === 'DIAMANT') note = Math.max(note, 5.0);
+  if (nbClients >= 5)  note = Math.min(note + 0.5, 5);  // expérience terrain
+  if (nbClients >= 20) note = Math.min(note + 0.5, 5);
+  return Math.round(note * 2) / 2;                  // arrondi au 0.5 près
+}
+
 @Injectable()
 export class QrcodeService {
   constructor(private prisma: PrismaService) {}
@@ -57,6 +73,8 @@ export class QrcodeService {
             role: true,
             kycVerifie: true,
             statut: true,
+            badges: { orderBy: { obtenuLe: 'desc' }, take: 1 },
+            _count: { select: { clients: true } },
           },
         },
       },
@@ -79,10 +97,25 @@ export class QrcodeService {
       });
     }
 
+    const c = qr.collecteur;
+    const badgeNiveau = c.badges[0]?.niveau ?? null;
+    const nbClients = c._count.clients;
+
+    // Note de profil 1-5 calculée depuis des données réelles
+    const noteProfile = _calculerNoteProfile(c.kycVerifie, badgeNiveau, nbClients);
+
+    const { badges: _b, _count, ...collecteurBase } = c;
+
     return {
       succes: true,
       message: 'Collecteur authentifié.',
-      donnees: { collecteur: qr.collecteur, expireLe: qr.expireLe },
+      donnees: {
+        collecteur: collecteurBase,
+        expireLe: qr.expireLe,
+        noteProfile,            // 1.0 – 5.0
+        niveauBadge: badgeNiveau,
+        nbClients,
+      },
     };
   }
 

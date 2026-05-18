@@ -6,8 +6,30 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import helmet from 'helmet';
 
+function validerVariablesEnv(logger: Logger) {
+  const requises: Record<string, string> = {
+    DATABASE_URL: process.env.DATABASE_URL ?? '',
+    JWT_SECRET: process.env.JWT_SECRET ?? '',
+    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? '',
+  };
+  const manquantes = Object.entries(requises)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  if (manquantes.length > 0) {
+    logger.fatal(`Variables d'environnement manquantes : ${manquantes.join(', ')}`);
+    process.exit(1);
+  }
+  const jwtExp = process.env.JWT_EXPIRES_IN ?? '';
+  if (jwtExp && !/^\d+[smhd]$/.test(jwtExp)) {
+    logger.fatal(`JWT_EXPIRES_IN invalide : "${jwtExp}" (format attendu : 24h, 3600s…)`);
+    process.exit(1);
+  }
+  logger.log('Variables d\'environnement validées ✓');
+}
+
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  validerVariablesEnv(logger);
   // rawBody: true → accès au corps brut pour vérification HMAC webhook KKiaPay
   const app = await NestFactory.create(AppModule, { rawBody: true });
 

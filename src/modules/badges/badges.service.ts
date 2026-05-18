@@ -2,39 +2,61 @@ import { Injectable } from '@nestjs/common';
 import { NiveauBadge, Role, StatutCompte } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../notifications/sms.service';
+import { PushService } from '../notifications/push.service';
 
 const REGLES_BADGES: {
   mois: number;
   regulariteMin: number;
   niveau: NiveauBadge;
   label: string;
+  nom: string;
+  description: string;
+  emoji: string;
 }[] = [
   {
-    mois: 12,
-    regulariteMin: 0.8,
-    niveau: NiveauBadge.DIAMANT,
-    label: 'DIAMANT 💎',
-  },
-  { mois: 6, regulariteMin: 0.7, niveau: NiveauBadge.OR, label: 'OR 🥇' },
-  {
-    mois: 3,
-    regulariteMin: 0.6,
-    niveau: NiveauBadge.ARGENT,
-    label: 'ARGENT 🥈',
+    mois: 12, regulariteMin: 0.8, niveau: NiveauBadge.DIAMANT,
+    label: 'DIAMANT 💎', emoji: '💎',
+    nom: 'Badge Diamant',
+    description: '12 mois d\'épargne continue avec un taux de régularité ≥ 80%.',
   },
   {
-    mois: 1,
-    regulariteMin: 0.5,
-    niveau: NiveauBadge.BRONZE,
-    label: 'BRONZE 🥉',
+    mois: 6, regulariteMin: 0.7, niveau: NiveauBadge.OR,
+    label: 'OR 🥇', emoji: '🥇',
+    nom: 'Badge Or',
+    description: '6 mois d\'épargne continue avec un taux de régularité ≥ 70%.',
+  },
+  {
+    mois: 3, regulariteMin: 0.6, niveau: NiveauBadge.ARGENT,
+    label: 'ARGENT 🥈', emoji: '🥈',
+    nom: 'Badge Argent',
+    description: '3 mois d\'épargne continue avec un taux de régularité ≥ 60%.',
+  },
+  {
+    mois: 1, regulariteMin: 0.5, niveau: NiveauBadge.BRONZE,
+    label: 'BRONZE 🥉', emoji: '🥉',
+    nom: 'Badge Bronze',
+    description: '1 mois d\'épargne avec un taux de régularité ≥ 50%.',
   },
 ];
+
+// Enrichit un enregistrement BadgeClient avec nom/description/emoji
+function enrichirBadge(b: { id: string; niveau: NiveauBadge; obtenuLe: Date }) {
+  const regle = REGLES_BADGES.find((r) => r.niveau === b.niveau);
+  return {
+    ...b,
+    nom: regle?.nom ?? b.niveau,
+    description: regle?.description ?? '',
+    emoji: regle?.emoji ?? '🏅',
+    obtenu: true,
+  };
+}
 
 @Injectable()
 export class BadgesService {
   constructor(
     private prisma: PrismaService,
     private sms: SmsService,
+    private push: PushService,
   ) {}
 
   // Appelé par le cron après chaque scoring
@@ -44,7 +66,7 @@ export class BadgesService {
     });
     const client = await this.prisma.utilisateur.findUnique({
       where: { id: clientId },
-      select: { telephone: true, nom: true },
+      select: { telephone: true, nom: true, tokenPush: true },
     });
     if (!scoreCredit || !client) return;
 
@@ -85,10 +107,20 @@ export class BadgesService {
       data: { clientId, niveau: badgeEligible.niveau },
     });
 
-    await this.sms.envoyer(
-      client.telephone,
-      `TontineBénin: 🎉 Félicitations ${client.nom} ! Vous venez d'obtenir le badge ${badgeEligible.label} TontineBénin. Continuez à épargner régulièrement !`,
-    );
+    const msgFelicitations = `🎉 Félicitations ${client.nom} ! Vous venez d'obtenir le badge ${badgeEligible.label} TontineBénin. Continuez à épargner régulièrement !`;
+
+    // SMS
+    await this.sms.envoyer(client.telephone, `TontineBénin: ${msgFelicitations}`);
+
+    // Push FCM (si token disponible)
+    if (client.tokenPush) {
+      await this.push.envoyerNotification(
+        client.tokenPush,
+        `Nouveau badge ${badgeEligible.label} !`,
+        msgFelicitations,
+        { type: 'BADGE', niveau: badgeEligible.niveau },
+      ).catch(() => { /* FCM non critique */ });
+    }
   }
 
   async attribuerBadgesATous() {
@@ -103,28 +135,63 @@ export class BadgesService {
 
   // ─── GET /badges/mes-badges ───────────────────────
   async mesBadges(clientId: string) {
-    const badges = await this.prisma.badgeClient.findMany({
-      where: { clientId },
-      orderBy: { obtenuLe: 'desc' },
-    });
+    const [badges, scoreCredit] = await Promise.all([
+      this.prisma.badgeClient.findMany({
+        where: { clientId },
+        orderBy: { obtenuLe: 'desc' },
+      }),
+      this.prisma.scoreCredit.findUnique({ where: { utilisateurId: clientId } }),
+    ]);
 
-    const niveauActuel =
-      badges.length > 0
-        ? badges.reduce((best, b) => {
-            const ordre: Record<string, number> = {
-              BRONZE: 1,
-              ARGENT: 2,
-              OR: 3,
-              DIAMANT: 4,
-            };
-            return ordre[b.niveau] > ordre[best.niveau] ? b : best;
-          })
-        : null;
+    const badgesEnrichis = badges.map(enrichirBadge);
+
+    const ordre: Record<NiveauBadge, number> = {
+      [NiveauBadge.BRONZE]: 1,
+      [NiveauBadge.ARGENT]: 2,
+      [NiveauBadge.OR]: 3,
+      [NiveauBadge.DIAMANT]: 4,
+    };
+
+    const niveauActuel = badges.length > 0
+      ? badges.reduce((best, b) => ordre[b.niveau] > ordre[best.niveau] ? b : best).niveau
+      : null;
+
+    // Prochain badge non encore obtenu
+    const niveauxObtenus = new Set(badges.map((b) => b.niveau));
+    const prochainBadge = REGLES_BADGES
+      .slice()
+      .reverse() // du plus bas au plus élevé
+      .find((r) => !niveauxObtenus.has(r.niveau));
+
+    // Progression vers le prochain badge
+    let progressionProchaineEtape: number | null = null;
+    if (prochainBadge && scoreCredit) {
+      const { totalMois, tauxRegularite } = scoreCredit;
+      const progMois = Math.min(totalMois / prochainBadge.mois, 1);
+      const progRegularite = Math.min(tauxRegularite / prochainBadge.regulariteMin, 1);
+      progressionProchaineEtape = Math.round(((progMois + progRegularite) / 2) * 100);
+    }
 
     return {
       succes: true,
       message: `${badges.length} badge(s) obtenu(s).`,
-      donnees: { badges, niveauActuel: niveauActuel?.niveau ?? null },
+      donnees: {
+        badges: badgesEnrichis,
+        niveauActuel,
+        prochainBadge: prochainBadge
+          ? {
+              niveau: prochainBadge.niveau,
+              nom: prochainBadge.nom,
+              description: prochainBadge.description,
+              emoji: prochainBadge.emoji,
+              criteres: {
+                moisRequis: prochainBadge.mois,
+                regulariteMinimum: prochainBadge.regulariteMin,
+              },
+              progression: progressionProchaineEtape,
+            }
+          : null,
+      },
     };
   }
 

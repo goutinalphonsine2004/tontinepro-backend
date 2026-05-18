@@ -2,6 +2,7 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   Role,
@@ -416,9 +417,78 @@ export class CollecteurTerrainService {
             telephone: collecteur.telephone,
             region: collecteur.zone?.nom || null,
             kycVerifie: collecteur.kycVerifie,
-            commissionPercent: 3, // À récupérer d'une config
+            commissionPercent: 3,
           }
         : null,
+    };
+  }
+
+  // ─── POST /collecteur/:id/avis ─────────────────────
+  async donnerAvis(
+    auteurId: string,
+    collecteurId: string,
+    note: number,
+    commentaire?: string,
+  ) {
+    // Vérifier que le collecteur existe
+    const collecteur = await this.prisma.utilisateur.findUnique({
+      where: { id: collecteurId },
+      select: { id: true, nom: true, role: true },
+    });
+    if (!collecteur) throw new NotFoundException('Collecteur introuvable');
+    if (collecteur.role !== Role.AGENT && collecteur.role !== Role.INDEPENDANT) {
+      throw new BadRequestException({
+        message: 'Cet utilisateur n\'est pas un collecteur',
+        code: 'ROLE_INVALIDE',
+      });
+    }
+    if (auteurId === collecteurId) {
+      throw new BadRequestException({
+        message: 'Vous ne pouvez pas vous noter vous-même',
+        code: 'AUTO_AVIS_INTERDIT',
+      });
+    }
+
+    // Upsert : 1 avis par client par collecteur (mise à jour si déjà donné)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.prisma as any;
+    const avis = await db.avisCollecteur.upsert({
+      where: { auteurId_collecteurId: { auteurId, collecteurId } },
+      create: { auteurId, collecteurId, note, commentaire },
+      update: { note, commentaire },
+    });
+
+    return {
+      succes: true,
+      message: `Avis de ${note}/5 enregistré pour ${collecteur.nom}. Merci !`,
+      donnees: { id: avis.id, note: avis.note },
+    };
+  }
+
+  // ─── GET /collecteur/:id/avis ──────────────────────
+  async avisCollecteur(collecteurId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.prisma as any;
+    const avis = await db.avisCollecteur.findMany({
+      where: { collecteurId },
+      orderBy: { creeLe: 'desc' },
+      select: {
+        note: true,
+        commentaire: true,
+        creeLe: true,
+        auteur: { select: { nom: true } },
+      },
+    });
+
+    const total = avis.length;
+    const moyenne = total > 0
+      ? Math.round((avis.reduce((s, a) => s + a.note, 0) / total) * 10) / 10
+      : null;
+
+    return {
+      succes: true,
+      message: `${total} avis pour ce collecteur.`,
+      donnees: { moyenne, total, avis },
     };
   }
 }
