@@ -193,12 +193,10 @@ export class OperationsAssisteesService {
     const telephone = dto.telephone ?? client.telephone;
     const otp = await this.creerOtp();
 
-    const fraisPlateformeFcfa = BUSINESS.calculerFraisPlateforme(dto.montant);
-    const montantNetFcfa = dto.montant - fraisPlateformeFcfa;
-    const fraisAgentFcfa =
-      role === Role.INDEPENDANT
-        ? BUSINESS.calculerCommissionAgent(dto.montant, true)
-        : 0;
+    // Cotisation assistée : 0% frais — 100% crédité dans la tontine
+    const fraisPlateformeFcfa = 0;
+    const montantNetFcfa = dto.montant;
+    const fraisAgentFcfa = 0;
 
     const transaction = await this.prisma.transaction.create({
       data: {
@@ -516,8 +514,11 @@ export class OperationsAssisteesService {
   }
 
   private async executerRetraitApresConfirmation(operation: any) {
-    const fraisRetrait = BUSINESS.calculerFraisRetrait(operation.montantFcfa);
-    const montantNetFcfa = operation.montantFcfa - fraisRetrait;
+    // Retrait assisté : barème progressif, pas de commission agent ici
+    // (l'agent perçoit sa commission via le mécanisme standard retraits.service)
+    const frais = BUSINESS.calculerFraisRetrait(operation.montantFcfa, false, false);
+    const montantNetFcfa = frais.montantNet;
+    const fraisRetrait = frais.fraisTotal;
     const transfert = await this.kkiapay.initierTransfert({
       montant: montantNetFcfa,
       telephone: operation.telephone,

@@ -917,11 +917,14 @@ export class TontinesService {
     }
 
     const montantFcfaDistribution = t.soldeActuelFcfa;
-    // Distribution GROUPE = sortie de fonds → taux retrait 2% (pas taux cotisation)
-    const fraisDistribution = BUSINESS.calculerFraisRetrait(
+    // Distribution GROUPE = sortie de fonds → barème progressif, pas de commission agent
+    const fraisDistrib = BUSINESS.calculerFraisRetrait(
       montantFcfaDistribution,
+      false,  // pas de badge Diamant sur les distributions groupe
+      false,  // pas de commission agent
     );
-    const montantNetFcfa = montantFcfaDistribution - fraisDistribution;
+    const fraisDistribution = fraisDistrib.fraisTotal;
+    const montantNetFcfa = fraisDistrib.montantNet;
 
     const transfert = await this.kkiapay.initierTransfert({
       montant: montantNetFcfa,
@@ -983,9 +986,8 @@ export class TontinesService {
           tontineId,
           utilisateurId: prochainTirage.utilisateurId,
           refKKiaPay: transfert.refKKiaPay,
-          fraisPlateformeFcfa: BUSINESS.calculerFraisPlateforme(
-            montantFcfaDistribution,
-          ),
+          // frais retrait 5% (distribution = sortie de fonds)
+          fraisPlateformeFcfa: fraisDistribution,
         },
       }),
     ]);

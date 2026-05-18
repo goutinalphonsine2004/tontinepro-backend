@@ -256,23 +256,43 @@ export class RetraitsService {
     tontineId: string,
     montantFcfa: number,
   ) {
-    const fraisRetrait = BUSINESS.calculerFraisRetrait(montantFcfa);
-    const montantNetFcfa = montantFcfa - fraisRetrait;
+    // Charger l'utilisateur pour vérifier le badge Diamant et le collecteur
+    const retrait = await this.prisma.retrait.findUnique({
+      where: { id: retraitId },
+      include: {
+        utilisateur: {
+          select: {
+            id: true,
+            nom: true,
+            collecteurId: true,
+            badges: { where: { niveau: 'DIAMANT' }, take: 1 },
+            collecteur: { select: { role: true } },
+          },
+        },
+        tontine: { select: { nom: true } },
+      },
+    });
+
+    const estDiamant = (retrait?.utilisateur.badges.length ?? 0) > 0;
+    const estAgentIndep =
+      retrait?.utilisateur.collecteur?.role === 'INDEPENDANT';
+    const collecteurId = retrait?.utilisateur.collecteurId ?? null;
+
+    // Barème progressif : 1.5%→5% standard | 1%→3% Diamant | 40% → agent indép.
+    const frais = BUSINESS.calculerFraisRetrait(
+      montantFcfa,
+      estDiamant,
+      estAgentIndep,
+    );
 
     const transfert = await this.kkiapay.initierTransfert({
-      montant: montantNetFcfa,
+      montant: frais.montantNet,
       telephone,
       reference: `retrait_${retraitId}`,
       motif: 'Retrait tontine',
     });
 
-    const retrait = await this.prisma.retrait.findUnique({
-      where: { id: retraitId },
-      include: {
-        utilisateur: { select: { id: true, nom: true, collecteurId: true } },
-        tontine: { select: { nom: true } },
-      },
-    });
+    const tauxPct = `${(frais.taux * 100).toFixed(1)}%${estDiamant ? ' (Diamant)' : ''}`;
 
     await this.prisma.$transaction([
       this.prisma.retrait.update({
@@ -287,20 +307,29 @@ export class RetraitsService {
         where: { id: tontineId },
         data: { soldeActuelFcfa: { decrement: montantFcfa } },
       }),
+      // Créditer la commission de l'agent indépendant si applicable
+      ...(collecteurId && frais.fraisAgent > 0
+        ? [
+            this.prisma.utilisateur.update({
+              where: { id: collecteurId },
+              data: { soldeCommissionFcfa: { increment: frais.fraisAgent } },
+            }),
+          ]
+        : []),
     ]);
 
     await this.sms.envoyer(
       telephone,
-      `TontineBénin: Retrait de ${montantNetFcfa} FCFA (après ${fraisRetrait}F de frais) exécuté avec succès. Réf: ${transfert.refKKiaPay}.`,
+      `TontineBénin: Retrait de ${frais.montantNet.toLocaleString('fr-FR')} FCFA exécuté ✅` +
+        ` (frais ${tauxPct} = ${frais.fraisTotal.toLocaleString('fr-FR')} F). Réf: ${transfert.refKKiaPay}.`,
     );
 
-    // Notifier l'équipe (Collecteur + Superviseur) si existant
-    if (retrait?.utilisateur.collecteurId) {
-      await this.notifications.envoyerAEquipe(
-        retrait.utilisateur.collecteurId,
-        'Retrait effectué',
-        `Le retrait de ${montantFcfa} F pour votre client ${retrait.utilisateur.nom} sur ${retrait.tontine.nom} a été payé.`,
-      );
+    if (collecteurId) {
+      const msg =
+        frais.fraisAgent > 0
+          ? `Retrait de ${montantFcfa.toLocaleString('fr-FR')} F pour ${retrait!.utilisateur.nom}. Votre commission: ${frais.fraisAgent.toLocaleString('fr-FR')} FCFA crédités.`
+          : `Retrait de ${montantFcfa.toLocaleString('fr-FR')} F pour ${retrait!.utilisateur.nom} (${retrait!.tontine.nom}) exécuté.`;
+      await this.notifications.envoyerAEquipe(collecteurId, 'Retrait effectué', msg);
     }
   }
 

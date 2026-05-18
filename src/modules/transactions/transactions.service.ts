@@ -118,31 +118,10 @@ export class TransactionsService {
 
     const telephone = dto.telephone ?? targetUser.telephone;
 
-    // Vérifier si l'utilisateur a le badge DIAMANT pour la réduction de frais
-    const badgeDiamant = await this.prisma.badgeClient.findFirst({
-      where: { clientId: targetUserId, niveau: 'DIAMANT' },
-    });
-
-    const fraisPlateformeFcfa = BUSINESS.calculerFraisPlateforme(
-      dto.montant,
-      !!badgeDiamant,
-    );
-    const montantNetFcfa = dto.montant - fraisPlateformeFcfa;
-
-    // Commission agent (seulement si indépendant)
-    let estIndependant = false;
-    if (targetUser.collecteurId) {
-      const collecteur = await this.prisma.utilisateur.findUnique({
-        where: { id: targetUser.collecteurId },
-        select: { role: true },
-      });
-      estIndependant = collecteur?.role === 'INDEPENDANT';
-    }
-
-    const fraisAgentFcfa = BUSINESS.calculerCommissionAgent(
-      dto.montant,
-      estIndependant,
-    );
+    // Cotisation : aucun frais — 100% crédité dans la tontine
+    const fraisPlateformeFcfa = 0;
+    const montantNetFcfa = dto.montant;
+    const fraisAgentFcfa = 0;
 
     // ─── VÉRIFICATION PLAFOND CAUTION (INDEPENDANT uniquement) ───
     if (targetUser.collecteurId) {
@@ -444,19 +423,10 @@ export class TransactionsService {
   }
 
   private async traiterSucces(transaction: any) {
-    const estDiamant = transaction.utilisateur.badges.length > 0;
-    const fraisPlateformeFcfa = BUSINESS.calculerFraisPlateforme(
-      transaction.montantFcfa,
-      estDiamant,
-    );
-    const montantNetFcfa = transaction.montantFcfa - fraisPlateformeFcfa;
-
-    const estIndependant =
-      transaction.utilisateur.collecteur?.role === 'INDEPENDANT';
-    const fraisAgentFcfa = BUSINESS.calculerCommissionAgent(
-      transaction.montantFcfa,
-      estIndependant,
-    );
+    // Cotisation : 0% frais — montant brut crédité intégralement dans la tontine
+    const fraisPlateformeFcfa = 0;
+    const montantNetFcfa = transaction.montantFcfa;
+    const fraisAgentFcfa = 0;
     const collecteurId = transaction.utilisateur.collecteurId;
 
     // Chaîne de hachage
@@ -491,23 +461,8 @@ export class TransactionsService {
         ? [
             this.prisma.tontine.update({
               where: { id: transaction.tontineId },
-              data: { soldeActuelFcfa: { increment: montantNetFcfa } },
-            }),
-          ]
-        : []),
-      ...(collecteurId && fraisAgentFcfa > 0
-        ? [
-            this.prisma.commission.create({
-              data: {
-                agentId: collecteurId,
-                transactionId: transaction.id,
-                montantFcfa: fraisAgentFcfa,
-                type: 'COTISATION',
-              },
-            }),
-            this.prisma.utilisateur.update({
-              where: { id: collecteurId },
-              data: { soldeCommissionFcfa: { increment: fraisAgentFcfa } },
+              // Montant brut crédité — frais prélevés uniquement au retrait
+              data: { soldeActuelFcfa: { increment: transaction.montantFcfa } },
             }),
           ]
         : []),
@@ -515,7 +470,7 @@ export class TransactionsService {
 
     await this.sms.envoyer(
       transaction.utilisateur.telephone,
-      `TontineBénin: Cotisation de ${transaction.montantFcfa} FCFA reçue ✅. Frais: ${fraisPlateformeFcfa} FCFA. Net crédité: ${montantNetFcfa} FCFA.`,
+      `TontineBénin: Cotisation de ${transaction.montantFcfa} FCFA reçue ✅. Montant intégralement crédité sur votre tontine.`,
     );
 
     // Notifier l'équipe (Collecteur + Superviseur) si existant
