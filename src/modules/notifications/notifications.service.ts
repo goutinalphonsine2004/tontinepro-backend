@@ -267,6 +267,20 @@ export class NotificationsService {
     };
   }
 
+  async supprimer(utilisateurId: string, id: string) {
+    await this.prisma.notification.deleteMany({
+      where: { id, utilisateurId },
+    });
+    return { succes: true, message: 'Notification supprimée.' };
+  }
+
+  async toutSupprimer(utilisateurId: string) {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { utilisateurId },
+    });
+    return { succes: true, message: `${count} notification(s) supprimée(s).` };
+  }
+
   private async creerNotification(
     utilisateurId: string,
     type: TypeNotification,

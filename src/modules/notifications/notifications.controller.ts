@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -65,6 +66,16 @@ export class NotificationsController {
     @Body() dto: EnregistrerTokenDto,
   ) {
     return this.service.enregistrerTokenPush(u.id, dto.tokenPush);
+  }
+
+  @Delete('tout-supprimer')
+  toutSupprimer(@UtilisateurCourant() u: { id: string }) {
+    return this.service.toutSupprimer(u.id);
+  }
+
+  @Delete(':id')
+  supprimer(@UtilisateurCourant() u: { id: string }, @Param('id') id: string) {
+    return this.service.supprimer(u.id, id);
   }
 
   @Post('diffuser')
