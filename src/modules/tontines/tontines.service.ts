@@ -170,6 +170,13 @@ export class TontinesService {
       },
     });
 
+    // Notification push création
+    this.notifications.envoyerAUtilisateur(
+      actualOwnerId,
+      '🎉 Tontine créée !',
+      `"${tontine.nom}" a été créée. Activez-la pour commencer les cotisations.`,
+    ).catch(() => {});
+
     return {
       succes: true,
       message:
@@ -243,6 +250,13 @@ export class TontinesService {
       where: { id },
       data: { statut: StatutTontine.ACTIVE },
     });
+
+    // Notification push activation
+    this.notifications.envoyerAUtilisateur(
+      proprietaireId,
+      '✅ Tontine activée !',
+      `"${t.nom}" est maintenant active. Vous pouvez commencer à cotiser.`,
+    ).catch(() => {});
 
     return {
       succes: true,

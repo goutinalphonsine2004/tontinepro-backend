@@ -42,6 +42,8 @@ export class NotificationsService {
     const user = rows[0] ?? null;
     if (!user) return;
 
+    this.logger.log(`[Notif] → ${user.nom} | token: ${user.tokenPush ? 'OUI (' + user.tokenPush.substring(0, 20) + '…)' : 'ABSENT'} | "${titre}"`);
+
     const preferences = await this.getPreferencesBrutes(utilisateurId);
     const resultats: Record<string, any> = {};
 
