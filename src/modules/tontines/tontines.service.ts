@@ -1311,6 +1311,23 @@ export class TontinesService {
     }
   }
 
+  // ─── DELETE /tontines/:id ─────────────────────────
+  async supprimerTontine(id: string, proprietaireId: string) {
+    const t = await this.prisma.tontine.findUnique({ where: { id } });
+    if (!t) throw new NotFoundException('Tontine introuvable');
+    if (t.proprietaireId !== proprietaireId)
+      throw new ForbiddenException('Seul le propriétaire peut supprimer cette tontine');
+
+    if (t.soldeActuelFcfa > 0)
+      throw new BadRequestException({
+        message: 'Impossible de supprimer : une cotisation a déjà été effectuée sur cette tontine.',
+        code: 'COTISATION_EXISTANTE',
+      });
+
+    await this.prisma.tontine.delete({ where: { id } });
+    return { succes: true, message: 'Tontine supprimée avec succès.' };
+  }
+
   private getLibelleFrequence(frequence: FrequenceTontine): string {
     switch (frequence) {
       case FrequenceTontine.JOURNALIER:

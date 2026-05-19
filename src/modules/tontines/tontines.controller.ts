@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -135,5 +136,10 @@ export class TontinesController {
   @Post(':id/distribuer')
   distribuer(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
     return this.service.distribuer(id, u.id);
+  }
+
+  @Delete(':id')
+  supprimer(@Param('id') id: string, @UtilisateurCourant() u: { id: string }) {
+    return this.service.supprimerTontine(id, u.id);
   }
 }
