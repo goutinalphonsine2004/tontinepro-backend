@@ -22,14 +22,19 @@ export class PushService implements OnModuleInit {
 
       // Priorité 2 : variables individuelles (FIREBASE_PRIVATE_KEY + CLIENT_EMAIL + PROJECT_ID)
       if (!serviceAccount) {
-        const privateKey = this.config.get<string>('FIREBASE_PRIVATE_KEY');
+        let privateKey = this.config.get<string>('FIREBASE_PRIVATE_KEY') ?? '';
         const clientEmail = this.config.get<string>('FIREBASE_CLIENT_EMAIL');
         const projectId = this.config.get<string>('FIREBASE_PROJECT_ID');
         if (privateKey && clientEmail && projectId) {
+          // Nettoyer la clé : supprimer guillemets Railway + convertir \n en vrais sauts de ligne
+          privateKey = privateKey.trim();
+          if (privateKey.startsWith('"')) privateKey = privateKey.slice(1);
+          if (privateKey.endsWith('"')) privateKey = privateKey.slice(0, -1);
+          privateKey = privateKey.replace(/\\n/g, '\n');
           serviceAccount = {
             type: 'service_account',
             project_id: projectId,
-            private_key: privateKey.replace(/\\n/g, '\n'),
+            private_key: privateKey,
             client_email: clientEmail,
           };
           this.logger.log('[Push] Firebase credentials depuis variables individuelles');
