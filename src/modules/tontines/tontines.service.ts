@@ -392,6 +392,12 @@ export class TontinesService {
       include: {
         proprietaire: { select: { id: true, nom: true, telephone: true } },
         _count: { select: { membres: true, transactions: true } },
+        membres: {
+          include: {
+            utilisateur: { select: { id: true, nom: true, telephone: true } },
+          },
+          orderBy: { rejointLe: 'asc' },
+        },
       },
     });
     if (!t) throw new NotFoundException('Tontine introuvable');
@@ -400,7 +406,24 @@ export class TontinesService {
     });
     if (t.proprietaireId !== utilisateurId && !estMembre)
       throw new ForbiddenException('Accès refusé à cette tontine');
-    return { succes: true, message: 'Tontine récupérée.', donnees: t };
+
+    // Formater la liste membres pour le client Flutter
+    const membres = (t.membres ?? []).map((m) => ({
+      id: m.utilisateurId,
+      nom: m.utilisateur.nom,
+      telephone: m.utilisateur.telephone,
+      statut: m.statut,
+      aRecu: false,
+      ordrePassage: 0,
+      nbCotisations: 0,
+      estMoi: m.utilisateurId === utilisateurId,
+    }));
+
+    return {
+      succes: true,
+      message: 'Tontine récupérée.',
+      donnees: { ...t, membres },
+    };
   }
 
   // ─── PUT /tontines/:id ─────────────────────────────
