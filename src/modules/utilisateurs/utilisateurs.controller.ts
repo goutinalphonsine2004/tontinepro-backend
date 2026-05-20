@@ -131,6 +131,13 @@ export class UtilisateursController {
     return this.service.assignerSuperviseur(u.id, id, body.superviseurId);
   }
 
+  @Roles(Role.ADMIN, Role.SUPERVISEUR)
+  @UseGuards(RolesGuard)
+  @Get(':id')
+  ficheClient(@Param('id') id: string) {
+    return this.service.ficheClientAdmin(id);
+  }
+
   @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
   @Delete(':id')

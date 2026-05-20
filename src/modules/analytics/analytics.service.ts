@@ -473,4 +473,153 @@ export class AnalyticsService {
       donnees: { classement: classes },
     };
   }
+
+  // ─── GET /analytics/dashboard ─────────────────────
+  // Toutes les données du tableau de bord admin en un seul appel
+  async dashboardAdmin() {
+    const [
+      // KPIs
+      totalClients,
+      totalCollecteurs,
+      totalAdmins,
+      volumeCotisations,
+      revenusCommissions,
+      // Tontines — répartition par type
+      tontinesParType,
+      // Tontines — répartition par statut
+      tontinesParStatut,
+      // Micro-crédits — répartition par statut
+      creditsParStatut,
+      // KYC — répartition par statut
+      kycParStatut,
+      // Score — distribution
+      scoresListe,
+      // Cotisations mensuelles (12 derniers mois)
+      cotisationsParMois,
+      // Retraits en attente
+      retraitsEnAttente,
+      // KYC en attente
+      kycEnAttente,
+      // Micro-crédits en défaut
+      creditsEnDefaut,
+      // Collecteurs les plus actifs (top 5)
+      topCollecteurs,
+      // Taux remboursement crédits
+      creditsTermines,
+      creditsTotal,
+    ] = await Promise.all([
+      this.prisma.utilisateur.count({ where: { role: 'CLIENT', statut: 'ACTIF' } }),
+      this.prisma.utilisateur.count({ where: { role: { in: ['AGENT', 'INDEPENDANT'] }, statut: 'ACTIF' } }),
+      this.prisma.utilisateur.count({ where: { role: 'ADMIN' } }),
+      this.prisma.transaction.aggregate({
+        where: { type: 'COTISATION', statut: 'SUCCES' },
+        _sum: { montantFcfa: true },
+      }),
+      this.prisma.commission.aggregate({ _sum: { montantFcfa: true } }),
+      // Répartition tontines par type
+      this.prisma.tontine.groupBy({ by: ['type'], _count: { id: true } }),
+      // Répartition tontines par statut
+      this.prisma.tontine.groupBy({ by: ['statut'], _count: { id: true } }),
+      // Répartition micro-crédits par statut
+      this.prisma.microCredit.groupBy({ by: ['statut'], _count: { id: true } }),
+      // Répartition KYC par statut
+      this.prisma.documentKYC.groupBy({ by: ['statut'], _count: { id: true } }),
+      // Distribution des scores
+      this.prisma.scoreCredit.findMany({ select: { score: true } }),
+      // Cotisations mensuelles — 12 derniers mois
+      this.prisma.transaction.findMany({
+        where: {
+          type: 'COTISATION',
+          statut: 'SUCCES',
+          creeLe: { gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) },
+        },
+        select: { montantFcfa: true, creeLe: true },
+      }),
+      // Retraits en attente d'approbation
+      this.prisma.retrait.count({ where: { statut: 'EN_ATTENTE' } }),
+      // KYC en attente
+      this.prisma.documentKYC.count({ where: { statut: 'EN_ATTENTE' } }),
+      // Crédits en défaut
+      this.prisma.microCredit.count({ where: { statut: 'EN_DEFAUT' } }),
+      // Top 5 collecteurs par volume
+      this.prisma.utilisateur.findMany({
+        where: { role: { in: ['AGENT', 'INDEPENDANT'] }, statut: 'ACTIF' },
+        select: {
+          id: true, nom: true, telephone: true,
+          _count: { select: { clients: true } },
+          commissions: { select: { montantFcfa: true } },
+        },
+        take: 5,
+        orderBy: { clients: { _count: 'desc' } },
+      }),
+      this.prisma.microCredit.count({ where: { statut: 'TERMINE' } }),
+      this.prisma.microCredit.count({ where: { statut: { not: 'EN_ATTENTE' } } }),
+    ]);
+
+    // Distribution scores en tranches
+    const distributionScores = {
+      faible: scoresListe.filter((s) => s.score < 40).length,
+      moyen: scoresListe.filter((s) => s.score >= 40 && s.score < 60).length,
+      bon: scoresListe.filter((s) => s.score >= 60 && s.score < 75).length,
+      excellent: scoresListe.filter((s) => s.score >= 75 && s.score < 90).length,
+      elite: scoresListe.filter((s) => s.score >= 90).length,
+    };
+
+    // Cotisations agrégées par mois
+    const maintenant = new Date();
+    const evolutionMensuelle = Array.from({ length: 12 }, (_, i) => {
+      const mois = new Date(maintenant.getFullYear(), maintenant.getMonth() - (11 - i), 1);
+      const label = mois.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      const total = cotisationsParMois
+        .filter((t) => {
+          const d = new Date(t.creeLe);
+          return d.getMonth() === mois.getMonth() && d.getFullYear() === mois.getFullYear();
+        })
+        .reduce((sum, t) => sum + t.montantFcfa, 0);
+      return { mois: label, montant: total };
+    });
+
+    return {
+      succes: true,
+      message: 'Tableau de bord admin.',
+      donnees: {
+        kpis: {
+          totalClients,
+          totalCollecteurs,
+          totalAdmins,
+          volumeCotisations: volumeCotisations._sum.montantFcfa ?? 0,
+          revenusCommissions: revenusCommissions._sum.montantFcfa ?? 0,
+          retraitsEnAttente,
+          kycEnAttente,
+          creditsEnDefaut,
+          tauxRemboursement: creditsTotal > 0
+            ? Math.round((creditsTermines / creditsTotal) * 100)
+            : 100,
+        },
+        graphiques: {
+          tontinesParType: tontinesParType.map((g) => ({
+            label: g.type, valeur: g._count.id,
+          })),
+          tontinesParStatut: tontinesParStatut.map((g) => ({
+            label: g.statut, valeur: g._count.id,
+          })),
+          creditsParStatut: creditsParStatut.map((g) => ({
+            label: g.statut, valeur: g._count.id,
+          })),
+          kycParStatut: kycParStatut.map((g) => ({
+            label: g.statut, valeur: g._count.id,
+          })),
+          distributionScores,
+          evolutionMensuelle,
+        },
+        topCollecteurs: topCollecteurs.map((c) => ({
+          id: c.id,
+          nom: c.nom,
+          telephone: c.telephone,
+          nbClients: c._count.clients,
+          totalCommissions: c.commissions.reduce((s, cm) => s + cm.montantFcfa, 0),
+        })),
+      },
+    };
+  }
 }

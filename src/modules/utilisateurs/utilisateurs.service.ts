@@ -666,4 +666,135 @@ export class UtilisateursService {
       },
     };
   }
+
+  // ─── GET /utilisateurs/:id (Admin) — Fiche client complète ─
+  async ficheClientAdmin(id: string) {
+    const client = await this.prisma.utilisateur.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nom: true,
+        telephone: true,
+        photo: true,
+        role: true,
+        statut: true,
+        kycVerifie: true,
+        empreinteActive: true,
+        soldeCommissionFcfa: true,
+        montantCautionFcfa: true,
+        creeLe: true,
+        misAJourLe: true,
+        collecteur: {
+          select: { id: true, nom: true, telephone: true, role: true },
+        },
+        zone: {
+          select: { id: true, nom: true, ville: true },
+        },
+        scoreCredit: {
+          select: {
+            score: true,
+            tauxRegularite: true,
+            eligibleMicroCredit: true,
+            eligiblePADME: true,
+            derniereCalcule: true,
+            badges: { select: { niveau: true, obtenuLe: true } },
+          },
+        },
+        documentsKyc: {
+          select: {
+            id: true,
+            typeDocument: true,
+            statut: true,
+            motifRejet: true,
+            cheminFichier: true,
+            creeLe: true,
+          },
+          orderBy: { creeLe: 'desc' },
+        },
+        tontines: {
+          select: {
+            id: true,
+            nom: true,
+            emoji: true,
+            type: true,
+            statut: true,
+            soldeActuelFcfa: true,
+            objectifMontantFcfa: true,
+            montantJournalierFcfa: true,
+            creeLe: true,
+          },
+          orderBy: { creeLe: 'desc' },
+          take: 10,
+        },
+        transactions: {
+          select: {
+            id: true,
+            type: true,
+            montantFcfa: true,
+            montantNetFcfa: true,
+            statut: true,
+            operateur: true,
+            creeLe: true,
+          },
+          orderBy: { creeLe: 'desc' },
+          take: 20,
+        },
+        microCredits: {
+          select: {
+            id: true,
+            montantPrincipalFcfa: true,
+            montantTotalFcfa: true,
+            montantRestantFcfa: true,
+            statut: true,
+            dateEcheance: true,
+            creeLe: true,
+          },
+          orderBy: { creeLe: 'desc' },
+          take: 5,
+        },
+        retraits: {
+          select: {
+            id: true,
+            montantDemandeFcfa: true,
+            montantNetFcfa: true,
+            statut: true,
+            creeLe: true,
+          },
+          orderBy: { creeLe: 'desc' },
+          take: 5,
+        },
+        _count: {
+          select: {
+            tontines: true,
+            transactions: true,
+            microCredits: true,
+            retraits: true,
+          },
+        },
+      },
+    });
+
+    if (!client) throw new NotFoundException('Client introuvable');
+
+    // Calcul solde épargne total
+    const soldeTotal = client.tontines.reduce(
+      (sum, t) => sum + t.soldeActuelFcfa,
+      0,
+    );
+
+    // Volume cotisations
+    const volumeCotisations = client.transactions
+      .filter((t) => t.type === 'COTISATION' && t.statut === 'SUCCES')
+      .reduce((sum, t) => sum + t.montantFcfa, 0);
+
+    return {
+      succes: true,
+      message: 'Fiche client complète.',
+      donnees: {
+        ...client,
+        soldeTotal,
+        volumeCotisations,
+      },
+    };
+  }
 }

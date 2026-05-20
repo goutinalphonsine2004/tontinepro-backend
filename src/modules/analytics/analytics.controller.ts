@@ -53,6 +53,11 @@ export class AnalyticsController {
     return this.service.padme();
   }
 
+  @Get('dashboard')
+  dashboard() {
+    return this.service.dashboardAdmin();
+  }
+
   @Get('leaderboard')
   @Roles(Role.ADMIN, Role.SUPERVISEUR, Role.CLIENT)
   leaderboard(
