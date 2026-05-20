@@ -1,15 +1,18 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
-import { StatutCredit } from '@prisma/client';
+import { StatutCredit, TypeNotification } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KkiapayService } from '../../common/services/kkiapay.service';
 import { SmsService } from '../notifications/sms.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BUSINESS } from '../../common/constants/business.constants';
 import { DemanderCreditDto } from './dto/demander-credit.dto';
 import { ConfirmerPinDto } from './dto/confirmer-pin.dto';
@@ -26,8 +29,23 @@ export class MicroCreditsService {
   constructor(
     private prisma: PrismaService,
     private kkiapay: KkiapayService,
+    @Inject(forwardRef(() => SmsService))
     private sms: SmsService,
+    @Inject(forwardRef(() => NotificationsService))
+    private notifications: NotificationsService,
   ) {}
+
+  private async notifierCollecteur(
+    collecteurId: string | null | undefined,
+    titre: string,
+    message: string,
+    type: TypeNotification = TypeNotification.PAIEMENT_RECU,
+  ) {
+    if (!collecteurId) return;
+    await this.notifications.envoyerAUtilisateur(
+      collecteurId, titre, message, 'TOUS', type,
+    ).catch(() => {});
+  }
 
   // ─── GET /micro-credits/mon-eligibilite ───────────
   async monEligibilite(clientId: string) {
@@ -281,15 +299,37 @@ export class MicroCreditsService {
       });
     }
 
+    // Récupérer collecteurId pour notifier
+    const clientComplet = await this.prisma.utilisateur.findUnique({
+      where: { id: clientId },
+      select: { collecteurId: true, nom: true },
+    });
+
     await this.prisma.microCredit.update({
       where: { id: creditId },
       data: { consentementObtenu: true, consentementObtenuLe: new Date() },
     });
 
+    // Notif client — dossier soumis
+    await this.notifications.envoyerAUtilisateur(
+      clientId,
+      'Demande de crédit soumise',
+      `TontineBénin: Votre demande de micro-crédit a été confirmée avec votre PIN. Un administrateur va examiner votre dossier sous 24h.`,
+      'TOUS',
+      TypeNotification.MICRO_CREDIT_DISPO,
+    ).catch(() => {});
+
+    // Notif collecteur — dossier prêt à valider
+    await this.notifierCollecteur(
+      clientComplet?.collecteurId,
+      `Dossier crédit en attente — ${clientComplet?.nom ?? clientId}`,
+      `Le client ${clientComplet?.nom ?? clientId} a confirmé sa demande de micro-crédit. Dossier transmis à l'administration pour validation.`,
+      TypeNotification.MICRO_CREDIT_DISPO,
+    );
+
     return {
       succes: true,
-      message:
-        "Consentement confirmé avec PIN. Dossier transmis à l'administration.",
+      message: "Consentement confirmé avec PIN. Dossier transmis à l'administration.",
     };
   }
 
@@ -316,7 +356,9 @@ export class MicroCreditsService {
     this.logger.log(`[valider] crédit ${creditId} validé par admin ${adminId}`);
     const credit = await this.prisma.microCredit.findUnique({
       where: { id: creditId },
-      include: { client: { select: { id: true, nom: true, telephone: true } } },
+      include: {
+        client: { select: { id: true, nom: true, telephone: true, collecteurId: true } },
+      },
     });
     if (!credit) throw new NotFoundException('Micro-crédit introuvable');
 
@@ -333,7 +375,6 @@ export class MicroCreditsService {
       });
     }
 
-    // Décaissement via KKiaPay
     const transfert = this.kkiapay.initierTransfert({
       montant: credit.montantPrincipalFcfa,
       telephone: credit.client.telephone,
@@ -353,9 +394,21 @@ export class MicroCreditsService {
       data: { statut: StatutCredit.ACTIF, decaisseLE: new Date() },
     });
 
-    await this.sms.envoyer(
-      credit.client.telephone,
-      `TontineBénin: Votre micro-crédit de ${credit.montantPrincipalFcfa} FCFA a été débloqué sur votre Mobile Money ✅. Remboursement: ${credit.paiementJournalierFcfa} FCFA/jour pendant 30 jours.`,
+    // ── Notif client — SMS + Push + in-app ─────────────
+    await this.notifications.envoyerAUtilisateur(
+      credit.client.id,
+      'Crédit débloqué ✅',
+      `TontineBénin: Votre micro-crédit de ${credit.montantPrincipalFcfa} FCFA a été transféré sur votre Mobile Money. Remboursement automatique : ${credit.paiementJournalierFcfa} FCFA/jour pendant ${DUREE_CREDIT_JOURS} jours, dès demain à 7h.`,
+      'TOUS',
+      TypeNotification.MICRO_CREDIT_DISPO,
+    );
+
+    // ── Notif collecteur — SMS + Push + in-app ──────────
+    await this.notifierCollecteur(
+      credit.client.collecteurId,
+      `Crédit décaissé — ${credit.client.nom}`,
+      `✅ Le micro-crédit de ${credit.client.nom} (${credit.montantPrincipalFcfa} FCFA) a été validé et décaissé. Prélèvements automatiques de ${credit.paiementJournalierFcfa} FCFA/jour démarrent demain à 7h.`,
+      TypeNotification.MICRO_CREDIT_DISPO,
     );
 
     return {
@@ -373,7 +426,9 @@ export class MicroCreditsService {
   async refuser(creditId: string, _adminId: string, dto: RefuserCreditDto) {
     const credit = await this.prisma.microCredit.findUnique({
       where: { id: creditId },
-      include: { client: { select: { telephone: true } } },
+      include: {
+        client: { select: { id: true, nom: true, telephone: true, collecteurId: true } },
+      },
     });
     if (!credit) throw new NotFoundException('Micro-crédit introuvable');
     if (credit.statut !== StatutCredit.EN_ATTENTE) {
@@ -388,12 +443,24 @@ export class MicroCreditsService {
       data: { statut: StatutCredit.REFUSE },
     });
 
-    await this.sms.envoyer(
-      credit.client.telephone,
-      `TontineBénin: Votre demande de micro-crédit a été refusée. Motif: ${dto.motif}. Continuez à épargner pour améliorer votre score.`,
+    // ── Notif client — SMS + Push + in-app ─────────────
+    await this.notifications.envoyerAUtilisateur(
+      credit.client.id,
+      'Demande de crédit refusée',
+      `TontineBénin: Votre demande de micro-crédit a été refusée. Motif : ${dto.motif}. Continuez à cotiser régulièrement pour améliorer votre score.`,
+      'TOUS',
+      TypeNotification.MICRO_CREDIT_DISPO,
     );
 
-    return { succes: true, message: 'Micro-crédit refusé. Client notifié.' };
+    // ── Notif collecteur ────────────────────────────────
+    await this.notifierCollecteur(
+      credit.client.collecteurId,
+      `Crédit refusé — ${credit.client.nom}`,
+      `La demande de micro-crédit de ${credit.client.nom} a été refusée par l'administration. Motif : ${dto.motif}.`,
+      TypeNotification.MICRO_CREDIT_DISPO,
+    );
+
+    return { succes: true, message: 'Micro-crédit refusé. Client et collecteur notifiés.' };
   }
 
   // ─── GET /micro-credits/mes-credits ───────────────

@@ -12,6 +12,7 @@ import {
   Role,
   StatutCredit,
   StatutTransaction,
+  TypeNotification,
   TypeTransaction,
 } from '@prisma/client';
 import { createHash } from 'crypto';
@@ -30,6 +31,7 @@ import { FiltrerTransactionsDto } from './dto/filtrer-transactions.dto';
 import { SimulerTransactionDto } from './dto/simuler-transaction.dto';
 
 import { NotificationsService } from '../notifications/notifications.service';
+import { CronService } from '../cron/cron.service';
 
 @Injectable()
 export class TransactionsService {
@@ -44,6 +46,8 @@ export class TransactionsService {
     private whatsapp: WhatsappService,
     @Inject(forwardRef(() => NotificationsService))
     private notifications: NotificationsService,
+    @Inject(forwardRef(() => CronService))
+    private cronService: CronService,
   ) {}
 
   // ─── POST /transactions/cotiser ───────────────────
@@ -468,17 +472,22 @@ export class TransactionsService {
         : []),
     ]);
 
-    await this.sms.envoyer(
-      transaction.utilisateur.telephone,
-      `TontineBénin: Cotisation de ${transaction.montantFcfa} FCFA reçue ✅. Montant intégralement crédité sur votre tontine.`,
-    );
+    // ── Notif client — SMS + Push FCM + in-app ─────────
+    const nomTontine = transaction.tontine?.nom ?? 'votre tontine';
+    await this.notifications.envoyerAUtilisateur(
+      transaction.utilisateur.id,
+      'Cotisation confirmée ✅',
+      `TontineBénin: Votre cotisation de ${transaction.montantFcfa} FCFA a été reçue et créditée sur ${nomTontine}.`,
+      'TOUS',
+      TypeNotification.PAIEMENT_RECU,
+    ).catch(() => {});
 
-    // Notifier l'équipe (Collecteur + Superviseur) si existant
+    // ── Notif collecteur — SMS + Push FCM + in-app ──────
     if (collecteurId) {
       await this.notifications.envoyerAEquipe(
         collecteurId,
         'Cotisation reçue',
-        `Votre client ${transaction.utilisateur.nom} a cotisé ${transaction.montantFcfa} F sur ${transaction.tontine.nom}.`,
+        `✅ ${transaction.utilisateur.nom} a cotisé ${transaction.montantFcfa} FCFA sur ${nomTontine}.`,
       );
     }
 
@@ -553,20 +562,54 @@ export class TransactionsService {
     ]);
 
     if (termine) {
-      await this.sms.envoyer(
-        credit.client.telephone,
-        `TontineBénin: Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipalFcfa} FCFA est entièrement remboursé. Votre score de crédit va augmenter.`,
+      this.logger.log(`[Webhook] Crédit terminé: ${credit.id} — ${credit.client.nom}`);
+
+      // ── Notif client — SMS + Push + in-app ─────────
+      await this.notifications.envoyerAUtilisateur(
+        credit.client.id,
+        'Crédit entièrement remboursé 🎉',
+        `Bravo ${credit.client.nom} ! Votre micro-crédit de ${credit.montantPrincipalFcfa} FCFA est soldé. Votre score de crédit vient d'être recalculé.`,
+        'TOUS',
+        TypeNotification.SCORE_MISE_A_JOUR,
       );
-      this.logger.log(
-        `[Webhook remboursement] Crédit terminé: ${credit.id} — ${credit.client.nom}`,
+
+      // ── Notif collecteur — SMS + Push + in-app ──────
+      if (credit.client.collecteurId) {
+        await this.notifications.envoyerAUtilisateur(
+          credit.client.collecteurId,
+          `Crédit soldé — ${credit.client.nom}`,
+          `✅ ${credit.client.nom} a entièrement remboursé son micro-crédit de ${credit.montantPrincipalFcfa} FCFA. Son score a été recalculé.`,
+          'TOUS',
+          TypeNotification.SCORE_MISE_A_JOUR,
+        ).catch(() => {});
+      }
+
+      // ── Recalcul score immédiat (pas d'attente minuit) ─
+      this.cronService.calculerEtMettreAJourScore(credit.client.id).catch((e) =>
+        this.logger.error(`[Score] Erreur recalcul après crédit terminé: ${e.message}`),
       );
       return;
     }
 
-    await this.sms.envoyer(
-      credit.client.telephone,
-      `TontineBénin: Prélèvement ${remboursement.montantFcfa} FCFA confirmé. Restant: ${montantRestantFcfa} FCFA (${joursPayes}/${credit.totalJours} jours).`,
+    // ── Prélèvement journalier réussi ──────────────────
+    await this.notifications.envoyerAUtilisateur(
+      credit.client.id,
+      'Prélèvement micro-crédit confirmé',
+      `TontineBénin: Prélèvement ${remboursement.montantFcfa} FCFA confirmé. Restant : ${montantRestantFcfa} FCFA (${joursPayes}/${credit.totalJours} jours).`,
+      'TOUS',
+      TypeNotification.PAIEMENT_RECU,
     );
+
+    // ── Notif collecteur (résumé discret) ──────────────
+    if (credit.client.collecteurId) {
+      await this.notifications.envoyerAUtilisateur(
+        credit.client.collecteurId,
+        `Remboursement reçu — ${credit.client.nom}`,
+        `${credit.client.nom} : prélèvement ${remboursement.montantFcfa} FCFA effectué. Restant : ${montantRestantFcfa} FCFA (J${joursPayes}/${credit.totalJours}).`,
+        'TOUS',
+        TypeNotification.PAIEMENT_RECU,
+      ).catch(() => {});
+    }
   }
 
   private async confirmerRemboursementEchec(remboursement: any, motif: string) {
@@ -593,22 +636,32 @@ export class TransactionsService {
       );
     }
 
-    await this.sms.envoyer(
-      credit.client.telephone,
-      `TontineBénin: Prélèvement micro-crédit échoué (${motif}). Assurez-vous d'avoir ${remboursement.montantFcfa} FCFA sur votre compte Mobile Money.`,
+    const enDefaut = echecsRecents.length === 3;
+    const msgClient = enDefaut
+      ? `TontineBénin: 🚨 Votre micro-crédit est en défaut après 3 échecs consécutifs. Contactez votre collecteur ou rechargez votre Mobile Money avant 7h demain.`
+      : `TontineBénin: ⚠️ Prélèvement micro-crédit échoué (${echecsRecents.length}/3). Assurez-vous d'avoir ${remboursement.montantFcfa} FCFA sur votre Mobile Money avant 7h demain.`;
+
+    await this.notifications.envoyerAUtilisateur(
+      credit.client.id,
+      enDefaut ? 'Crédit en défaut de paiement 🚨' : `Prélèvement échoué (${echecsRecents.length}/3) ⚠️`,
+      msgClient,
+      'TOUS',
+      TypeNotification.REMBOURSEMENT_RAPPEL,
     );
 
-    if (!credit.client.collecteurId) return;
+    // ── Alerte collecteur — plus détaillée ─────────────
+    if (credit.client.collecteurId) {
+      const msgCollecteur = enDefaut
+        ? `🚨 Crédit EN DÉFAUT — ${credit.client.nom} : 3 prélèvements consécutifs échoués sur son crédit de ${credit.montantPrincipalFcfa} FCFA. Intervention requise.`
+        : `⚠️ ${credit.client.nom} : prélèvement ${remboursement.montantFcfa} FCFA échoué (${echecsRecents.length}/3). Rappeler le client pour recharger son MoMo.`;
 
-    const collecteur = await this.prisma.utilisateur.findUnique({
-      where: { id: credit.client.collecteurId },
-      select: { telephone: true },
-    });
-    if (collecteur) {
-      await this.sms.envoyer(
-        collecteur.telephone,
-        `TontineBénin: Alerte remboursement échoué pour ${credit.client.nom}. Crédit: ${credit.montantPrincipalFcfa} FCFA.`,
-      );
+      await this.notifications.envoyerAUtilisateur(
+        credit.client.collecteurId,
+        enDefaut ? `Crédit en défaut — ${credit.client.nom}` : `Prélèvement échoué — ${credit.client.nom}`,
+        msgCollecteur,
+        'TOUS',
+        TypeNotification.REMBOURSEMENT_RAPPEL,
+      ).catch(() => {});
     }
   }
 

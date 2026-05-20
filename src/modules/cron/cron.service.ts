@@ -90,25 +90,41 @@ export class CronService {
         },
       });
 
-      // ✅ CORRECTION : Si le crédit était EN_DEFAUT et que le paiement réussit,
-      // on remet le statut à ACTIF (le client a rechargé son compte).
       if (credit.statut === StatutCredit.EN_DEFAUT) {
         await this.prisma.microCredit.update({
           where: { id: credit.id },
           data: { statut: StatutCredit.ACTIF },
         });
-        this.logger.log(
-          `[CRON] Crédit réactivé (ACTIF) après paiement réussi: ${credit.id} — ${credit.client.nom}`,
-        );
-        await this.sms.envoyer(
-          credit.client.telephone,
-          `TontineBénin: ✅ Votre prélèvement de ${credit.paiementJournalierFcfa} FCFA a réussi. Votre micro-crédit est de nouveau actif.`,
-        );
+        this.logger.log(`[CRON] Crédit réactivé: ${credit.id} — ${credit.client.nom}`);
+
+        // Notif client — réactivation
+        await this.notifications.envoyerAUtilisateur(
+          credit.client.id,
+          'Crédit réactivé ✅',
+          `TontineBénin: Votre prélèvement de ${credit.paiementJournalierFcfa} FCFA a réussi. Votre micro-crédit est de nouveau actif.`,
+          'TOUS',
+          TypeNotification.PAIEMENT_RECU,
+        ).catch(() => {});
+
+        // Notif collecteur — bonne nouvelle
+        if (credit.client.collecteurId) {
+          await this.notifications.envoyerAUtilisateur(
+            credit.client.collecteurId,
+            `Crédit réactivé — ${credit.client.nom}`,
+            `✅ ${credit.client.nom} a réglé son arriéré. Son micro-crédit est de nouveau ACTIF.`,
+            'TOUS',
+            TypeNotification.PAIEMENT_RECU,
+          ).catch(() => {});
+        }
       } else {
-        await this.sms.envoyer(
-          credit.client.telephone,
-          `TontineBénin: Prélèvement de ${credit.paiementJournalierFcfa} FCFA initié pour votre micro-crédit. Confirmation en cours.`,
-        );
+        // Notif client — initiation prélèvement (discret)
+        await this.notifications.envoyerAUtilisateur(
+          credit.client.id,
+          'Prélèvement micro-crédit initié',
+          `TontineBénin: Prélèvement de ${credit.paiementJournalierFcfa} FCFA en cours pour votre micro-crédit. Confirmation dans quelques minutes.`,
+          'PUSH',
+          TypeNotification.PAIEMENT_RECU,
+        ).catch(() => {});
       }
     } catch {
       await this.gererEchecRemboursement(credit);
@@ -144,36 +160,40 @@ export class CronService {
       }
     }
 
-    if (echecsConsecutifs >= 3) {
+    const enDefaut = echecsConsecutifs >= 3;
+
+    if (enDefaut) {
       await this.prisma.microCredit.update({
         where: { id: credit.id },
         data: { statut: StatutCredit.EN_DEFAUT },
       });
-      this.logger.warn(
-        `[CRON] Crédit EN_DEFAUT (${echecsConsecutifs} échecs consécutifs): ${credit.id} — ${credit.client.nom}`,
-      );
-      await this.sms.envoyer(
-        credit.client.telephone,
-        `TontineBénin: 🚨 Votre micro-crédit est en défaut après ${echecsConsecutifs} échecs consécutifs. Contactez votre collecteur.`,
-      );
-    } else {
-      await this.sms.envoyer(
-        credit.client.telephone,
-        `TontineBénin: ⚠️ Prélèvement échoué (${echecsConsecutifs}/3). Assurez-vous d'avoir ${credit.paiementJournalierFcfa} FCFA sur votre compte Mobile Money.`,
-      );
+      this.logger.warn(`[CRON] EN_DEFAUT (${echecsConsecutifs} échecs): ${credit.id} — ${credit.client.nom}`);
     }
 
+    // ── Notif client — SMS + Push + in-app ─────────────
+    await this.notifications.envoyerAUtilisateur(
+      credit.client.id,
+      enDefaut ? '🚨 Crédit en défaut de paiement' : `⚠️ Prélèvement échoué (${echecsConsecutifs}/3)`,
+      enDefaut
+        ? `TontineBénin: Votre micro-crédit est en défaut après ${echecsConsecutifs} échecs consécutifs. Rechargez votre Mobile Money et contactez votre collecteur.`
+        : `TontineBénin: Prélèvement de ${credit.paiementJournalierFcfa} FCFA échoué (${echecsConsecutifs}/3). Assurez-vous d'avoir ce montant sur votre MoMo avant 7h demain.`,
+      'TOUS',
+      TypeNotification.REMBOURSEMENT_RAPPEL,
+    ).catch(() => {});
+
+    // ── Notif collecteur — SMS + Push + in-app ──────────
     if (credit.client.collecteurId) {
-      const collecteur = await this.prisma.utilisateur.findUnique({
-        where: { id: credit.client.collecteurId },
-        select: { telephone: true },
-      });
-      if (collecteur) {
-        await this.sms.envoyer(
-          collecteur.telephone,
-          `TontineBénin: Alerte — prélèvement échoué pour ${credit.client.nom} (${echecsConsecutifs}/3 échecs consécutifs). Crédit: ${credit.montantPrincipalFcfa} FCFA.`,
-        );
-      }
+      await this.notifications.envoyerAUtilisateur(
+        credit.client.collecteurId,
+        enDefaut
+          ? `🚨 Crédit EN DÉFAUT — ${credit.client.nom}`
+          : `⚠️ Prélèvement échoué — ${credit.client.nom}`,
+        enDefaut
+          ? `URGENT : ${credit.client.nom} est en défaut de paiement (${echecsConsecutifs} échecs consécutifs). Crédit ${credit.montantPrincipalFcfa} FCFA. Contactez le client immédiatement.`
+          : `${credit.client.nom} : prélèvement ${credit.paiementJournalierFcfa} FCFA échoué (${echecsConsecutifs}/3). Rappeler le client de recharger son MoMo avant 7h demain.`,
+        'TOUS',
+        TypeNotification.REMBOURSEMENT_RAPPEL,
+      ).catch(() => {});
     }
   }
 
